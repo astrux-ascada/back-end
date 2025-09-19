@@ -1,10 +1,15 @@
 # backend/main.py
 from fastapi import FastAPI, Depends
-from app.core.database import get_db
-from app.core import RedisClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_db
+from app.core import RedisClient
+from app.api.api import api_router
+
 app = FastAPI(title="Orquestador Industrial 5.0 - Backend")
+
+# Incluye el enrutador principal de la API con el prefijo /api/v1
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/health")
