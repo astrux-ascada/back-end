@@ -1,0 +1,111 @@
+# Archivos de Python
+###################
+
+# Archivos compilados de Python (bytecode)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de distribución / empaquetado
+build/
+dist/
+*.egg-info/
+sdist/
+wheels/
+
+# Registros de instaladores
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Entornos Virtuales
+####################
+##.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Archivos de configuración local y secretos
+*.local
+local_settings.py
+.env.*.local
+
+# Bases de datos
+################
+*.sqlite3
+*.db
+
+# Reportes de tests y cobertura
+###############################
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Documentación generada
+########################
+docs/_build/
+site/
+
+# Notebooks de Jupyter
+######################
+.ipynb_checkpoints
+
+# Archivos de sistema operativo
+###############################
+.DS_Store
+Thumbs.db
+
+# Archivos de configuración de IDEs y editores
+##############################################
+
+# PyCharm
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Otros
+#######
+
+# PyInstaller
+*.spec
+
+# Django
+*.log
+db.sqlite3-journal
+
+# Flask
+instance/
+.webassets-cache
+
+# Scrapy
+.scrapy
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# pytype
+.pytype/
+.idea/**
+.idea/vcs.xml
