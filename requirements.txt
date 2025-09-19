@@ -1,0 +1,7 @@
+SQLAlchemy~=2.0.43
+pydantic~=2.11.9
+aio-pika~=9.5.7
+python-jose~=3.5.0
+passlib~=1.7.4
+asyncpg
+greenlet
