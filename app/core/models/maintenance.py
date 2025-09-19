@@ -1,4 +1,5 @@
 
+import uuid
 import enum
 from sqlalchemy import (
     Column,
@@ -10,7 +11,7 @@ from sqlalchemy import (
     Enum,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from app.core.db.base import Base
@@ -34,7 +35,7 @@ class MaintenanceStatus(enum.Enum):
 class MaintenanceOrder(Base):
     __tablename__ = "maintenance_orders"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     title = Column(String(200), nullable=False)
     description = Column(Text)
 
@@ -55,8 +56,8 @@ class MaintenanceOrder(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # --- Foreign Keys ---
-    asset_id = Column(Integer, ForeignKey("assets.id"), nullable=False)
-    assigned_to_id = Column(Integer, ForeignKey("users.id"))
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False)
+    assigned_to_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
 
     # --- JSON Fields ---
     checklist = Column(JSONB)  # e.g., [{"step": "Check pressure", "completed": false}]
@@ -70,7 +71,7 @@ class MaintenanceOrder(Base):
 class SparePart(Base):
     __tablename__ = "spare_parts"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     name = Column(String(200), nullable=False)
     code = Column(String(50), unique=True, nullable=False, index=True)
     category = Column(String(100))

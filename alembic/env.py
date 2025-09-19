@@ -1,5 +1,6 @@
 
 import asyncio
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -9,47 +10,46 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 # Importa la clase Base de tus modelos de SQLAlchemy.
-# Asumiremos que estará en core.db.base. ¡Tendremos que crear este archivo!
 from app.core.db.base import Base
 
 # --- ¡AÑADIR ESTO PARA AUTOGENERATE! ---
 # Importa tus modelos aquí para que Alembic los detecte.
 from app.core.models.assets import Asset  # noqa
 from app.core.models.maintenance import MaintenanceOrder, SparePart  # noqa
-from app.core.models.identity import User  # noqa
+from app.core.models.identity import User, Role  # noqa
+from app.core.models.plant import Section  # noqa
 
 # Este es el objeto de configuración de Alembic, que da acceso a los
 # valores del archivo .ini.
 config = context.config
 
+# --- CONFIGURACIÓN DE LA URL DE LA BASE DE DATOS CON VARIABLES DE ENTORNO ---
+
+# Lee las credenciales de las variables de entorno
+# Se usan valores por defecto para facilitar el desarrollo local
+DB_USER = os.getenv("DB_USER", "admin")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "IndustrialSecreto2025!")
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5433")
+DB_NAME = os.getenv("DB_NAME", "industrial_orchestrator")
+
+# Construye la URL de la base de datos
+DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+# Establece la URL en la configuración de Alembic
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
+
+
 # Interpreta el archivo de configuración para el logging de Python.
-# Esta línea básicamente configura los loggers.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Añade aquí tu metadato de modelo para el soporte de 'autogenerate'.
-# Por ejemplo:
-# target_metadata = my_model.Base.metadata
 target_metadata = Base.metadata
-
-# otros valores desde la config, definidos por las necesidades de env.py,
-# se pueden obtener con:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline() -> None:
-    """Ejecuta migraciones en modo 'offline'.
-
-    Esto configura el contexto solo con una URL
-    y no con un Engine, aunque un Engine es aceptable
-    aquí también. Al omitir la creación del Engine,
-    ni siquiera necesitamos que un DBAPI esté disponible.
-
-    Las llamadas a context.execute() emiten la cadena dada a la
-    salida del script.
-
-    """
+    """Ejecuta migraciones en modo 'offline'."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -70,12 +70,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    """Ejecuta migraciones en modo 'online'.
-
-    En este escenario necesitamos crear un Engine
-    y asociar una conexión con el contexto.
-
-    """
+    """Ejecuta migraciones en modo 'online'."""
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
