@@ -1,0 +1,25 @@
+# Ignora el historial de Git
+.git
+
+# Ignora el entorno virtual local
+.venv/
+virtualenv/
+env/
+
+# Ignora los archivos de configuración de IDEs comunes
+.idea/
+.vscode/
+
+# Ignora los archivos de caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignora los archivos de caché de herramientas de testing
+.pytest_cache/
+.coverage
+
+# Ignora el propio archivo .dockerignore
+.dockerignore
+

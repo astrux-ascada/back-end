@@ -32,7 +32,10 @@ services:
     ports:
       - "8090:8000"
     volumes:
+      # Monta el código local para desarrollo en vivo
       - .:/app
+      # Sobrescribe la carpeta .venv local con un volumen anónimo para evitar conflictos
+      - /app/.venv
     networks:
       - orchestrator-net
     depends_on:
