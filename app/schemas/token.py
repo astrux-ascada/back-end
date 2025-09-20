@@ -1,4 +1,4 @@
-# Esquemas Pydantic para la Autenticación y Tokens
+# Esquemas Pydantic para la autenticación y tokens JWT
 import uuid
 from typing import Optional
 
@@ -10,5 +10,5 @@ class Token(BaseModel):
     token_type: str
 
 
-class TokenPayload(BaseModel):
-    sub: uuid.UUID
+class TokenData(BaseModel):
+    sub: Optional[uuid.UUID] = None
