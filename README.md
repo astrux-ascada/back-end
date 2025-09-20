@@ -1,63 +1,76 @@
 # Proyecto Astruxa (Back-End)
 
-Este es el repositorio del back-end para el proyecto Astruxa, un sistema de orquestación industrial.
+Este es el repositorio del back-end para el proyecto Astruxa, un sistema de orquestación industrial que utiliza FastAPI, PostgreSQL y TimescaleDB, todo gestionado a través de Docker.
 
 ## Requisitos Previos
 
-- Python 3.12 o superior
-- pip para la gestión de paquetes
-- Git para el control de versiones
+- **Docker** y **Docker Compose**: El entorno de desarrollo está completamente contenedorizado.
+- **Git** para el control de versiones.
 
-## Instalación
+## Puesta en Marcha (Primer Uso)
 
 1.  **Clona el repositorio:**
     ```sh
     git clone <URL_DEL_REPOSITORIO>
-    cd back-end
+    cd back_end_astruxa
     ```
 
-2.  **Crea y activa un entorno virtual:**
-    ```sh
-    python3 -m venv .venv
-    source .venv/bin/activate
+2.  **Crea el archivo de entorno:**
+    Crea un archivo llamado `.env` en la raíz del proyecto y copia el siguiente contenido. Este archivo alimenta las credenciales a los contenedores de forma segura.
+    ```env
+    POSTGRES_USER=admin
+    POSTGRES_PASSWORD=IndustrialSecreto2025!
+    POSTGRES_DB=industrial_orchestrator
+    APP_DB_PASS=tu_contraseña_para_app_user # Define una contraseña para el usuario de la aplicación
     ```
 
-3.  **Instala las dependencias:**
+3.  **Construye y levanta los contenedores:**
+    Este comando construirá las imágenes de la base de datos y del backend, y los iniciará en segundo plano.
     ```sh
-    pip install -r requirements.txt
+    docker-compose up --build -d
     ```
+
+4.  **Inicializa la base de datos con Alembic:**
+    La primera vez, necesitas "sellar" la base de datos para que Alembic sepa que el esquema ya ha sido creado por el script `init.sql`.
+    ```sh
+    docker-compose run --rm backend python -m alembic stamp head
+    ```
+
+¡Y eso es todo! Tu entorno está listo.
+
+## Flujo de Trabajo Diario
+
+- **Iniciar el entorno:** `docker-compose up -d`
+- **Detener el entorno:** `docker-compose down`
+- **Ver logs del backend:** `docker-compose logs -f backend`
 
 ## Comandos de la Base de Datos (Alembic)
 
-La gestión de la base de datos se realiza con Alembic. Antes de ejecutar estos comandos, asegúrate de que las variables de entorno para la conexión a la base de datos están configuradas o de que los valores por defecto en `alembic/env.py` son correctos.
+**Importante:** Todos los comandos de Alembic deben ejecutarse a través de `docker-compose` para asegurar que se ejecutan en el entorno correcto.
 
 **Crear una nueva migración (autogenerada):**
-*Alembic comparará los modelos de SQLAlchemy con el estado actual de la base de datos y generará un script de migración.*
+*Después de hacer cambios en los modelos de SQLAlchemy, ejecuta este comando para generar el script de migración.*
 ```sh
-alembic revision --autogenerate -m "un_mensaje_descriptivo_sin_acentos"
+docker-compose run --rm backend python -m alembic revision --autogenerate -m "un_mensaje_descriptivo"
 ```
 
 **Aplicar la última migración a la base de datos:**
-*Esto ejecuta el último script de migración para actualizar el esquema de la base de datos.*
 ```sh
-alembic upgrade head
+docker-compose run --rm backend python -m alembic upgrade head
 ```
 
 **Revertir la última migración:**
-*Esto deshará los cambios de la última migración aplicada.*
 ```sh
-alembic downgrade -1
+docker-compose run --rm backend python -m alembic downgrade -1
 ```
 
 **Ver la revisión actual de la base de datos:**
-*Muestra el ID de la última migración aplicada a la base de datos.*
 ```sh
-alembic current
+docker-compose run --rm backend python -m alembic current
 ```
 
-## Ejecutar la Aplicación
+## Acceso a los Servicios
 
-Para ejecutar el servidor de desarrollo localmente:
-```sh
-uvicorn app.main:app --reload
-```
+- **API Backend**: La API estará disponible en `http://localhost:8090`
+- **Documentación Interactiva (Swagger UI)**: `http://localhost:8090/docs`
+- **Base de Datos (PostgreSQL)**: Puedes conectarte desde una herramienta externa (DBeaver, pgAdmin) usando el puerto `5433` en `localhost`.

@@ -25,13 +25,13 @@ config = context.config
 
 # --- CONFIGURACIÓN DE LA URL DE LA BASE DE DATOS CON VARIABLES DE ENTORNO ---
 
-# Lee las credenciales de las variables de entorno
-# Se usan valores por defecto para facilitar el desarrollo local
-DB_USER = os.getenv("DB_USER", "admin")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "IndustrialSecreto2025!")
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5433")
-DB_NAME = os.getenv("DB_NAME", "industrial_orchestrator")
+# Lee las credenciales de las variables de entorno.
+# Los valores por defecto están optimizados para el entorno Docker.
+DB_USER = os.getenv("POSTGRES_USER", "admin")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "IndustrialSecreto2025!")
+DB_HOST = os.getenv("DB_HOST", "postgres")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("POSTGRES_DB", "industrial_orchestrator")
 
 # Construye la URL de la base de datos
 DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"

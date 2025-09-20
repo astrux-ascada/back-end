@@ -1,5 +1,5 @@
 # Endpoints de la API para el modelo Section
-
+import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -45,3 +45,17 @@ async def read_sections(
     """
     sections = await repository_section.get_multi(db, skip=skip, limit=limit)
     return sections
+
+
+@router.get("/{section_id}", response_model=Section)
+async def read_section_by_id(
+    section_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Obtiene una sección por su ID.
+    """
+    section = await repository_section.get(db, id=section_id)
+    if not section:
+        raise HTTPException(status_code=404, detail="Sección no encontrada.")
+    return section

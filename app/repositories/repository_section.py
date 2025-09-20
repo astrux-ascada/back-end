@@ -1,13 +1,13 @@
 # Funciones de Repositorio para el modelo Section
-
+import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from app.models.plant import Section
+from app.core.models.plant import Section
 from app.schemas.section import SectionCreate
 
 
-async def get(db: AsyncSession, id: int):
+async def get(db: AsyncSession, id: uuid.UUID):
     """Obtiene una sección por su ID."""
     result = await db.execute(select(Section).filter(Section.id == id))
     return result.scalars().first()

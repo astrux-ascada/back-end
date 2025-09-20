@@ -1,5 +1,5 @@
 # Esquemas Pydantic para el modelo Section
-
+import uuid
 from pydantic import BaseModel
 from typing import Optional
 
@@ -21,7 +21,7 @@ class SectionCreate(SectionBase):
 # --- Esquema para la Lectura ---
 # Se utiliza para formatear los datos de salida al devolver una sección desde la API.
 class Section(SectionBase):
-    id: int
+    id: uuid.UUID
 
     class Config:
         # Esta configuración permite que el esquema Pydantic se cree a partir
