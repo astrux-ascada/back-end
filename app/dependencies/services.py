@@ -12,6 +12,8 @@ from app.telemetry.service import TelemetryService
 from app.procurement.service import ProcurementService
 from app.maintenance.service import MaintenanceService
 from app.core_engine.service import CoreEngineService
+ 
+ 
 
 # --- Dependencias antiguas (se irán eliminando a medida que refactoricemos) ---
 from app.contracts.IContactService import IContactService
@@ -59,11 +61,13 @@ def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService
     return ProcurementService(db)
 
 def get_maintenance_service(db: Session = Depends(get_db)) -> MaintenanceService:
+  
     return MaintenanceService(db)
 
 def get_core_engine_service(db: Session = Depends(get_db)) -> CoreEngineService:
     return CoreEngineService(db)
 
+ 
 
 # --- Inyectores antiguos (se irán eliminando) ---
 

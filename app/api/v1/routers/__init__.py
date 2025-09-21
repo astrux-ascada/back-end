@@ -11,7 +11,6 @@ from app.telemetry import api as telemetry_api
 from app.procurement import api as procurement_api
 from app.maintenance import api as maintenance_api
 from app.core_engine import api as core_engine_api
-
 # --- Routers antiguos (se irán eliminando) ---
 from . import (
     address,
@@ -46,6 +45,7 @@ api_router.include_router(telemetry_api.router) # El prefijo "/telemetry" ya est
 api_router.include_router(procurement_api.router) # El prefijo "/procurement" ya está en el router
 api_router.include_router(maintenance_api.router) # El prefijo "/maintenance" ya está en el router
 api_router.include_router(core_engine_api.router) # El prefijo "/core-engine" ya está en el router
+ 
 
 
 # --- REGISTRO DE ROUTERS ANTIGUOS ---
