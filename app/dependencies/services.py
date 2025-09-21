@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.identity.auth_service import AuthService
 from app.assets.service import AssetService
 from app.telemetry.service import TelemetryService
+from app.procurement.service import ProcurementService
 
 # --- Dependencias antiguas (se irán eliminando a medida que refactoricemos) ---
 from app.contracts.IContactService import IContactService
@@ -54,6 +55,10 @@ def get_asset_service(db: Session = Depends(get_db)) -> AssetService:
 def get_telemetry_service(db: Session = Depends(get_db)) -> TelemetryService:
     """Proporciona una instancia del TelemetryService de Astruxa."""
     return TelemetryService(db)
+
+def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
+    """Proporciona una instancia del ProcurementService de Astruxa."""
+    return ProcurementService(db)
 
 
 # --- Inyectores antiguos (se irán eliminando) ---
