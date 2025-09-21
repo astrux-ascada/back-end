@@ -37,3 +37,7 @@ class CoreEngineRepository:
     def list_data_sources(self, skip: int = 0, limit: int = 100) -> List[models.DataSource]:
         """Lista todas las fuentes de datos con paginación."""
         return self.db.query(models.DataSource).offset(skip).limit(limit).all()
+
+    def list_active_data_sources(self) -> List[models.DataSource]:
+        """Obtiene una lista de todas las fuentes de datos marcadas como activas."""
+        return self.db.query(models.DataSource).filter(models.DataSource.is_active == True).all()
