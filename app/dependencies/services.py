@@ -11,6 +11,9 @@ from app.assets.service import AssetService
 from app.telemetry.service import TelemetryService
 from app.procurement.service import ProcurementService
 from app.maintenance.service import MaintenanceService
+from app.core_engine.service import CoreEngineService
+ 
+ 
 
 # --- Dependencias antiguas (se irán eliminando a medida que refactoricemos) ---
 from app.contracts.IContactService import IContactService
@@ -46,25 +49,25 @@ from app.services.vital_sign_service import VitalSignService
 # --- Inyectores para Módulos de Astruxa ---
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
-    """Proporciona una instancia del AuthService de Astruxa."""
     return AuthService(db)
 
 def get_asset_service(db: Session = Depends(get_db)) -> AssetService:
-    """Proporciona una instancia del AssetService de Astruxa."""
     return AssetService(db)
 
 def get_telemetry_service(db: Session = Depends(get_db)) -> TelemetryService:
-    """Proporciona una instancia del TelemetryService de Astruxa."""
     return TelemetryService(db)
 
 def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
-    """Proporciona una instancia del ProcurementService de Astruxa."""
     return ProcurementService(db)
 
 def get_maintenance_service(db: Session = Depends(get_db)) -> MaintenanceService:
-    """Proporciona una instancia del MaintenanceService de Astruxa."""
+  
     return MaintenanceService(db)
 
+def get_core_engine_service(db: Session = Depends(get_db)) -> CoreEngineService:
+    return CoreEngineService(db)
+
+ 
 
 # --- Inyectores antiguos (se irán eliminando) ---
 
