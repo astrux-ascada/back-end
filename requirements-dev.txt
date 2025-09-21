@@ -3,6 +3,7 @@ alabaster==1.0.0
 alembic==1.13.3
 annotated-types==0.7.0
 anyio==4.9.0
+async-opcua==1.0.6  # Añadido para la comunicación OPC UA
 astroid==3.3.11
 babel==2.17.0
 bandit==1.7.9
@@ -69,6 +70,7 @@ pyflakes==3.4.0
 Pygments==2.19.2
 PyJWT==2.10.1
 pylint==3.3.7
+pymodbus==3.6.8  # Añadido para la comunicación Modbus
 pyparsing==3.2.3
 pyright==1.1.403
 pytest==8.3.5
