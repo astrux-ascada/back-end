@@ -1,0 +1,17 @@
+ Archivo .aiexclude
+
+# Ignorar archivos de secretos y credenciales
+#.env
+*.env
+*.pem
+*.key
+
+# Ignorar directorios de dependencias y control de versiones
+#.git/
+.idea/
+.venv/
+node_modules/
+__pycache__/
+
+# Ignorar archivos de configuración específicos del IDE
+.sonarlint/

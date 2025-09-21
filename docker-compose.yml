@@ -1,0 +1,54 @@
+services:
+  # --- FastAPI Application Service ---
+  backend_api:
+    build: .
+    container_name: astruxa_backend_api
+    ports:
+      - "5678:5678"
+      - "8051:8000"
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=backend_db
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+    depends_on:
+      backend_db:
+        condition: service_healthy
+
+  # --- TimescaleDB Service (antes PostgreSQL) ---
+  backend_db:
+    # --- MEJORA CLAVE: Cambiamos la imagen a la oficial de TimescaleDB ---
+    image: timescale/timescaledb:latest-pg16
+    container_name: astruxa_backend_db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
+  # --- Servicio para ejecutar comandos y scripts ---
+  runner:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=backend_db
+    volumes:
+      - .:/app
+    depends_on:
+      backend_db:
+        condition: service_healthy
+
+# Define the named volume used for data persistence.
+volumes:
+  postgres_data:

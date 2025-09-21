@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Entorno virtual de Python
+.venv
+venv/
+env/
+
+# Archivos de IDE y sistema operativo
+.idea/
+.vscode/
+*.pyc
+__pycache__/
+*.swp
+*~
+.DS_Store
+
+# Logs y bases de datos locales
+*.log
+app.log
+
+# Artefactos de pruebas
+.pytest_cache/
+htmlcov/
+
+# Archivos de configuración local que no deben ir en la imagen
+.env
+.env.*

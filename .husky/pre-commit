@@ -1,0 +1,27 @@
+#!/bin/sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# --- LA SOLUCIÓN DEFINITIVA: EJECUTAR DENTRO DE DOCKER ---
+# Este script delega la ejecución de las herramientas de calidad a un contenedor
+# de Docker. Esto garantiza un entorno consistente y aislado, eliminando
+# cualquier problema relacionado con la configuración del PATH en la máquina local.
+
+echo "Running pre-commit hook inside Docker..."
+
+# 1. Formatear el código con Black dentro del contenedor 'runner'
+echo "Formatting with Black (inside Docker)..."
+docker-compose run --rm runner poetry run black .
+if [ $? -ne 0 ]; then
+    echo "Black formatting failed. Please check the output above."
+    exit 1
+fi
+
+# 2. Revisar y arreglar el código con Ruff dentro del contenedor 'runner'
+echo "Linting with Ruff (inside Docker)..."
+docker-compose run --rm runner poetry run ruff check --fix .
+if [ $? -ne 0 ]; then
+    echo "Ruff checks failed. Please fix the issues before committing."
+    exit 1
+fi
+
+echo "Pre-commit checks passed."

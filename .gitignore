@@ -1,0 +1,106 @@
+# ===================================================================
+# General
+# ===================================================================
+
+# Environments & Secrets
+# Nunca subas al repositorio archivos con secretos o variables de entorno.
+.env
+.env.*.local
+.env.local
+local_settings.py
+.pypirc
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos generados por el Sistema Operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ===================================================================
+# IDE & Editor Directories (WebStorm, VSCode, etc.)
+# ===================================================================
+.idea/
+.vscode/
+.spyderproject
+.ropeproject
+
+# ===================================================================
+# Python / FastAPI Backend
+# ===================================================================
+
+# Entornos Virtuales
+.venv/
+venv/
+# env/
+# ENV/
+
+# Caches y archivos compilados
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.cache
+
+# Reportes de tests y cobertura
+htmlcov/
+.coverage
+.coverage.*
+cover/
+
+# Almacenamiento de la aplicación (archivos subidos por usuarios)
+/storage/
+
+# ===================================================================
+# JavaScript / Node.js (Común para Web y Móvil)
+# ===================================================================
+
+# Dependencias
+node_modules/
+
+# ===================================================================
+# Next.js (Web Frontend)
+# ===================================================================
+.next/
+out/
+.swc/
+next-env.d.ts
+
+# ===================================================================
+# React Native (Mobile App)
+# ===================================================================
+
+# Carpetas de Build
+/android/app/build/
+/android/build/
+/ios/build/
+
+# Caches
+/android/.gradle/
+
+# Archivos generados
+/android/local.properties
+/ios/Pods/
+
+# Expo (si lo usas)
+.expo/
+.generated/
+
+# ===================================================================
+# Build & Distribution
+# ===================================================================
+build/
+dist/
+/site
+*.egg-info/
