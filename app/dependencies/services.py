@@ -10,6 +10,7 @@ from app.identity.auth_service import AuthService
 from app.assets.service import AssetService
 from app.telemetry.service import TelemetryService
 from app.procurement.service import ProcurementService
+from app.maintenance.service import MaintenanceService
 
 # --- Dependencias antiguas (se irán eliminando a medida que refactoricemos) ---
 from app.contracts.IContactService import IContactService
@@ -59,6 +60,10 @@ def get_telemetry_service(db: Session = Depends(get_db)) -> TelemetryService:
 def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
     """Proporciona una instancia del ProcurementService de Astruxa."""
     return ProcurementService(db)
+
+def get_maintenance_service(db: Session = Depends(get_db)) -> MaintenanceService:
+    """Proporciona una instancia del MaintenanceService de Astruxa."""
+    return MaintenanceService(db)
 
 
 # --- Inyectores antiguos (se irán eliminando) ---
