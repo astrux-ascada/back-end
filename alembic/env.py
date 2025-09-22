@@ -11,8 +11,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # --- 2. Importación de Componentes Clave de la Aplicación ---
 from app.core.config import settings
-from app.db.base_model import BaseModel
-from app.models import *
+# --- MEJORA: Importar la Base correcta y todos los modelos de los módulos ---
+from app.db.base_class import Base
+from app.identity.models import *
+from app.assets.models import *
+from app.telemetry.models import *
+from app.procurement.models import *
+from app.maintenance.models import *
+from app.core_engine.models import *
 
 config = context.config
 
@@ -22,7 +28,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # --- 3. Definición del Objetivo para Autogenerate ---
-target_metadata = BaseModel.metadata
+# Alembic usará los metadatos de nuestra Base para detectar cambios.
+target_metadata = Base.metadata
 
 # El resto del archivo es el boilerplate estándar de Alembic
 def run_migrations_offline() -> None:
