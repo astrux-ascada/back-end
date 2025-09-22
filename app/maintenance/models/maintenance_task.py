@@ -32,5 +32,4 @@ class MaintenanceTask(Base):
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
-# Añadir la relación inversa en WorkOrder
-WorkOrder.tasks = relationship("MaintenanceTask", order_by=MaintenanceTask.order, back_populates="work_order")
+# La relación inversa se definirá en app/maintenance/models/__init__.py para evitar dependencias circulares.

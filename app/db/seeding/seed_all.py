@@ -1,18 +1,19 @@
 # /app/db/seeding/seed_all.py
+"""
+Script de siembra maestro para la base de datos de Astruxa.
+
+Ejecuta todos los scripts de siembra de los módulos en el orden correcto
+de dependencia para poblar la base de datos con datos iniciales.
+"""
 
 import logging
-import random
-from faker import Faker
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 
 from app.core.database import SessionLocal
-from app.models.client import Client
-from ._seed_diseases import seed_diseases
-from ._seed_clients import seed_clients
-from ._seed_addictions import seed_addictions_for_user
-from ._seed_menstrual_cycle import seed_menstrual_cycle_for_user
-from ._seed_pregnancy import seed_pregnancy_for_user
+# --- Importar los nuevos seeders de nuestros módulos ---
+from ._seed_core_engine import seed_core_engine
+# from ._seed_identity import seed_identity # Futuro
+# from ._seed_assets import seed_assets # Futuro
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,40 +21,16 @@ logger = logging.getLogger(__name__)
 
 def seed_all(db: Session):
     """
-    Ejecuta todos los scripts de siembra en el orden correcto de dependencia.
-    Selecciona usuarios de prueba dinámicamente para poblar datos específicos.
+    Ejecuta todos los scripts de siembra en el orden correcto.
     """
-    logger.info("--- Iniciando Proceso de Siembra Maestro ---")
-    fake = Faker("es_ES")
-
-    # 1. Sembrar datos maestros y clientes base
-    seed_diseases(db)
-    seed_clients(db)
-
-    # --- INICIO DE LA SOLUCIÓN: Selección dinámica de usuarios ---
-    logger.info("--- Iniciando siembra de datos para usuarios de prueba seleccionados dinámicamente ---")
-
-    # 2. Seleccionar un usuario femenino aleatorio para datos específicos
-    female_user = db.query(Client).filter(Client.sex == 'F').order_by(func.random()).first()
-
-    if female_user:
-        logger.info(f"Poblando datos de ciclo menstrual y embarazo para: {female_user.email}")
-        seed_menstrual_cycle_for_user(db, female_user, fake)
-        seed_pregnancy_for_user(db, female_user, fake)
-    else:
-        logger.warning("No se encontró un usuario femenino para la siembra de datos específicos.")
-
-    # 3. Seleccionar dos usuarios aleatorios (cualquier género) para datos generales
-    # Nos aseguramos de no seleccionar al mismo usuario dos veces si es posible
-    users_for_general_data = db.query(Client).order_by(func.random()).limit(2).all()
+    logger.info("--- Iniciando Proceso de Siembra Maestro para Astruxa ---")
     
-    if users_for_general_data:
-        for user in users_for_general_data:
-            logger.info(f"Poblando datos generales (adicciones) para: {user.email}")
-            seed_addictions_for_user(db, user, fake)
-    else:
-        logger.warning("No se encontraron usuarios para la siembra de datos generales.")
-    # --- FIN DE LA SOLUCIÓN ---
+    # El orden es importante si hay dependencias entre los datos.
+    # seed_identity(db) # Ej: Crear Roles
+    # seed_assets(db)   # Ej: Crear AssetTypes
+    seed_core_engine(db) # Crear la DataSource para el simulador
+    
+    logger.info("--- Proceso de Siembra Maestro Finalizado ---")
 
 
 if __name__ == "__main__":
@@ -61,8 +38,8 @@ if __name__ == "__main__":
     db_session = SessionLocal()
     try:
         seed_all(db_session)
-        db_session.commit()
-        logger.info("--- Proceso de Siembra Maestro Finalizado con Éxito ---")
+        db_session.commit() # Hacemos un commit final por si algún seeder no lo hizo.
+        logger.info("Siembra maestra completada con éxito.")
     except Exception as e:
         logger.error(f"Ocurrió un error inesperado durante la siembra maestra: {e}", exc_info=True)
         db_session.rollback()

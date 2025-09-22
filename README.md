@@ -1,261 +1,116 @@
-# EmergQR - Backend
+# Astruxa - Industrial Orchestrator 5.0 (Backend)
 
-Este proyecto es el Backend principal construido con **FastAPI** para la aplicación móvil **EmergQR
-**.
+Este proyecto es el backend principal para **Astruxa**, un sistema de control, monitoreo y automatización industrial de última generación, construido con **FastAPI**.
 
 ## Descripción
 
-El Backend de EmergQR está diseñado para ser el punto central de lógica de negocio, gestión de datos
-y autenticación. Proporciona una API RESTful segura y eficiente para que la aplicación móvil pueda
-operar.
+Astruxa es el cerebro digital de una planta industrial. Su propósito es unificar sistemas dispares (SCADA, MES, ERP), predecir fallos mediante IA y automatizar operaciones. Este backend proporciona una API modular, segura y de alto rendimiento para gestionar todos los aspectos de la planta, desde la identidad de los usuarios hasta la ingesta de datos de telemetría en tiempo real.
 
-## Características
+## Arquitectura y Principios
 
-- Autenticación de usuarios con JWT.
-- Gestión de perfil de cliente completo (datos personales, dirección, datos de emergencia).
-- Gestión de contactos de emergencia.
-- **Gestión de perfil médico:**
-    - Alergias
-    - Enfermedades crónicas
-    - Historial de eventos médicos (cirugías, estudios, etc.)
-    - Recordatorios de medicación
-- **Perfil Público de Emergencia:** Generación de un perfil público (JSON y vista HTML) accesible a
-  través de un código QR.
-- **Almacenamiento de Archivos:** Subida y servicio de archivos estáticos para avatares de perfil.
-- **Procesamiento DICOM:** Endpoint para la extracción de metadatos de archivos DICOM.
-- **Seguridad:**
-    - Rate Limiting para proteger endpoints sensibles contra ataques de fuerza bruta.
-    - Middleware de CORS configurado para permitir la comunicación con el frontend.
-    - Manejo de errores y excepciones personalizadas para respuestas de API consistentes.
-- **Base de Datos:**
-    - Integración con PostgreSQL a través de SQLAlchemy 2.0 (ORM asíncrono).
-- Uso de Alembic para migraciones de base de datos.
-- **Entorno de Desarrollo:**
-    - Soporte completo para Docker y Docker Compose para un entorno aislado y reproducible.
-    - Siembra de datos (seeding) para poblar la base de datos con datos de prueba realistas.
-- **Documentación:** API documentada automáticamente con Swagger UI y ReDoc.
-- Soporte para pruebas unitarias y de integración.
-- Configuración de variables de entorno para facilitar el despliegue en diferentes entornos.
-- Integración con un sistema de logging para registrar eventos importantes y errores.
+El sistema está construido siguiendo un manifiesto estricto:
 
-## Requisitos
+- **Arquitectura Limpia y Modular:** La lógica está organizada por dominios de negocio (`identity`, `assets`, `maintenance`, etc.), no por capas técnicas.
+- **Principios SOLID:** Cada componente tiene una única responsabilidad, promoviendo un código mantenible y escalable.
+- **Seguridad Zero Trust:** Ningún componente confía en otro por defecto. Se aplica autenticación y autorización en cada capa.
+- **Enfoque Industrial e IoT:** Diseñado para ser robusto, operar on-premise y comunicarse con hardware industrial a través de protocolos como OPC UA.
 
-- Python 3.12+
-- PostgreSQL 16+
-- Docker y Docker Compose (altamente recomendado)
+## Stack Tecnológico
 
-Las dependencias principales de Python se gestionan a través de `requirements.txt`:
+- **Backend:** FastAPI
+- **Base de Datos:** PostgreSQL + TimescaleDB (para series temporales)
+- **ORM:** SQLAlchemy 2.0
+- **Migraciones:** Alembic
+- **Contenedores:** Docker y Docker Compose
+- **Protocolos Industriales:** OPC UA (implementado), Modbus (planificado)
 
-- `fastapi`
-- `uvicorn[standard]`
-- `sqlalchemy`
-- `psycopg[binary]`
-- `alembic`
-- `pydantic`
-- `passlib[bcrypt]`
-- `python-jose[cryptography]`
-- `python-dotenv`
-- `slowapi`
+---
 
-## Instalación
+## Development & Testing Workflow
 
-Para instalar y ejecutar el proyecto, sigue estos pasos:
+Esta sección describe la secuencia exacta de comandos para levantar el entorno de desarrollo completo, incluyendo el PLC simulado para probar el flujo de datos en tiempo real.
 
-1. Clona el repositorio:
+**Necesitarás dos terminales abiertas en la raíz del proyecto.**
+
+### Terminal 1: Docker (La Aplicación Principal)
+
+En esta terminal, gestionaremos los servicios de la aplicación (backend y base de datos).
+
+**1. Limpieza Total (Paso Inicial y Crucial)**
+
+Para asegurar un inicio 100% limpio y eliminar cualquier resto de ejecuciones anteriores (contenedores, redes, volúmenes de base de datos), ejecuta:
 
 ```sh
-git clone https://github.com/emergqr/back-end.git
-cd back-end
-```
-
-## Estructura del Proyecto
-
-```
-
-    bff_mobil/
-    ├── app/
-    │ ├── api/
-    │ │ └── endpoints/
-    │ │ └── files.py
-    │ ├── core/
-    │ │ ├── config.py
-    │ │ └── tasks.py
-    │ ├── dependencies/
-    │ │ └── auth.py
-    │ ├── middlewares/
-    │ │ └── file_validation.py
-    │ ├── models/
-    │ │ ├── schemas.py
-    │ │ ├── client.py
-    │ │ ├── contact.py
-    │ │ └── client_contact.py
-    │ ├── routers/
-    │ │ └── auth.py
-    │ └── main.py
-    ├── requirements.txt
-    ├── Dockerfile
-    ├── .dockerignore
-    └── docker-compose.yml
-
-```
-
-## Configuración
-
-### 1. Dependencias
-
-El archivo `requirements.txt` contiene todas las dependencias de Python. Para instalarlas, ejecuta:
-
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# venv\Scripts\activate    # Windows
-pip install -r requirements.txt
-```
-
-### 2. Variables de Entorno
-
-Crea un archivo `.env` en la raíz del proyecto con la siguiente estructura:
-
-```env
-# Base de Datos (para desarrollo local, Docker lo sobreescribe)
-POSTGREs_HOST=localhost
-POSTGREs_PORT=5432
-POSTGREs_ CLIENT=your_client
-POSTGREs_PASSWORD=your_password
-POSTGREs_NAME=your_database
-
-# JWT
-JWT_SECRET=tu-clave-secreta-muy-segura
-JWT_ALGORITHM=HS256
-JWT_EXPIRE_MINUTES=1440 # 24 horas
-
-# Entorno
-ENV=development # development | testing | production
-```
-
-Para trabajar ya en docekr directamente con el contenedor, puedes crear un archivo `.env` en la raíz
-del proyecto con la siguiente estructura:
-destruye el contenedor y crea uno nuevo con los cambios.
-
-```bash
 docker-compose down -v
 ```
 
-create a new container with the changes.
+> **¿Qué hace?** El flag `-v` es la clave. Destruye los contenedores y, lo más importante, elimina el volumen donde se guardan los datos de la base de datos, forzando a Alembic a recrearla desde cero.
 
-```bash
-docker-compose up -d --build
+**2. Construir y Levantar los Contenedores**
+
+Este comando reconstruirá las imágenes con el último código y las iniciará en segundo plano.
+
+```sh
+docker-compose up --build -d
 ```
 
-### 3. Base de Datos
+> **¿Qué hace?** `--build` le dice a Docker que reconstruya la imagen de la aplicación, incluyendo cualquier nueva dependencia o cambio en el código. `-d` (detached) lo ejecuta en segundo plano.
 
-Para inicializar la base de datos, asegúrate de que el contenedor de PostgreSQL esté corriendo.
-Luego, ejecuta las migraciones:
+**3. Poblar la Base de Datos (Seeding)**
 
-```bash     
-docker-compose exec bff_mobil alembic upgrade head
+Una vez que los contenedores estén corriendo, ejecuta este comando para poblar la base de datos con datos iniciales, como la configuración de nuestro PLC simulado.
+
+```sh
+docker-compose run --rm runner python -m app.db.seeding.seed_all
 ```
 
-### 4. Comandos Útiles
+> **¿Qué hace?** `run --rm` crea un contenedor temporal del servicio `runner` para ejecutar un único comando (nuestro script de siembra) y luego lo elimina automáticamente (`--rm`).
 
-#### Crear una nueva migración
+**4. Monitorear los Logs**
 
-Después de modificar un modelo de SQLAlchemy, crea una nueva migración:
+Deja esta terminal abierta observando los logs de la aplicación. Aquí es donde veremos llegar los datos del PLC.
 
-```bash
-docker-compose exec bff_mobil alembic revision --autogenerate -m "Descripción de la migración"
+```sh
+docker-compose logs -f backend_api
 ```
 
-#### Aplicar las migraciones
+> **¿Qué hace?** `logs -f` muestra los logs de un servicio en tiempo real (`-f` significa "follow").
 
-Aplica las migraciones pendientes a la base de datos:
+### Terminal 2: Local (El PLC Simulador)
 
-```bash
-docker-compose exec bff_mobil alembic upgrade head
+En esta terminal, ejecutaremos el script que simula el hardware de la planta.
+
+**1. Activar el Entorno Virtual**
+
+Esto aísla las librerías de Python para este proyecto.
+
+```sh
+source .venv/bin/activate
 ```
 
-#### Revertir la última migración
+**2. Instalar las Dependencias**
 
-Si necesitas deshacer la última migración, usa:
+Instala todas las librerías, incluyendo `asyncua`, en tu entorno local para poder ejecutar el simulador.
 
-```bash
-docker-compose exec bff_mobil alembic downgrade -1
-``` 
+```sh
+pip install -r requirements-dev.txt
+```
 
-¡Listo! Tu backend está ahora corriendo y completamente funcional.
+**3. Iniciar el Simulador**
+
+Con las dependencias instaladas, ejecuta el script:
+
+```sh
+python simulators/plc_simulator.py
+```
+
+> **¿Qué hace?** Inicia un servidor OPC UA en tu máquina local (`localhost`) en el puerto 4840. El `CoreEngine` dentro de Docker se conectará a él.
+
+---
 
 ## Documentación de la API
 
-Con la aplicación corriendo, puedes acceder a la documentación interactiva de la API, donde podrás
-ver todos los endpoints y probarlos directamente desde el navegador.
+Con la aplicación corriendo, puedes acceder a la documentación interactiva de la API:
 
-- **Swagger UI**: http://localhost:8051/api/v1/docs
-- **ReDoc**: http://localhost:8051/api/v1/redoc
-
-## Comandos Útiles de Desarrollo
-
-Todos los comandos se ejecutan desde la raíz del proyecto.
-
-#### Ver Logs en Tiempo Real
-
-Para ver los logs de la aplicación y depurar problemas:
-
-### 🐳 Comandos útiles de Docker Compose
-
-Esta aplicación utiliza Docker Compose para gestionar los servicios. A continuación se listan los
-comandos más comunes que puedes usar durante el desarrollo.
-
-#### 🔧 Comandos básicos
-
-| Comando                     | Descripción                                                                                                   |
-|-----------------------------|---------------------------------------------------------------------------------------------------------------|
-| `docker compose up`         | Crea y arranca todos los contenedores. Usa `-d` para ejecutar en segundo plano.                               |
-| `docker compose down`       | Detiene y elimina contenedores, redes e imágenes creadas por `up`.                                            |
-| `docker compose up --build` | Reconstruye las imágenes antes de iniciar los contenedores. Útil tras cambios en el código o en `Dockerfile`. |
-
-#### 🛠️ Gestión de servicios
-
-| Comando                                    | Descripción                                                                                        |
-|--------------------------------------------|----------------------------------------------------------------------------------------------------|
-| `docker compose ps`                        | Muestra el estado de los contenedores en ejecución.                                                |
-| `docker compose logs`                      | Muestra los logs de todos los servicios. Usa `logs -f <servicio>` para seguir logs en tiempo real. |
-| `docker compose exec <servicio> <comando>` | Ejecuta un comando dentro de un contenedor en ejecución. Ej: `docker compose exec app bash`        |
-| `docker compose restart <servicio>`        | Reinicia un servicio específico.                                                                   |
-| `docker compose stop`                      | Detiene los contenedores sin eliminarlos.                                                          |
-| `docker compose start`                     | Inicia contenedores previamente detenidos.                                                         |
-
-#### 📦 Construcción e imágenes
-
-| Comando                | Descripción                                                         |
-|------------------------|---------------------------------------------------------------------|
-| `docker compose build` | Construye o reconstruye las imágenes definidas en el `compose.yml`. |
-| `docker compose pull`  | Descarga las imágenes especificadas en el archivo compose.          |
-| `docker compose push`  | Sube las imágenes de los servicios a un registry.                   |
-
-#### 🧪 Mantenimiento
-
-| Comando                     | Descripción                                                                   |
-|-----------------------------|-------------------------------------------------------------------------------|
-| `docker compose config`     | Valida y muestra la configuración final del archivo `compose.yml` (resuelto). |
-| `docker compose rm`         | Elimina contenedores detenidos.                                               |
-| `docker compose images`     | Lista las imágenes usadas por los servicios.                                  |
-| `docker compose volumes ls` | Muestra los volúmenes asociados al proyecto.                                  |
-
-#### 🚀 Desarrollo (opcional)
-
-| Comando                                   | Descripción                                                                                      |
-|-------------------------------------------|--------------------------------------------------------------------------------------------------|
-| `docker compose watch`                    | Monitorea cambios en el código y reinicia contenedores automáticamente (requiere configuración). |
-| `docker compose run <servicio> <comando>` | Ejecuta un comando ad-hoc en un nuevo contenedor del servicio. Ideal para migraciones o pruebas. |
-
-> 💡 **Consejo**: Si usas múltiples archivos de compose (ej: `docker-compose.yml`,
-`docker-compose.prod.yml`), puedes especificarlos con `-f`:
-> ```bash
-> docker compose -f docker-compose.yml -f docker-compose.prod.yml up
-> ```
-
-> 📁 **Proyecto**: Puedes cambiar el nombre del proyecto con `-p`:
-> ```bash
-> docker compose -p mi-app-proyecto up
-> ```
-
+- **Swagger UI**: [http://localhost:8051/api/v1/docs](http://localhost:8051/api/v1/docs)
+- **ReDoc**: [http://localhost:8051/api/v1/redoc](http://localhost:8051/api/v1/redoc)

@@ -46,7 +46,7 @@ COPY --from=builder /opt/venv /opt/venv
 # 3. Copy the application code and necessary configuration files.
 COPY ./app ./app
 COPY alembic.ini .
-COPY ./templates ./templates
+# COPY ./templates ./templates
 COPY alembic ./alembic
 
 # 4. Copy the entrypoint script and make it executable.

@@ -3,7 +3,7 @@ alabaster==1.0.0
 alembic==1.13.3
 annotated-types==0.7.0
 anyio==4.9.0
-async-opcua==1.0.6  # Añadido para la comunicación OPC UA
+asyncua==1.0.6  # Corregido: Nombre real del paquete para OPC UA
 astroid==3.3.11
 babel==2.17.0
 bandit==1.7.9
