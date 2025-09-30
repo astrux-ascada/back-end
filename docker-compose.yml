@@ -5,7 +5,7 @@ services:
     container_name: astruxa_backend_api
     ports:
       - "5678:5678"
-      - "8051:8000"
+      - "8071:8000" # Puerto de salida cambiado a 8071
     environment:
       - POSTGRES_HOST=backend_db
       - REDIS_HOST=redis

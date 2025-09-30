@@ -19,7 +19,7 @@ class User(Base):
 
     # --- Relaciones Muchos-a-Muchos ---
     roles = relationship("Role", secondary="user_roles", back_populates="users")
-    assigned_sectors = relationship("Sector", secondary="user_sectors", back_populates="users")
+    # La relación `assigned_sectors` se definirá en el __init__.py del módulo para evitar importaciones circulares.
 
     # --- Campos de Perfil y Autenticación ---
     email = Column(String, unique=True, index=True, nullable=False)
