@@ -1,14 +1,31 @@
-import redis.asyncio as redis
+# /app/core/redis.py
+"""
+Servicio central para la gestión de la conexión con Redis.
 
-class RedisClient:
-    def __init__(self):
-        self.client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+Este módulo inicializa un pool de conexiones y proporciona una función para
+obtener un cliente de Redis, asegurando un uso eficiente de los recursos.
+"""
 
-    async def publish(self, channel: str, message: str):
-        await self.client.publish(channel, message)
+import redis
+from app.core.config import settings
 
-    async def get(self, key: str):
-        return await self.client.get(key)
+# --- Creación del Pool de Conexiones ---
+# Se crea una única vez cuando la aplicación arranca.
+redis_connection_pool = redis.ConnectionPool(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=0,  # Usamos la base de datos 0 por defecto
+    decode_responses=True  # Decodifica las respuestas de bytes a strings (utf-8)
+)
 
-    async def set(self, key: str, value: str, ex: int = None):
-        await self.client.set(key, value, ex=ex)
+# --- Cliente Principal de Redis ---
+# Este es el cliente que el resto de la aplicación usará.
+redis_client = redis.Redis(connection_pool=redis_connection_pool)
+
+
+# --- Dependencia para FastAPI ---
+def get_redis_client() -> redis.Redis:
+    """
+    Dependencia de FastAPI que inyecta el cliente de Redis en los endpoints.
+    """
+    return redis_client

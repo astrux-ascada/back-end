@@ -6,20 +6,22 @@ services:
     ports:
       - "5678:5678"
       - "8051:8000"
-    env_file:
-      - .env
     environment:
       - POSTGRES_HOST=backend_db
+      - REDIS_HOST=redis
+    env_file:
+      - .env
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/app
     depends_on:
       backend_db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
-  # --- TimescaleDB Service (antes PostgreSQL) ---
+  # --- TimescaleDB Service ---
   backend_db:
-    # --- MEJORA CLAVE: Cambiamos la imagen a la oficial de TimescaleDB ---
     image: timescale/timescaledb:latest-pg16
     container_name: astruxa_backend_db
     environment:
@@ -35,20 +37,37 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-  
+
+  # --- Redis Service ---
+  redis:
+    image: redis:alpine
+    container_name: astruxa_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # --- Servicio para ejecutar comandos y scripts ---
   runner:
     build: .
-    env_file:
-      - .env
     environment:
       - POSTGRES_HOST=backend_db
+      - REDIS_HOST=redis
+    env_file:
+      - .env
     volumes:
       - .:/app
     depends_on:
       backend_db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
-# Define the named volume used for data persistence.
 volumes:
   postgres_data:
+  redis_data:
