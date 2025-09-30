@@ -7,12 +7,12 @@ y los une en un único APIRouter para ser incluido en la aplicación principal.
 
 from fastapi import APIRouter
 
+from app.assets import api as assets_api
+from app.core_engine import api as core_engine_api
 # --- Routers de Módulos de Astruxa ---
 from app.identity import api as identity_api
-from app.assets import api as assets_api
-from app.telemetry import api as telemetry_api
-from app.procurement import api as procurement_api
 from app.maintenance import api as maintenance_api
+
 from app.core_engine import api as core_engine_api
 from app.sectors import api as sectors_api
 

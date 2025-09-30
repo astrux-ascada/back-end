@@ -5,12 +5,27 @@ services:
     container_name: astruxa_backend_api
     ports:
       - "5678:5678"
+ 
       - "8071:8000" # Puerto de salida cambiado a 8071
     environment:
       - POSTGRES_HOST=backend_db
       - REDIS_HOST=redis
     env_file:
       - .env
+ 
+  #    - "8051:8000"
+    # --- MEJORA: Definimos explícitamente las variables de entorno ---
+    # Esto evita que una variable DATABASE_URL conflictiva del .env entre al contenedor.
+    # Docker-compose leerá las variables del .env y las sustituirá aquí.
+   # environment:
+    #  - POSTGRES_HOST=backend_db
+    #  - POSTGRES_USER=${POSTGRES_USER}
+    #  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    #  - POSTGRES_DB=${POSTGRES_DB}
+    #  - POSTGRES_PORT=${POSTGRES_PORT}
+    #  - JWT_SECRET=${JWT_SECRET}
+    #  - ENV=${ENV}
+ 
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/app
@@ -55,11 +70,23 @@ services:
   # --- Servicio para ejecutar comandos y scripts ---
   runner:
     build: .
+
     environment:
       - POSTGRES_HOST=backend_db
       - REDIS_HOST=redis
     env_file:
       - .env
+
+    # Aplicamos la misma mejora al runner
+ #   environment:
+ #     - POSTGRES_HOST=backend_db
+  #    - POSTGRES_USER=${POSTGRES_USER}
+  #    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+  #    - POSTGRES_DB=${POSTGRES_DB}
+  #    - POSTGRES_PORT=${POSTGRES_PORT}
+  #    - JWT_SECRET=${JWT_SECRET}
+   #   - ENV=${ENV}
+
     volumes:
       - .:/app
     depends_on:

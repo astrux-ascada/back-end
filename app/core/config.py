@@ -44,6 +44,7 @@ class Settings(BaseSettings):
             return v.replace("postgresql://", "postgresql+psycopg://")
         
         if info.data.get("POSTGRES_HOST") and info.data.get("POSTGRES_USER") and info.data.get("POSTGRES_DB"):
+
             return str(
                 PostgresDsn.build(
                     scheme="postgresql+psycopg",
@@ -54,12 +55,14 @@ class Settings(BaseSettings):
                     path=str(info.data.get("POSTGRES_DB")).lstrip("/"),
                 )
             )
-        raise ValueError("La configuración de la base de datos está incompleta.")
+raise ValueError("La configuración de la base de datos está incompleta.")
 
     # --- Configuración de JWT ---
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
+ 
     JWT_EXPIRE_MINUTES: int = 1080 # 18 horas
+ 
 
     # --- Configuración de Almacenamiento ---
     STORAGE_PATH: Path = ROOT_PATH / "storage"
