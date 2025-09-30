@@ -11,8 +11,8 @@ from typing import Optional, List, Any
 
 from pydantic import BaseModel, Field, Json
 
-# Importamos los esquemas de lectura de otros módulos para anidarlos
-from app.assets.schemas import AssetRead
+# --- MEJORA: Importar el DTO correcto de Assets para anidarlo ---
+from app.assets.schemas import AssetReadDTO
 from app.identity.schemas import UserRead
 from app.procurement.schemas import ProviderRead
 
@@ -56,11 +56,11 @@ class WorkOrderRead(WorkOrderBase):
     updated_at: datetime
     completed_at: Optional[datetime] = None
     
-    # --- Relaciones Anidadas ---
-    asset: AssetRead
+    # --- MEJORA: La relación anidada ahora usa el DTO correcto de Asset ---
+    asset: AssetReadDTO
     tasks: List[MaintenanceTaskRead] = []
     assigned_users: List[UserRead] = []
-    assigned_provider: Optional[ProviderRead] = None # Asumimos que solo puede haber un proveedor por orden
+    assigned_provider: Optional[ProviderRead] = None
 
     class Config:
         from_attributes = True

@@ -21,5 +21,6 @@ class Sector(Base):
     name = Column(String(100), unique=True, index=True, nullable=False)
     description = Column(String(255), nullable=True)
 
-    # --- Relación con User (Muchos-a-Muchos) ---
+    # --- Relaciones ---
     users = relationship("User", secondary="user_sectors", back_populates="assigned_sectors")
+    assets = relationship("Asset", back_populates="sector") # Relación inversa con Asset
