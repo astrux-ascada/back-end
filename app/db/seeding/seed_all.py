@@ -10,13 +10,11 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-
-# --- MEJORA: Usar importación absoluta para evitar errores de resolución ---
+# --- Importar todos los nuevos seeders de nuestros módulos ---
+from app.db.seeding._seed_sectors import seed_sectors
+from app.db.seeding._seed_identity import seed_identity
+from app.db.seeding._seed_assets import seed_assets
 from app.db.seeding._seed_core_engine import seed_core_engine
-
-# from ._seed_identity import seed_identity # Futuro
-# from ._seed_assets import seed_assets # Futuro
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,12 +26,11 @@ def seed_all(db: Session):
     """
     logger.info("--- Iniciando Proceso de Siembra Maestro para Astruxa ---")
     
-
-    # El orden es importante si hay dependencias entre los datos.
-    # seed_identity(db) # Ej: Crear Roles
-    # seed_assets(db)   # Ej: Crear AssetTypes
-    seed_core_engine(db) # Crear la DataSource para el simulador
-
+    # El orden es crucial para respetar las claves foráneas.
+    seed_sectors(db)
+    seed_identity(db)
+    seed_assets(db)
+    seed_core_engine(db)
     
     logger.info("--- Proceso de Siembra Maestro Finalizado ---")
 
@@ -43,9 +40,7 @@ if __name__ == "__main__":
     db_session = SessionLocal()
     try:
         seed_all(db_session)
-
-        db_session.commit()
-
+        # El commit final se hace dentro de cada seeder individualmente.
         logger.info("Siembra maestra completada con éxito.")
     except Exception as e:
         logger.error(f"Ocurrió un error inesperado durante la siembra maestra: {e}", exc_info=True)
