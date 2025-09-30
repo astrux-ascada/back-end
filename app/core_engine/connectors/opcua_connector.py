@@ -11,7 +11,6 @@ import logging
 from typing import Callable, Any, List, Dict
 from datetime import datetime, timezone
 
-# --- CORRECCIÓN FINAL: Importar la clase Node directamente desde asyncua ---
 from asyncua import Client, Node, ua
 
 from app.core_engine.models import DataSource
@@ -25,9 +24,10 @@ class OpcUaDataChangeHandler:
     def __init__(self, connector: 'OpcUaConnector'):
         self.connector = connector
 
-    # --- CORRECCIÓN: La pista de tipo correcta es solo 'Node' ---
+
     def datachange_notification(self, node: Node, val: Any, data: ua.DataValue):
         """Callback que se ejecuta cuando la librería OPC UA detecta un cambio de valor."""
+
         self.connector.process_data_change(node, val, data)
 
 
@@ -84,7 +84,9 @@ class OpcUaConnector:
         finally:
             logger.info(f"Cerrando conexión OPC UA para: {self.data_source.name}")
 
+
     # --- CORRECCIÓN: La pista de tipo correcta es solo 'Node' ---
+
     def process_data_change(self, node: Node, val: Any, data: ua.DataValue):
         try:
             node_id_str = node.nodeid.to_string()

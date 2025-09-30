@@ -5,14 +5,16 @@ una fuente de datos de prueba para el PLC simulado.
 """
 
 import logging
+ 
 import json
 from sqlalchemy.orm import Session
 
-from app.core_engine.models import DataSource
 from app.assets.models import Asset, AssetType
+from app.core_engine.models import DataSource
 
 logger = logging.getLogger(__name__)
 
+ 
 def seed_core_engine(db: Session):
     """
     Crea una configuración de DataSource para el PLC simulado si no existe.
@@ -66,7 +68,7 @@ def seed_core_engine(db: Session):
                 }
             ]
         }
-        
+ 
         data_source = DataSource(
             name="PLC Simulator",
             protocol="OPCUA",

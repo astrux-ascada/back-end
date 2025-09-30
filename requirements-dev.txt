@@ -70,7 +70,7 @@ pyflakes==3.4.0
 Pygments==2.19.2
 PyJWT==2.10.1
 pylint==3.3.7
-pymodbus==3.6.8  # Añadido para la comunicación Modbus
+pymodbus==3.6.8
 pyparsing==3.2.3
 pyright==1.1.403
 pytest==8.3.5
@@ -78,6 +78,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
 python-multipart==0.0.20
 PyYAML==6.0.2
+redis==5.0.4  # Añadido para la comunicación con Redis
 requests==2.32.4
 rich==14.0.0
 roman-numerals-py==3.1.0

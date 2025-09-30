@@ -1,19 +1,23 @@
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.routers import api_router
+
+# --- ELIMINADO: El router de avatares ya no existe en la nueva arquitectura ---
+# from app.api.v1.routers.avatars import router as avatars_router
+
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.exception_handlers import add_exception_handlers
 from app.core.limiter import limiter
+
 # --- MEJORA: Importar los servicios necesarios para el ciclo de vida ---
+
 from app.core_engine.service import CoreEngineService
 from app.services.external.google_translate import get_google_translate_service
 from app.telemetry.service import TelemetryService
@@ -32,21 +36,22 @@ if settings.ENV == "development":
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Maneja eventos de inicio/cierre de la aplicación."""
     logger.info("Iniciando aplicación...")
+
 
     # Creamos una sesión de BD dedicada para el ciclo de vida de los servicios.
     db = SessionLocal()
 
     # --- MEJORA: Iniciar el Core Engine con sus dependencias ---
     # 1. Crear la dependencia (TelemetryService)
+
     telemetry_service = TelemetryService(db)
-    # 2. Crear el servicio principal, inyectando la dependencia
     app.state.core_engine_service = CoreEngineService(db, telemetry_service)
 
     try:
         await app.state.core_engine_service.start()
         logger.info("Motor de comunicación (Core Engine) iniciado.")
+
 
         # Tareas de inicio existentes
         # settings.STORAGE_PATH.mkdir(parents=True, exist_ok=True)
@@ -61,15 +66,16 @@ async def lifespan(app: FastAPI):
 
     finally:
         logger.info("Apagando aplicación...")
-        # --- MEJORA: Detener el Core Engine ---
         if hasattr(app.state, 'core_engine_service') and app.state.core_engine_service:
             await app.state.core_engine_service.stop()
             logger.info("Motor de comunicación (Core Engine) detenido.")
+
 
         # Tareas de cierre existentes
         translator_service = get_google_translate_service()
         await translator_service.close()
         logger.info("Conexiones del servicio de traducción cerradas.")
+
         db.close()
 
 
@@ -77,28 +83,18 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
     lifespan=lifespan,
-    description="Backend for Frontend para la aplicación móvil EmergQR.",
+    # --- MEJORA: Descripción actualizada del proyecto ---
+    description="Backend para el Orquestador Industrial 5.0 de Astruxa.",
     docs_url="/api/v1/docs" if settings.ENV == "development" else None,
     redoc_url="/api/v1/redoc" if settings.ENV == "development" else None,
     openapi_url="/api/v1/openapi.json" if settings.ENV == "development" else None,
 )
 
 # --- Configuración de Middlewares ---
-
-allowed_origins = []
-if settings.ENV == "development":
-    allowed_origins.extend([
-        "http://localhost:3000",
-        "http://192.168.1.42:3000",
-    ])
-
 if settings.BACKEND_CORS_ORIGINS:
-    allowed_origins.extend([str(origin) for origin in settings.BACKEND_CORS_ORIGINS])
-
-if allowed_origins:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -106,26 +102,22 @@ if allowed_origins:
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
 add_exception_handlers(app)
-
-STATIC_PATH = Path(__file__).parent / "assets"
-app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
-app.mount("/storage", StaticFiles(directory=settings.STORAGE_PATH), name="storage")
 
 # --- Inclusión de Routers ---
 app.include_router(api_router)
 
+
 if settings.ENV == "development":
     # from app.api.v1.routers import dev_tools
-
+    pass
     # app.include_router(dev_tools.router, prefix="/api/v1")
     logger.info("🛠️  Routers de desarrollo cargados.")
+ 
 
 
 @app.get("/", tags=["Root"])
 def root():
-    """Endpoint de bienvenida que muestra información básica del servicio."""
     return {
         "message": f"Bienvenido al Backend de {settings.PROJECT_NAME}",
         "version": app.version,

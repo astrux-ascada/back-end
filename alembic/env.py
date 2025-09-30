@@ -18,7 +18,9 @@ from app.assets.models import *
 from app.telemetry.models import *
 from app.procurement.models import *
 from app.maintenance.models import *
-from app.core_engine.models import *
+
+from app.sectors.models import * # Añadido el nuevo módulo de sectores
+
 
 config = context.config
 

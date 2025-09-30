@@ -19,5 +19,10 @@ class Role(Base):
     name = Column(String(50), unique=True, index=True, nullable=False)
     description = Column(String(255), nullable=True)
 
-    # Relación inversa: Un rol puede tener muchos usuarios.
-    users = relationship("User", back_populates="role")
+    # --- Relaciones Muchos-a-Muchos ---
+
+    # Relación con User a través de la tabla user_roles
+    users = relationship("User", secondary="user_roles", back_populates="roles")
+
+    # Relación con Permission a través de la tabla role_permissions
+    permissions = relationship("Permission", secondary="role_permissions", back_populates="roles")
