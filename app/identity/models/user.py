@@ -4,7 +4,7 @@ Modelo de la base de datos para la entidad User.
 """
 import uuid
 
-from sqlalchemy import Boolean, Column, String, func, TIMESTAMP, ForeignKey
+from sqlalchemy import Boolean, Column, String, func, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -17,9 +17,9 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    # --- Relación con Role ---
-    role_id = Column(UUID(as_uuid=True), ForeignKey("roles.id"), nullable=True)
-    role = relationship("Role", back_populates="users")
+    # --- Relaciones Muchos-a-Muchos ---
+    roles = relationship("Role", secondary="user_roles", back_populates="users")
+    assigned_sectors = relationship("Sector", secondary="user_sectors", back_populates="users")
 
     # --- Campos de Perfil y Autenticación ---
     email = Column(String, unique=True, index=True, nullable=False)

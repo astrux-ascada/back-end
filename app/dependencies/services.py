@@ -17,6 +17,7 @@ from app.telemetry.service import TelemetryService
 from app.procurement.service import ProcurementService
 from app.maintenance.service import MaintenanceService
 from app.core_engine.service import CoreEngineService
+from app.sectors.service import SectorService # Añadido el nuevo servicio
 
 # --- Dependencias antiguas (se irán eliminando) ---
 from app.contracts.IContactService import IContactService
@@ -51,7 +52,6 @@ from app.services.vital_sign_service import VitalSignService
 # --- Inyectores para Módulos de Astruxa ---
 
 def get_auth_service(db: Session = Depends(get_db), redis_client: redis.Redis = Depends(get_redis_client)) -> AuthService:
-    """Proporciona una instancia del AuthService con todas sus dependencias."""
     return AuthService(db=db, redis_client=redis_client)
 
 def get_asset_service(db: Session = Depends(get_db)) -> AssetService:
@@ -68,6 +68,10 @@ def get_maintenance_service(db: Session = Depends(get_db)) -> MaintenanceService
 
 def get_core_engine_service(db: Session = Depends(get_db)) -> CoreEngineService:
     return CoreEngineService(db, telemetry_service=None)
+
+def get_sector_service(db: Session = Depends(get_db)) -> SectorService:
+    """Proporciona una instancia del SectorService."""
+    return SectorService(db)
 
 
 # --- Inyectores antiguos (se irán eliminando) ---
