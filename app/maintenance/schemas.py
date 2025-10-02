@@ -1,9 +1,6 @@
 # /app/maintenance/schemas.py
 """
 Esquemas Pydantic para el módulo de Mantenimiento.
-
-Define los contratos de datos para la API, cubriendo WorkOrder, MaintenanceTask
-y las asignaciones de personal y proveedores.
 """
 import uuid
 from datetime import date, datetime
@@ -11,7 +8,6 @@ from typing import Optional, List, Any
 
 from pydantic import BaseModel, Field, Json
 
-# --- MEJORA: Importar el DTO correcto de Assets para anidarlo ---
 from app.assets.schemas import AssetReadDTO
 from app.identity.schemas import UserRead
 from app.procurement.schemas import ProviderRead
@@ -39,24 +35,26 @@ class MaintenanceTaskRead(MaintenanceTaskBase):
 
 class WorkOrderBase(BaseModel):
     asset_id: uuid.UUID = Field(..., description="ID del activo que requiere mantenimiento.")
-    category: str = Field(..., example="PREDICTIVE", description="CORRECTIVE, PREVENTIVE, PREDICTIVE, IMPROVEMENT")
+    category: str = Field(..., example="PREDICTIVE")
     status: str = Field("OPEN", example="OPEN")
     priority: str = Field("MEDIUM", example="MEDIUM")
     summary: str = Field(..., example="Fallo inminente detectado en el motor principal.")
-    description: Optional[str] = Field(None, example="El análisis de vibraciones indica un desgaste del 85% en el rodamiento A-3.")
+    description: Optional[str] = Field(None)
     due_date: Optional[date] = None
-    source_trigger: Optional[Json[Any]] = Field(None, description="JSON data explaining the origin of the work order.")
+    source_trigger: Optional[Json[Any]] = Field(None)
 
 class WorkOrderCreate(WorkOrderBase):
     pass
+
+class WorkOrderStatusUpdate(BaseModel):
+    """Esquema para actualizar el estado de una orden de trabajo."""
+    status: str = Field(..., example="IN_PROGRESS")
 
 class WorkOrderRead(WorkOrderBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None
-    
-    # --- MEJORA: La relación anidada ahora usa el DTO correcto de Asset ---
     asset: AssetReadDTO
     tasks: List[MaintenanceTaskRead] = []
     assigned_users: List[UserRead] = []
