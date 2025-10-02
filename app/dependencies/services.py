@@ -20,7 +20,8 @@ from app.maintenance.service import MaintenanceService
 from app.core_engine.service import CoreEngineService
 from app.sectors.service import SectorService
 from app.auditing.service import AuditService
-from app.configuration.service import ConfigurationService # Añadido el nuevo servicio
+from app.configuration.service import ConfigurationService
+from app.alarming.service import AlarmingService
 
 
 # --- Service Injectors for Astruxa Modules ---
@@ -28,14 +29,22 @@ from app.configuration.service import ConfigurationService # Añadido el nuevo s
 def get_audit_service(db: Session = Depends(get_db)) -> AuditService:
     return AuditService(db)
 
+def get_alarming_service(db: Session = Depends(get_db)) -> AlarmingService:
+    return AlarmingService(db)
+
 def get_auth_service(db: Session = Depends(get_db), redis_client: redis.Redis = Depends(get_redis_client)) -> AuthService:
     return AuthService(db=db, redis_client=redis_client)
 
 def get_asset_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> AssetService:
     return AssetService(db=db, audit_service=audit_service)
 
-def get_telemetry_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> TelemetryService:
-    return TelemetryService(db=db, audit_service=audit_service)
+def get_telemetry_service(
+    db: Session = Depends(get_db), 
+    audit_service: AuditService = Depends(get_audit_service),
+    alarming_service: AlarmingService = Depends(get_alarming_service)
+) -> TelemetryService:
+    """Provides an instance of the TelemetryService with its dependencies."""
+    return TelemetryService(db=db, audit_service=audit_service, alarming_service=alarming_service)
 
 def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
     return ProcurementService(db)
@@ -50,5 +59,4 @@ def get_sector_service(db: Session = Depends(get_db)) -> SectorService:
     return SectorService(db)
 
 def get_configuration_service(db: Session = Depends(get_db)) -> ConfigurationService:
-    """Provides an instance of the ConfigurationService."""
     return ConfigurationService(db)

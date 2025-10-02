@@ -16,7 +16,8 @@ from app.maintenance import api as maintenance_api
 from app.core_engine import api as core_engine_api
 from app.sectors import api as sectors_api
 from app.auditing import api as auditing_api
-from app.configuration import api as configuration_api # Añadido el nuevo router
+from app.configuration import api as configuration_api
+from app.alarming import api as alarming_api # Añadido el nuevo router
 
 
 api_router = APIRouter(prefix="/api/v1")
@@ -30,4 +31,5 @@ api_router.include_router(maintenance_api.router)
 api_router.include_router(core_engine_api.router)
 api_router.include_router(sectors_api.router)
 api_router.include_router(auditing_api.router)
-api_router.include_router(configuration_api.router) # El prefijo "/configuration" ya está en el router
+api_router.include_router(configuration_api.router)
+api_router.include_router(alarming_api.router) # El prefijo "/alarming" ya está en el router

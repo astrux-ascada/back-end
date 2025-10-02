@@ -2,7 +2,7 @@
 """
 Capa de Servicio para el módulo de Telemetría.
 
-Orquesta la lógica de negocio para la ingesta y consulta de datos de telemetría.
+Orquesta la lógica de negocio para la ingesta, consulta y evaluación de datos de telemetría.
 """
 
 from typing import List
@@ -13,24 +13,34 @@ from sqlalchemy.orm import Session
 
 from app.telemetry import schemas
 from app.telemetry.repository import TelemetryRepository
-# --- MEJORA: Importar dependencias para auditoría ---
 from app.auditing.service import AuditService
 from app.identity.models import User
+# --- MEJORA: Importar el servicio de alertas para la evaluación de datos ---
+from app.alarming.service import AlarmingService
 
 
 class TelemetryService:
     """Servicio de negocio para la gestión de la telemetría."""
 
-    def __init__(self, db: Session, audit_service: AuditService):
+    def __init__(self, db: Session, audit_service: AuditService, alarming_service: AlarmingService):
         self.db = db
         self.audit_service = audit_service
+        self.alarming_service = alarming_service
         self.telemetry_repo = TelemetryRepository(self.db)
 
     def ingest_bulk_readings(self, readings_in: List[schemas.SensorReadingCreate]) -> int:
-        """Ingesta un lote de lecturas de sensores."""
-        # Nota: La ingesta de datos de alta frecuencia podría no ser auditada
-        # para evitar sobrecargar la tabla de auditoría. Es una decisión de diseño.
-        return self.telemetry_repo.create_bulk_readings(readings_in)
+        """
+        Ingesta un lote de lecturas de sensores y luego las evalúa contra las reglas de alerta.
+        """
+        # 1. Guardar los datos en la base de datos
+        inserted_count = self.telemetry_repo.create_bulk_readings(readings_in)
+
+        # 2. Evaluar cada nueva lectura contra las reglas de alerta activas
+        if inserted_count > 0:
+            for reading in readings_in:
+                self.alarming_service.evaluate_reading(reading)
+        
+        return inserted_count
 
     def get_aggregated_readings(
         self,
