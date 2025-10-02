@@ -13,8 +13,9 @@ from app.core.redis import get_redis_client
 
 # --- Import services from Astruxa's modules ---
 from app.identity.auth_service import AuthService
+from app.identity.tfa_service import TfaService # Añadido el nuevo servicio de 2FA
 from app.assets.service import AssetService
-from app.assets.repository import AssetRepository # Import repository for cross-service logic
+from app.assets.repository import AssetRepository
 from app.telemetry.service import TelemetryService
 from app.procurement.service import ProcurementService
 from app.maintenance.service import MaintenanceService
@@ -37,14 +38,18 @@ def get_notification_service(db: Session = Depends(get_db)) -> NotificationServi
 def get_alarming_service(
     db: Session = Depends(get_db), 
     notification_service: NotificationService = Depends(get_notification_service),
-    audit_service: AuditService = Depends(get_audit_service) # Añadida dependencia de auditoría
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> AlarmingService:
-    """Provides an instance of the AlarmingService with its dependencies."""
     asset_repo = AssetRepository(db)
     return AlarmingService(db=db, notification_service=notification_service, asset_repo=asset_repo, audit_service=audit_service)
 
-def get_auth_service(db: Session = Depends(get_db), redis_client: redis.Redis = Depends(get_redis_client)) -> AuthService:
-    return AuthService(db=db, redis_client=redis_client)
+def get_auth_service(
+    db: Session = Depends(get_db), 
+    redis_client: redis.Redis = Depends(get_redis_client)
+) -> AuthService:
+    """Provides an instance of the AuthService with all its dependencies."""
+    tfa_service = TfaService() # TfaService no tiene dependencias
+    return AuthService(db=db, redis_client=redis_client, tfa_service=tfa_service)
 
 def get_asset_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> AssetService:
     return AssetService(db=db, audit_service=audit_service)

@@ -47,7 +47,6 @@ class UserBase(BaseModel):
     email: EmailStr = Field(..., example="operario1@astruxa.com")
     name: Optional[str] = Field(None, example="Juan Pérez")
     avatar_url: Optional[str] = Field(None, alias="avatarUrl", example="https://example.com/avatar.png")
-    # ... otros campos de perfil ...
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -78,3 +77,7 @@ class Token(BaseModel):
 
 class TokenWithUser(Token):
     user: UserRead
+
+class TfaToken(BaseModel):
+    """Esquema para recibir un token de 2FA."""
+    token: str = Field(..., min_length=6, max_length=6, example="123456")
