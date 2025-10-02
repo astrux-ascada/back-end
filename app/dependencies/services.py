@@ -34,14 +34,14 @@ def get_auth_service(db: Session = Depends(get_db), redis_client: redis.Redis = 
 def get_asset_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> AssetService:
     return AssetService(db=db, audit_service=audit_service)
 
-def get_telemetry_service(db: Session = Depends(get_db)) -> TelemetryService:
-    return TelemetryService(db)
+def get_telemetry_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> TelemetryService:
+    """Provides an instance of the TelemetryService with its dependencies."""
+    return TelemetryService(db=db, audit_service=audit_service)
 
 def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
     return ProcurementService(db)
 
 def get_maintenance_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> MaintenanceService:
-    """Provides an instance of the MaintenanceService with its dependencies."""
     return MaintenanceService(db=db, audit_service=audit_service)
 
 def get_core_engine_service(db: Session = Depends(get_db)) -> CoreEngineService:

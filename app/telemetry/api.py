@@ -15,6 +15,9 @@ from fastapi import APIRouter, Depends, status, Query
 from app.telemetry import schemas
 from app.telemetry.service import TelemetryService
 from app.dependencies.services import get_telemetry_service
+# --- MEJORA: Importar dependencias de autenticación y el modelo de usuario ---
+from app.dependencies.auth import get_current_active_user
+from app.identity.models import User
 
 logger = logging.getLogger("app.telemetry.api")
 
@@ -50,16 +53,12 @@ def get_aggregated_readings(
     end_time: datetime = Query(default_factory=datetime.utcnow),
     bucket_interval: str = Query("1 minute", alias="interval"),
     telemetry_service: TelemetryService = Depends(get_telemetry_service),
+    # --- MEJORA: Proteger el endpoint y obtener el usuario para la auditoría ---
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Obtiene datos de series temporales agregados para un activo específico,
-    ideal para la visualización en gráficos.
-
-    - **asset_id**: El UUID del activo a consultar.
-    - **metric_name**: El nombre de la métrica (ej: 'temperature_celsius').
-    - **start_time**: La fecha y hora de inicio del rango de tiempo (formato ISO 8601).
-    - **end_time**: La fecha y hora de fin del rango de tiempo (formato ISO 8601).
-    - **interval**: El tamaño del intervalo de agregación (ej: '1 second', '5 minutes', '1 hour').
+    ideal para la visualización en gráficos. La consulta queda registrada en la auditoría.
     """
     return telemetry_service.get_aggregated_readings(
         asset_id=asset_id,
@@ -67,4 +66,5 @@ def get_aggregated_readings(
         start_time=start_time,
         end_time=end_time,
         bucket_interval=bucket_interval,
+        current_user=current_user,
     )
