@@ -15,13 +15,13 @@ from app.procurement import api as procurement_api
 from app.maintenance import api as maintenance_api
 from app.core_engine import api as core_engine_api
 from app.sectors import api as sectors_api
-from app.auditing import api as auditing_api # Añadido el nuevo router
+from app.auditing import api as auditing_api
+from app.configuration import api as configuration_api # Añadido el nuevo router
 
 
 api_router = APIRouter(prefix="/api/v1")
 
 # --- REGISTRO DE ROUTERS DE MÓDULOS ---
-# Los prefijos de las rutas (ej: "/auth") están definidos dentro del router de cada módulo.
 api_router.include_router(identity_api.router)
 api_router.include_router(assets_api.router)
 api_router.include_router(telemetry_api.router)
@@ -29,4 +29,5 @@ api_router.include_router(procurement_api.router)
 api_router.include_router(maintenance_api.router)
 api_router.include_router(core_engine_api.router)
 api_router.include_router(sectors_api.router)
-api_router.include_router(auditing_api.router) # El prefijo "/auditing" ya está en el router
+api_router.include_router(auditing_api.router)
+api_router.include_router(configuration_api.router) # El prefijo "/configuration" ya está en el router

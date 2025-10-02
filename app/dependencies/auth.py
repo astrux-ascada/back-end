@@ -1,9 +1,6 @@
 # /app/dependencies/auth.py
 """
 Dependencias de FastAPI para la autenticación y autorización.
-
-Define la lógica para proteger los endpoints, validando los tokens JWT
-y las sesiones activas en Redis.
 """
 
 import logging
@@ -11,7 +8,7 @@ import uuid
 import redis
 from typing import Dict, Any
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from app.core.database import get_db
@@ -20,7 +17,7 @@ from app.core.security import verify_jwt_token
 from app.core.exceptions import AuthenticationException
 from app.identity.models import User
 from app.identity.repository import UserRepository
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger("app.dependency.auth")
 
@@ -30,9 +27,6 @@ def get_current_token_payload(
     token: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     redis_client: redis.Redis = Depends(get_redis_client),
 ) -> Dict[str, Any]:
-    """
-    Valida el token JWT, comprueba la sesión en Redis y devuelve el payload del token.
-    """
     payload = verify_jwt_token(token.credentials)
     if not payload:
         raise AuthenticationException("Token inválido o expirado.")
@@ -51,9 +45,6 @@ def get_current_active_user(
     payload: Dict[str, Any] = Depends(get_current_token_payload),
     db: Session = Depends(get_db),
 ) -> User:
-    """
-    Dependencia principal para rutas protegidas. Obtiene el usuario a partir de un payload ya validado.
-    """
     user_id_str = payload.get("sub")
     if not user_id_str:
         raise AuthenticationException("Token inválido: falta el identificador del sujeto (sub).")
@@ -63,8 +54,8 @@ def get_current_active_user(
     except ValueError:
         raise AuthenticationException("Token inválido: el identificador del sujeto no es un UUID válido.")
 
-    user_repo = UserRepository(db)
-    user = user_repo.get_by_id(user_id)
+    # Usamos joinedload para cargar los roles y permisos en una sola consulta
+    user = db.query(User).options(joinedload(User.roles).joinedload(models.Role.permissions)).filter(User.id == user_id).first()
 
     if not user or not user.is_active:
         raise AuthenticationException("Credenciales de autenticación no válidas o usuario inactivo.")
@@ -74,12 +65,15 @@ def get_current_active_user(
 def get_current_admin_user(
     current_user: User = Depends(get_current_active_user),
 ) -> User:
-    """
-    Dependencia que obtiene el usuario activo y verifica que sea administrador.
-    """
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=403,
-            detail="Se requieren permisos de administrador."
-        )
+    """Dependencia que obtiene el usuario activo y verifica que tenga el rol 'Administrator'."""
+    if not any(role.name == "Administrator" for role in current_user.roles):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Se requieren permisos de Administrador.")
+    return current_user
+
+def get_current_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """Dependencia que obtiene el usuario activo y verifica que tenga el rol 'SuperUser'."""
+    if not any(role.name == "SuperUser" for role in current_user.roles):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Se requieren permisos de SuperUsuario.")
     return current_user

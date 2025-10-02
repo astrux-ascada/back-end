@@ -20,12 +20,12 @@ from app.maintenance.service import MaintenanceService
 from app.core_engine.service import CoreEngineService
 from app.sectors.service import SectorService
 from app.auditing.service import AuditService
+from app.configuration.service import ConfigurationService # Añadido el nuevo servicio
 
 
 # --- Service Injectors for Astruxa Modules ---
 
 def get_audit_service(db: Session = Depends(get_db)) -> AuditService:
-    """Provides an instance of the AuditService."""
     return AuditService(db)
 
 def get_auth_service(db: Session = Depends(get_db), redis_client: redis.Redis = Depends(get_redis_client)) -> AuthService:
@@ -35,7 +35,6 @@ def get_asset_service(db: Session = Depends(get_db), audit_service: AuditService
     return AssetService(db=db, audit_service=audit_service)
 
 def get_telemetry_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> TelemetryService:
-    """Provides an instance of the TelemetryService with its dependencies."""
     return TelemetryService(db=db, audit_service=audit_service)
 
 def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
@@ -49,3 +48,7 @@ def get_core_engine_service(db: Session = Depends(get_db)) -> CoreEngineService:
 
 def get_sector_service(db: Session = Depends(get_db)) -> SectorService:
     return SectorService(db)
+
+def get_configuration_service(db: Session = Depends(get_db)) -> ConfigurationService:
+    """Provides an instance of the ConfigurationService."""
+    return ConfigurationService(db)
