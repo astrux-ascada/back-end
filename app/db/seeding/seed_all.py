@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 # --- Importar todos los nuevos seeders de nuestros módulos ---
+from app.db.seeding._seed_configuration import seed_configuration
 from app.db.seeding._seed_sectors import seed_sectors
 from app.db.seeding._seed_identity import seed_identity
 from app.db.seeding._seed_assets import seed_assets
@@ -26,11 +27,12 @@ def seed_all(db: Session):
     """
     logger.info("--- Iniciando Proceso de Siembra Maestro para Astruxa ---")
     
-    # El orden es crucial para respetar las claves foráneas.
-    seed_sectors(db)
-    seed_identity(db)
-    seed_assets(db)
-    seed_core_engine(db)
+    # El orden es crucial para respetar las claves foráneas y las dependencias.
+    seed_configuration(db) # Parámetros y Enums
+    seed_sectors(db)       # Áreas de la planta
+    seed_identity(db)      # Permisos, Roles y Usuarios
+    seed_assets(db)        # Catálogo y Activos Físicos
+    seed_core_engine(db)   # Conexiones a hardware
     
     logger.info("--- Proceso de Siembra Maestro Finalizado ---")
 
@@ -40,7 +42,6 @@ if __name__ == "__main__":
     db_session = SessionLocal()
     try:
         seed_all(db_session)
-        # El commit final se hace dentro de cada seeder individualmente.
         logger.info("Siembra maestra completada con éxito.")
     except Exception as e:
         logger.error(f"Ocurrió un error inesperado durante la siembra maestra: {e}", exc_info=True)
