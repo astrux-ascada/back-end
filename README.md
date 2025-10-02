@@ -25,8 +25,6 @@ El sistema utiliza un modelo de Control de Acceso Basado en Roles (RBAC) con una
 -   **`Technician`**: El "Técnico de Mantenimiento". Ejecuta las órdenes de trabajo que se le asignan.
 -   **`Operator`**: El "Operario de Máquina". Solo puede visualizar el estado de los activos.
 
-Cada rol está compuesto por un conjunto de permisos atómicos (ej. `asset:read`, `workorder:create`) que definen qué acciones puede realizar.
-
 ---
 
 ## Stack Tecnológico
@@ -44,41 +42,72 @@ Cada rol está compuesto por un conjunto de permisos atómicos (ej. `asset:read`
 
 Esta sección describe la secuencia exacta de comandos para levantar el entorno de desarrollo completo.
 
-**Necesitarás dos terminales abiertas en la raíz del proyecto.**
+(Se asume que se usan dos terminales en la raíz del proyecto).
 
-### Terminal 1: Docker (La Aplicación Principal)
+### Terminal 1: Docker (Aplicación Principal)
 
-1.  **Limpieza Total (Opcional, pero recomendado para cambios estructurales):**
+1.  **Limpieza Total (Opcional, pero recomendado):**
     ```sh
     docker-compose down -v
     ```
-2.  **Construir y Levantar los Contenedores:**
+2.  **Construir y Levantar:**
     ```sh
     docker-compose up --build -d
     ```
-3.  **Poblar la Base de Datos (Seeding):**
+3.  **Poblar la Base de Datos:**
     ```sh
     docker-compose run --rm runner python -m app.db.seeding.seed_all
     ```
-4.  **Monitorear los Logs:**
-    ```sh
-    docker-compose logs -f backend_api
-    ```
 
-### Terminal 2: Local (El PLC Simulador)
+### Terminal 2: Local (PLC Simulador)
 
-1.  **Activar el Entorno Virtual:**
+1.  **Activar Entorno Virtual y Dependencias:**
     ```sh
     source .venv/bin/activate
-    ```
-2.  **Instalar las Dependencias:**
-    ```sh
     pip install -r requirements-dev.txt
     ```
-3.  **Iniciar el Simulador:**
+2.  **Iniciar el Simulador:**
     ```sh
     python simulators/plc_simulator.py
     ```
+
+---
+
+## Smoke Test: Verifying the End-to-End Data Flow
+
+Después de seguir el workflow anterior, la aplicación estará corriendo y recibiendo datos. Esta guía te ayudará a verificar que puedes consultar esos datos a través de la API.
+
+1.  **Abre la Documentación de la API:**
+    -   Navega a [http://localhost:8071/api/v1/docs](http://localhost:8071/api/v1/docs) en tu navegador.
+
+2.  **Obtén un Token de Autenticación:**
+    -   Busca el endpoint `POST /auth/login`.
+    -   Haz clic en "Try it out" e introduce las credenciales del usuario administrador:
+        ```json
+        {
+          "email": "admin@astruxa.com",
+          "password": "admin_password"
+        }
+        ```
+    -   Ejecuta y copia el `access_token` de la respuesta.
+
+3.  **Autoriza tus Peticiones:**
+    -   En la parte superior derecha, haz clic en el botón "Authorize".
+    -   Pega el `access_token` en el campo "Value" y autoriza.
+
+4.  **Obtén un `asset_id`:**
+    -   Busca el endpoint `GET /assets`.
+    -   Ejecútalo. En la respuesta, busca el activo con el `serial_number`: "SCH-L1-001".
+    -   Copia el valor de su `uuid`.
+
+5.  **Prueba la API del Dashboard:**
+    -   Busca el endpoint `GET /telemetry/readings/{asset_id}`.
+    -   Pega el `uuid` del activo en el campo `asset_id`.
+    -   En el campo `metric_name`, escribe `temperature_celsius`.
+    -   Ejecuta la petición.
+
+6.  **Verifica la Respuesta:**
+    -   Deberías recibir una respuesta `200 OK` con un cuerpo JSON que es una lista de objetos, cada uno representando un punto de datos agregado por minuto. ¡Felicidades, el flujo de datos de extremo a extremo está funcionando!
 
 ---
 
