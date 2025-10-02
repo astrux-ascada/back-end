@@ -1,5 +1,13 @@
+# /app/main.py
+"""
+Archivo principal de la aplicación FastAPI de Astruxa.
+
+Define la aplicación, su ciclo de vida (startup/shutdown) y la configuración de middlewares y routers.
+"""
+
 import logging
 from contextlib import asynccontextmanager
+from functools import partial
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,27 +15,23 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api.v1.routers import api_router
-
-# --- ELIMINADO: El router de avatares ya no existe en la nueva arquitectura ---
-# from app.api.v1.routers.avatars import router as avatars_router
-
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.exception_handlers import add_exception_handlers
 from app.core.limiter import limiter
 
-# --- MEJORA: Importar los servicios necesarios para el ciclo de vida ---
-
+# --- Importar los componentes para el sistema de acción por logs ---
 from app.core_engine.service import CoreEngineService
-from app.services.external.google_translate import get_google_translate_service
 from app.telemetry.service import TelemetryService
+from app.auditing.service import AuditService
+from app.core.log_handler import astruxa_log_handler
+from app.core_engine.log_actions import handle_connector_error
 
 logger = logging.getLogger(__name__)
 
 if settings.ENV == "development":
     try:
         import debugpy
-
         debugpy.listen(("0.0.0.0", 5678))
         logger.info("🚀 Servidor de depuración iniciado en el puerto 5678. Esperando conexión...")
     except ImportError:
@@ -36,46 +40,34 @@ if settings.ENV == "development":
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Iniciando aplicación...")
-
-
-    # Creamos una sesión de BD dedicada para el ciclo de vida de los servicios.
+    """Maneja eventos de inicio/cierre de la aplicación."""
+    logger.info("Iniciando aplicación Astruxa...")
+    
     db = SessionLocal()
-
-    # --- MEJORA: Iniciar el Core Engine con sus dependencias ---
-    # 1. Crear la dependencia (TelemetryService)
-
-    telemetry_service = TelemetryService(db)
+    
+    # --- Configuración de Servicios ---
+    audit_service = AuditService(db)
+    telemetry_service = TelemetryService(db, audit_service)
     app.state.core_engine_service = CoreEngineService(db, telemetry_service)
+
+    # --- Configuración del Handler de Logs para Acciones Automáticas ---
+    # 1. Crear una función parcial con la sesión de la BD inyectada.
+    error_handler_with_db = partial(handle_connector_error, db=db)
+    # 2. Registrar el manejador de eventos en nuestro handler de logs.
+    astruxa_log_handler.event_handlers["handle_connection_error"] = error_handler_with_db
+    # 3. Añadir nuestro handler al logger raíz para que escuche todos los logs.
+    logging.getLogger().addHandler(astruxa_log_handler)
+    logger.info("Handler de logs de Astruxa para acciones automáticas activado.")
 
     try:
         await app.state.core_engine_service.start()
         logger.info("Motor de comunicación (Core Engine) iniciado.")
-
-
-        # Tareas de inicio existentes
-        # settings.STORAGE_PATH.mkdir(parents=True, exist_ok=True)
-        # (settings.STORAGE_PATH / "clients").mkdir(exist_ok=True)
-        # (settings.STORAGE_PATH / "medical").mkdir(exist_ok=True)
-        # (settings.STORAGE_PATH / "temp").mkdir(exist_ok=True)
-        # logger.info("Directorios de almacenamiento verificados.")
-        # asyncio.create_task(cleanup_temp_files())
-        # logger.info("Tarea de limpieza de archivos temporales iniciada.")
-
         yield
-
     finally:
         logger.info("Apagando aplicación...")
         if hasattr(app.state, 'core_engine_service') and app.state.core_engine_service:
             await app.state.core_engine_service.stop()
             logger.info("Motor de comunicación (Core Engine) detenido.")
-
-
-        # Tareas de cierre existentes
-        translator_service = get_google_translate_service()
-        await translator_service.close()
-        logger.info("Conexiones del servicio de traducción cerradas.")
-
         db.close()
 
 
@@ -83,7 +75,6 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
     lifespan=lifespan,
-    # --- MEJORA: Descripción actualizada del proyecto ---
     description="Backend para el Orquestador Industrial 5.0 de Astruxa.",
     docs_url="/api/v1/docs" if settings.ENV == "development" else None,
     redoc_url="/api/v1/redoc" if settings.ENV == "development" else None,
@@ -107,15 +98,6 @@ add_exception_handlers(app)
 # --- Inclusión de Routers ---
 app.include_router(api_router)
 
-
-if settings.ENV == "development":
-    # from app.api.v1.routers import dev_tools
-    pass
-    # app.include_router(dev_tools.router, prefix="/api/v1")
-    logger.info("🛠️  Routers de desarrollo cargados.")
- 
-
-
 @app.get("/", tags=["Root"])
 def root():
     return {
@@ -124,10 +106,8 @@ def root():
         "environment": settings.ENV,
     }
 
-
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

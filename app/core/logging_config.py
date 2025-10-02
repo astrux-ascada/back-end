@@ -1,58 +1,74 @@
 # /app/core/logging_config.py
-
 """
-Módulo para la configuración centralizada del sistema de logging,
-optimizado para FastAPI y Uvicorn.
+Módulo para la configuración centralizada del sistema de logging.
 
-Combina lo mejor de ambos mundos:
-- Integración nativa con Uvicorn para evitar logs duplicados.
-- Formato con colores en consola para un desarrollo más amigable.
-- Handler de archivo rotativo para un logging robusto en producción.
-- Logger nombrado ("app") para un control granular sobre el código de la aplicación.
+Implementa un formato JSON estructurado para los archivos de log, facilitando
+la ingesta y el análisis por parte de sistemas de monitoreo y auditoría.
 """
 
-# --- MEJORA: Unimos tu idea del handler de archivo con la integración de Uvicorn ---
+import json
+import logging
+from datetime import datetime
+
+# --- MEJORA: Formateador JSON Personalizado ---
+class JsonFormatter(logging.Formatter):
+    """Formateador de logs que produce JSON estructurado."""
+    def format(self, record: logging.LogRecord) -> str:
+        log_object = {
+            "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "source": {
+                "logger_name": record.name,
+                "module": record.module,
+                "function": record.funcName,
+                "line": record.lineno,
+            },
+        }
+        # Añadir datos extra si existen
+        if hasattr(record, "details"):
+            log_object["details"] = record.details
+
+        return json.dumps(log_object)
+
+
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
-        # Formato para la consola, usa el de Uvicorn para mantener los colores
         "console_formatter": {
             "()": "uvicorn.logging.DefaultFormatter",
             "fmt": "%(levelprefix)s %(asctime)s [%(name)s] - %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
             "use_colors": True,
         },
-        # Formato detallado para el archivo de logs
-        "file_formatter": {
-            "format": "%(asctime)s - %(levelname)s - %(name)s:%(funcName)s:%(lineno)d - %(message)s"
+        # --- MEJORA: Nuevo formateador JSON ---
+        "json_formatter": {
+            "()": JsonFormatter,
         },
     },
     "handlers": {
-        # Handler para la consola que usa el formato de Uvicorn
         "console": {
             "formatter": "console_formatter",
             "class": "logging.StreamHandler",
             "stream": "ext://sys.stderr",
         },
-        # Handler para el archivo, con rotación
         "file": {
-            "formatter": "file_formatter",
+            # --- MEJORA: El handler de archivo ahora usa el formateador JSON ---
+            "formatter": "json_formatter",
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": "app.log",  # Se puede sobreescribir desde la configuración principal
+            "filename": "app.log",
             "maxBytes": 1024 * 1024 * 10,  # 10 MB
             "backupCount": 5,
             "encoding": "utf8",
         },
     },
     "loggers": {
-        # Logger principal de nuestra aplicación
         "app": {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False
         },
-        # Loggers de Uvicorn, los forzamos a usar nuestros handlers
         "uvicorn.error": {
             "handlers": ["console", "file"],
             "level": "INFO",
@@ -65,6 +81,3 @@ LOGGING_CONFIG = {
         },
     },
 }
-
-# Para usarlo, simplemente importa este diccionario y aplícalo con logging.config.dictConfig(LOGGING_CONFIG)
-# en tu archivo de configuración principal o en main.py.
