@@ -2,37 +2,40 @@
 
 Este documento define los requerimientos para el backend del módulo de autenticación y autorización (`@astruxa/auth-core`).
 
-## 1. Modelos de Datos (DTOs - Data Transfer Objects)
+---
 
-El backend debe exponer los siguientes modelos en sus respuestas JSON.
+## 1. Roles & Permissions
 
-### `BaseEntity`
+El sistema se basa en un modelo de Control de Acceso Basado en Roles (RBAC) con los siguientes perfiles jerárquicos:
 
-Todo modelo principal debe incluir estos campos.
-
-```json
-{
-  "uuid": "string",         // (UUID v4)
-  "isActive": "boolean",
-  "createdAt": "string",    // (ISO 8601 Date)
-  "updatedAt": "string"     // (ISO 8601 Date)
-}
-```
+-   **`SuperUser`**: El "Dueño de la Plataforma". Rol técnico para la configuración del sistema. No participa en las operaciones diarias.
+-   **`Administrator`**: El "Jefe de Planta". Gestiona usuarios, roles operativos y catálogos (ej. `AssetTypes`).
+-   **`Supervisor`**: El "Jefe de Turno". Gestiona y asigna órdenes de trabajo.
+-   **`Technician`**: El "Técnico de Mantenimiento". Ejecuta órdenes de trabajo asignadas.
+-   **`Operator`**: El "Operario de Máquina". Solo puede visualizar el estado de los activos.
 
 ### `Permission`
 
-Un string que representa un permiso atómico.
+Un string que representa un permiso atómico en formato `entidad:accion`.
 
-```json
-"entidad:accion" // ej: "alarm:acknowledge"
-```
+**Ejemplos:**
+- `asset:read`, `asset:create`
+- `workorder:read`, `workorder:create`, `workorder:assign`
+- `user:create`, `user:read`
+- `configuration:read`, `configuration:update`
+- `auditing:read`
+- `admin:full-access` (un permiso especial para el `SuperUser`)
+
+---
+
+## 2. Modelos de Datos (DTOs)
 
 ### `Role`
 
 ```json
 {
   "uuid": "string",
-  "name": "string",
+  "name": "string", // ej: "SuperUser"
   "permissions": ["Permission", ...]
 }
 ```
@@ -65,7 +68,7 @@ Un string que representa un permiso atómico.
 
 ---
 
-## 2. Endpoints
+## 3. Endpoints
 
 ### Iniciar Sesión
 
@@ -79,40 +82,24 @@ Un string que representa un permiso atómico.
     }
     ```
 -   **Success Response**: `200 OK`
-    -   **Body**: El objeto `User` completo.
-    -   **Nota**: El backend debe gestionar la sesión (ej: mediante una cookie `httpOnly` segura).
--   **Error Responses**:
-    -   `401 Unauthorized`: Credenciales incorrectas.
-    -   `403 Forbidden`: Usuario inactivo (`isActive: false`).
-
-### Verificar Token 2FA
-
--   **Endpoint**: `POST /auth/verify-token`
--   **Descripción**: Verifica un token de 2FA después del login.
--   **Request Body**:
-    ```json
-    {
-      "token": "123456"
-    }
-    ```
--   **Success Response**: `200 OK`
-    -   **Body**: El objeto `User` completo.
--   **Error Response**:
-    -   `401 Unauthorized`: Token inválido o expirado.
+    -   **Body**: Un objeto que contiene el `access_token` (JWT) y el objeto `User` completo.
 
 ### Obtener Usuario Actual
 
 -   **Endpoint**: `GET /auth/me`
--   **Descripción**: Devuelve el usuario autenticado basado en la sesión actual (cookie).
+-   **Descripción**: Devuelve el usuario autenticado basado en el token JWT actual.
 -   **Success Response**: `200 OK`
     -   **Body**: El objeto `User` completo.
--   **Error Response**:
-    -   `401 Unauthorized`: No hay una sesión válida.
 
 ### Cerrar Sesión
 
 -   **Endpoint**: `POST /auth/logout`
--   **Descripción**: Invalida la sesión actual del usuario.
+-   **Descripción**: Invalida el token JWT actual del usuario, eliminando la sesión del backend (Redis).
 -   **Success Response**: `204 No Content`
--   **Error Response**:
-    -   `401 Unauthorized`: No hay una sesión que cerrar.
+
+### Limpiar Todas las Sesiones (SuperUser)
+
+-   **Endpoint**: `POST /auth/sessions/clear-all`
+-   **Descripción**: Invalida **todas** las sesiones de usuario activas. Acción crítica para cambios de turno.
+-   **Permisos**: `admin:full-access`
+-   **Success Response**: `200 OK`
