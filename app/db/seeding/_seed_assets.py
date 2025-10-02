@@ -17,6 +17,8 @@ ASSET_TYPES_DATA = {
     # Machines & Robots
     "Prensa Hidráulica Schuler 500T": {"category": "MACHINE"},
     "Brazo Robótico KUKA KR 210": {"category": "ROBOT"},
+    # --- MEJORA: Añadir tipo de activo para el simulador Modbus ---
+    "Tanque de Aceite Hidráulico": {"category": "EQUIPMENT"},
     # Sensors
     "Cámara de Visión Cognex-1000": {"category": "SENSOR"},
     "Sensor de Temperatura IFM-T2": {"category": "SENSOR"},
@@ -43,6 +45,8 @@ ASSETS_DATA = [
     {"type": "Prensa Hidráulica Schuler 500T", "serial": "SCH-L2-001", "sector": "Línea de Estampado 2"},
     {"type": "Brazo Robótico KUKA KR 210", "serial": "KUK-L2-001", "sector": "Línea de Estampado 2"},
     {"type": "Cámara de Visión Cognex-1000", "serial": "COG-L2-001", "sector": "Línea de Estampado 2"},
+    # --- MEJORA: Añadir instancia de activo para el simulador Modbus ---
+    {"type": "Tanque de Aceite Hidráulico", "serial": "TNK-HYD-001", "sector": "Área de Mantenimiento"},
 ]
 
 def seed_assets(db: Session):
