@@ -75,6 +75,48 @@ Este documento proporciona una serie de "smoke tests" para verificar que las fun
     -   Busca el endpoint `GET /maintenance/work-orders/{work_order_id}`. Para encontrar el ID de la nueva orden, primero puedes listar todas con `GET /maintenance/work-orders`.
     -   Al consultar la nueva orden, deberías ver en el `summary` el texto: `Fallo de conexión detectado en la fuente de datos: PLC Simulator`.
 
-5.  **Verifica la Auditoría (Opcional):**
-    -   Ejecuta el endpoint `GET /auditing/logs` (requiere rol de `SuperUser` o `Administrator`).
-    -   En la respuesta, busca el último registro. Debería tener la `action`: `CREATE_WORK_ORDER` y el `user_id` debería ser `null`, indicando que fue una acción del sistema.
+---
+
+## Prueba 3: Verificar el Sistema de Alertas Proactivo
+
+**Objetivo:** Confirmar que el sistema evalúa los datos de telemetría entrantes y dispara una alarma cuando se cumple una regla definida por el usuario.
+
+**Pasos:**
+
+1.  **Prerrequisitos:**
+    -   Asegúrate de que el sistema completo esté corriendo (PLC simulado y Docker).
+    -   Asegúrate de estar autenticado como `admin@astruxa.com` en la documentación de la API (ver Prueba 1, pasos 2 y 3).
+    -   Obtén el `uuid` del activo "Prensa Hidráulica Schuler 500T" (ver Prueba 1, paso 4).
+
+2.  **Crea una Regla de Alerta:**
+    -   Busca el endpoint `POST /alarming/rules`.
+    -   Haz clic en "Try it out" e introduce el siguiente cuerpo de petición, **reemplazando `"string"` con el `uuid` real del activo** que copiaste:
+        ```json
+        {
+          "assetId": "string",
+          "metricName": "temperature_celsius",
+          "condition": ">",
+          "threshold": 28,
+          "severity": "CRITICAL",
+          "isEnabled": true
+        }
+        ```
+    -   Ejecuta la petición. Deberías recibir una respuesta `201 Created`.
+
+3.  **Observa la Reacción del Sistema:**
+    -   El PLC simulado genera una temperatura que sigue una onda sinusoidal entre 10 y 30 grados. Tarde o temprano, superará los 28 grados.
+    -   Observa los logs de `backend_api` con `docker-compose logs -f backend_api`.
+    -   Espera a ver un log de `WARNING` con un mensaje similar a:
+        ```
+        WARNING:app.alarming.service:¡ALERTA! Regla [UUID de la regla] disparada para el activo [UUID del activo] con valor 28.19
+        ```
+
+4.  **Verifica la Alarma Activa:**
+    -   En la documentación de la API, busca y ejecuta el endpoint `GET /alarming/alarms`.
+    -   En la respuesta, deberías ver un nuevo objeto de alarma en estado `ACTIVE`, correspondiente a la regla que creaste.
+
+5.  **Acusa Recibo de la Alarma (Opcional):**
+    -   Copia el `uuid` de la alarma que acabas de ver.
+    -   Busca el endpoint `POST /alarming/alarms/{alarm_id}/acknowledge`.
+    -   Pega el `uuid` de la alarma en el campo `alarm_id` y ejecuta.
+    -   La respuesta debería mostrar la misma alarma, pero ahora con el `status`: `ACKNOWLEDGED`.
