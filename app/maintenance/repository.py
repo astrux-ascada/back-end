@@ -1,9 +1,6 @@
 # /app/maintenance/repository.py
 """
 Capa de Repositorio para el módulo de Mantenimiento.
-
-Encapsula la lógica de acceso a datos para las entidades WorkOrder,
-MaintenanceTask y sus asignaciones.
 """
 
 from typing import List, Optional
@@ -20,10 +17,7 @@ class MaintenanceRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    # --- Métodos para WorkOrder ---
-
     def create_work_order(self, work_order_in: schemas.WorkOrderCreate) -> models.WorkOrder:
-        """Crea una nueva orden de trabajo en la base de datos."""
         db_work_order = models.WorkOrder(**work_order_in.model_dump())
         self.db.add(db_work_order)
         self.db.commit()
@@ -31,7 +25,6 @@ class MaintenanceRepository:
         return db_work_order
 
     def get_work_order(self, work_order_id: uuid.UUID) -> Optional[models.WorkOrder]:
-        """Obtiene una orden de trabajo por su ID, cargando sus relaciones."""
         return (
             self.db.query(models.WorkOrder)
             .options(
@@ -45,13 +38,18 @@ class MaintenanceRepository:
         )
 
     def list_work_orders(self, skip: int = 0, limit: int = 100) -> List[models.WorkOrder]:
-        """Lista todas las órdenes de trabajo con paginación."""
         return self.db.query(models.WorkOrder).offset(skip).limit(limit).all()
 
-    # --- Métodos para Asignaciones ---
+    def update_work_order_status(self, work_order_id: uuid.UUID, new_status: str) -> Optional[models.WorkOrder]:
+        """Actualiza el campo de estado de una orden de trabajo específica."""
+        db_work_order = self.get_work_order(work_order_id)
+        if db_work_order:
+            db_work_order.status = new_status
+            self.db.commit()
+            self.db.refresh(db_work_order)
+        return db_work_order
 
     def assign_user_to_work_order(self, assignment_in: schemas.WorkOrderUserAssignmentCreate) -> models.WorkOrderUserAssignment:
-        """Asigna un usuario a una orden de trabajo."""
         db_assignment = models.WorkOrderUserAssignment(**assignment_in.model_dump())
         self.db.add(db_assignment)
         self.db.commit()
@@ -59,7 +57,6 @@ class MaintenanceRepository:
         return db_assignment
 
     def assign_provider_to_work_order(self, assignment_in: schemas.WorkOrderProviderAssignmentCreate) -> models.WorkOrderProviderAssignment:
-        """Asigna un proveedor a una orden de trabajo."""
         db_assignment = models.WorkOrderProviderAssignment(**assignment_in.model_dump())
         self.db.add(db_assignment)
         self.db.commit()
