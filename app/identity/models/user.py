@@ -34,6 +34,10 @@ class User(Base):
     preferred_language = Column(String(10), default="es", nullable=False)
     employee_id = Column(String(50), unique=True, nullable=True)
 
+    # --- MEJORA: Campos para 2FA ---
+    tfa_secret = Column(String(255), nullable=True, comment="Secreto para la autenticación de dos factores (2FA).")
+    is_tfa_enabled = Column(Boolean, default=False, nullable=False, comment="Indica si el 2FA está habilitado para el usuario.")
+
     # --- Campos de Auditoría ---
     created_at = Column(
         TIMESTAMP(timezone=True), server_default=func.now(), nullable=False

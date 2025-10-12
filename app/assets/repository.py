@@ -59,6 +59,17 @@ class AssetRepository:
             query = query.filter(models.Asset.sector_id == sector_id)
         return query.offset(skip).limit(limit).all()
 
+    def update_asset(self, db_asset: models.Asset, asset_in: schemas.AssetUpdate) -> models.Asset:
+        """Actualiza una instancia de activo con los datos proporcionados."""
+        update_data = asset_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_asset, field, value)
+        
+        self.db.add(db_asset)
+        self.db.commit()
+        self.db.refresh(db_asset)
+        return db_asset
+
     def update_asset_status(self, asset_id: uuid.UUID, new_status: str) -> Optional[models.Asset]:
         """Actualiza el campo de estado de un activo específico."""
         db_asset = self.get_asset(asset_id) # Reutilizamos get_asset para obtener el objeto

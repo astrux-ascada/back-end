@@ -9,6 +9,7 @@ from typing import Optional, List, Any
 from pydantic import BaseModel, Field, Json
 
 from app.assets.schemas import AssetReadDTO
+# --- CORRECCIÓN: Apuntar al archivo de esquemas consolidado ---
 from app.identity.schemas import UserRead
 from app.procurement.schemas import ProviderRead
 
