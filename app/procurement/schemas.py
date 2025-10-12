@@ -22,8 +22,17 @@ class ProviderBase(BaseModel):
 class ProviderCreate(ProviderBase):
     pass
 
+class ProviderUpdate(BaseModel):
+    """Esquema para actualizar un proveedor existente. Todos los campos son opcionales."""
+    name: Optional[str] = None
+    contact_info: Optional[str] = None
+    specialty: Optional[str] = None
+    performance_score: Optional[float] = Field(None, ge=0, le=100)
+    is_active: Optional[bool] = None # <-- AÑADIDO: Permitir reactivar un proveedor
+
 class ProviderRead(ProviderBase):
     id: uuid.UUID
+    is_active: bool # <-- AÑADIDO: Campo para soft delete
     created_at: datetime
     updated_at: datetime
 
