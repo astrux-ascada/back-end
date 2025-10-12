@@ -42,8 +42,8 @@ class CoreEngineService:
             protocol = ds.protocol.upper()
             if protocol == "OPCUA":
                 connector = OpcUaConnector(ds, self._telemetry_callback)
-            elif protocol == "MODBUS":
-                connector = ModbusConnector(ds, self._telemetry_callback)
+            # elif protocol == "MODBUS":
+            #     connector = ModbusConnector(ds, self._telemetry_callback)
             else:
                 logger.warning(f"Protocolo '{ds.protocol}' no soportado para la fuente de datos: {ds.name}")
                 continue

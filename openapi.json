@@ -1,1 +1,3334 @@
-{"openapi":"3.1.0","info":{"title":"Astruxa","description":"Backend para el Orquestador Industrial 5.0 de Astruxa.","version":"1.0.0"},"paths":{"/api/v1/auth/register":{"post":{"tags":["Authentication"],"summary":"Registrar un nuevo usuario y crear una sesión","operationId":"register_user_api_v1_auth_register_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserCreate"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenWithUser"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/auth/login":{"post":{"tags":["Authentication"],"summary":"Iniciar sesión y obtener un token JWT","operationId":"login_for_access_token_api_v1_auth_login_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserLogin"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TokenWithUser"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/auth/me":{"get":{"tags":["Authentication"],"summary":"Obtener los datos del usuario actual","description":"Devuelve el objeto completo del usuario autenticado actualmente.","operationId":"read_users_me_api_v1_auth_me_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/UserRead"}}}}},"security":[{"HTTPBearer":[]}]}},"/api/v1/auth/logout":{"post":{"tags":["Authentication"],"summary":"Cerrar sesión e invalidar el token actual","operationId":"logout_api_v1_auth_logout_post","responses":{"204":{"description":"Successful Response"}},"security":[{"HTTPBearer":[]}]}},"/api/v1/auth/sessions/clear-all":{"post":{"tags":["Authentication"],"summary":"[Admin] Invalidar todas las sesiones de usuario activas","description":"Invalida TODAS las sesiones de usuario activas eliminándolas de Redis.","operationId":"clear_all_sessions_api_v1_auth_sessions_clear_all_post","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}}},"security":[{"HTTPBearer":[]}]}},"/api/v1/assets/":{"get":{"tags":["Assets"],"summary":"Obtener todos los Activos con filtros","description":"Devuelve una lista de todos los activos, con soporte para filtros.\n\n- `type`: Filtra por el tipo de activo (ej: SENSOR, MACHINE, PLC).\n- `sectorId`: Filtra por el UUID del sector al que pertenecen los activos.","operationId":"list_assets_api_v1_assets__get","parameters":[{"name":"type","in":"query","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Type"}},{"name":"sectorId","in":"query","required":false,"schema":{"anyOf":[{"type":"string","format":"uuid"},{"type":"null"}],"title":"Sectorid"}},{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/AssetReadDTO"},"title":"Response List Assets Api V1 Assets  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"post":{"tags":["Assets"],"summary":"Crear una nueva instancia de activo físico","description":"Registra un nuevo activo físico en la planta.","operationId":"create_asset_api_v1_assets__post","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/AssetCreate"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/AssetReadDTO"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/assets/{uuid}":{"get":{"tags":["Assets"],"summary":"Obtener un Activo por su UUID","description":"Devuelve los detalles de un activo específico.","operationId":"get_asset_api_v1_assets__uuid__get","parameters":[{"name":"uuid","in":"path","required":true,"schema":{"type":"string","format":"uuid","title":"Uuid"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/AssetReadDTO"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/assets/{uuid}/status":{"patch":{"tags":["Assets"],"summary":"Actualizar el Estado de un Activo","description":"Actualiza el estado operativo de un activo específico.","operationId":"update_asset_status_api_v1_assets__uuid__status_patch","parameters":[{"name":"uuid","in":"path","required":true,"schema":{"type":"string","format":"uuid","title":"Uuid"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/AssetStatusUpdate"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/AssetReadDTO"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/telemetry/readings":{"post":{"tags":["Telemetry"],"summary":"Ingesta masiva de lecturas de sensores","description":"Recibe un lote de lecturas de sensores y las envía al servicio de telemetría\npara su procesamiento y almacenamiento.","operationId":"ingest_sensor_readings_api_v1_telemetry_readings_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/BulkSensorReadingCreate"}}},"required":true},"responses":{"202":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/BulkIngestionResponse"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/procurement/providers":{"post":{"tags":["Procurement"],"summary":"Crear un nuevo proveedor","description":"Registra un nuevo proveedor en el sistema.","operationId":"create_provider_api_v1_procurement_providers_post","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProviderCreate"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ProviderRead"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"get":{"tags":["Procurement"],"summary":"Listar todos los proveedores","description":"Obtiene una lista paginada de todos los proveedores.","operationId":"list_providers_api_v1_procurement_providers_get","parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/ProviderRead"},"title":"Response List Providers Api V1 Procurement Providers Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/maintenance/work-orders":{"post":{"tags":["Maintenance"],"summary":"Crear una nueva orden de trabajo","description":"Crea una nueva orden de trabajo para un activo.","operationId":"create_work_order_api_v1_maintenance_work_orders_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/WorkOrderCreate"}}},"required":true},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/WorkOrderRead"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/maintenance/work-orders/{work_order_id}":{"get":{"tags":["Maintenance"],"summary":"Obtener detalles de una orden de trabajo","description":"Obtiene toda la información de una orden de trabajo, incluyendo sus tareas y asignaciones.","operationId":"get_work_order_api_v1_maintenance_work_orders__work_order_id__get","parameters":[{"name":"work_order_id","in":"path","required":true,"schema":{"type":"string","format":"uuid","title":"Work Order Id"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/WorkOrderRead"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/maintenance/work-orders/assign-user":{"post":{"tags":["Maintenance"],"summary":"Asignar un técnico a una orden de trabajo","description":"Asigna un usuario (técnico) a una orden de trabajo existente.","operationId":"assign_user_to_work_order_api_v1_maintenance_work_orders_assign_user_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/WorkOrderUserAssignmentCreate"}}},"required":true},"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/maintenance/work-orders/assign-provider":{"post":{"tags":["Maintenance"],"summary":"Asignar un proveedor a una orden de trabajo","description":"Asigna un proveedor externo a una orden de trabajo existente.","operationId":"assign_provider_to_work_order_api_v1_maintenance_work_orders_assign_provider_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/WorkOrderProviderAssignmentCreate"}}},"required":true},"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/core-engine/data-sources":{"post":{"tags":["Core Engine"],"summary":"Crear una nueva fuente de datos","description":"Registra una nueva fuente de datos (ej: un PLC) en el sistema.","operationId":"create_data_source_api_v1_core_engine_data_sources_post","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DataSourceCreate"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/DataSourceRead"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"get":{"tags":["Core Engine"],"summary":"Listar todas las fuentes de datos","description":"Obtiene una lista paginada de todas las fuentes de datos configuradas.","operationId":"list_data_sources_api_v1_core_engine_data_sources_get","parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/DataSourceRead"},"title":"Response List Data Sources Api V1 Core Engine Data Sources Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/api/v1/sectors/":{"post":{"tags":["Sectors"],"summary":"Crear un nuevo sector","description":"Crea un nuevo sector en la planta.","operationId":"create_sector_api_v1_sectors__post","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SectorCreate"}}}},"responses":{"201":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SectorRead"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"get":{"tags":["Sectors"],"summary":"Listar todos los sectores","description":"Obtiene una lista paginada de todos los sectores.","operationId":"list_sectors_api_v1_sectors__get","parameters":[{"name":"skip","in":"query","required":false,"schema":{"type":"integer","default":0,"title":"Skip"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","default":100,"title":"Limit"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/SectorRead"},"title":"Response List Sectors Api V1 Sectors  Get"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/":{"get":{"tags":["Root"],"summary":"Root","operationId":"root__get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}}}}}},"components":{"schemas":{"AssetCreate":{"properties":{"asset_type_id":{"type":"string","format":"uuid","title":"Asset Type Id"},"sector_id":{"anyOf":[{"type":"string","format":"uuid"},{"type":"null"}],"title":"Sector Id"},"serial_number":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Serial Number"},"location":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Location"},"properties":{"anyOf":[{"additionalProperties":true,"type":"object"},{"type":"null"}],"title":"Properties"}},"type":"object","required":["asset_type_id"],"title":"AssetCreate"},"AssetReadDTO":{"properties":{"uuid":{"type":"string","format":"uuid","title":"Uuid"},"isActive":{"type":"boolean","title":"Isactive"},"createdAt":{"type":"string","format":"date-time","title":"Createdat"},"updatedAt":{"type":"string","format":"date-time","title":"Updatedat"},"name":{"type":"string","title":"Name"},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description"},"type":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Type"},"status":{"type":"string","title":"Status"},"properties":{"anyOf":[{"additionalProperties":true,"type":"object"},{"type":"null"}],"title":"Properties"},"sector":{"anyOf":[{"$ref":"#/components/schemas/SectorRead"},{"type":"null"}]},"parentId":{"anyOf":[{"type":"string","format":"uuid"},{"type":"null"}],"title":"Parentid"}},"type":"object","required":["uuid","isActive","createdAt","updatedAt","name","status"],"title":"AssetReadDTO"},"AssetStatusUpdate":{"properties":{"status":{"type":"string","title":"Status","example":"MAINTENANCE"}},"type":"object","required":["status"],"title":"AssetStatusUpdate"},"BulkIngestionResponse":{"properties":{"message":{"type":"string","title":"Message","example":"25 lecturas recibidas y encoladas para procesamiento."},"received_count":{"type":"integer","title":"Received Count","example":25}},"type":"object","required":["message","received_count"],"title":"BulkIngestionResponse"},"BulkSensorReadingCreate":{"properties":{"readings":{"items":{"$ref":"#/components/schemas/SensorReadingCreate"},"type":"array","title":"Readings"}},"type":"object","required":["readings"],"title":"BulkSensorReadingCreate"},"DataSourceCreate":{"properties":{"name":{"type":"string","title":"Name","example":"PLC Línea de Ensamblaje 3"},"protocol":{"type":"string","title":"Protocol","example":"OPCUA"},"connection_params":{"type":"string","contentMediaType":"application/json","contentSchema":{},"title":"Connection Params","example":"{\"host\": \"192.168.1.10\", \"port\": 4840}"},"is_active":{"type":"boolean","title":"Is Active","description":"Habilita o deshabilita la recolección de datos.","default":false},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description","example":"Controlador principal del brazo robótico de soldadura."}},"type":"object","required":["name","protocol","connection_params"],"title":"DataSourceCreate"},"DataSourceRead":{"properties":{"name":{"type":"string","title":"Name","example":"PLC Línea de Ensamblaje 3"},"protocol":{"type":"string","title":"Protocol","example":"OPCUA"},"connection_params":{"title":"Connection Params","example":"{\"host\": \"192.168.1.10\", \"port\": 4840}"},"is_active":{"type":"boolean","title":"Is Active","description":"Habilita o deshabilita la recolección de datos.","default":false},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description","example":"Controlador principal del brazo robótico de soldadura."},"id":{"type":"string","format":"uuid","title":"Id"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"}},"type":"object","required":["name","protocol","connection_params","id","created_at","updated_at"],"title":"DataSourceRead"},"HTTPValidationError":{"properties":{"detail":{"items":{"$ref":"#/components/schemas/ValidationError"},"type":"array","title":"Detail"}},"type":"object","title":"HTTPValidationError"},"MaintenanceTaskRead":{"properties":{"description":{"type":"string","title":"Description","example":"Reemplazar filtro de aceite principal."},"order":{"type":"integer","exclusiveMinimum":0.0,"title":"Order","default":1,"example":1},"id":{"type":"string","format":"uuid","title":"Id"},"is_completed":{"type":"boolean","title":"Is Completed"},"created_at":{"type":"string","format":"date-time","title":"Created At"}},"type":"object","required":["description","id","is_completed","created_at"],"title":"MaintenanceTaskRead"},"PermissionRead":{"properties":{"name":{"type":"string","title":"Name","example":"asset:read"},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description","example":"Permite leer la información de los activos."},"id":{"type":"string","format":"uuid","title":"Id"}},"type":"object","required":["name","id"],"title":"PermissionRead"},"ProviderCreate":{"properties":{"name":{"type":"string","title":"Name","example":"Soluciones Industriales ACME"},"contact_info":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Contact Info","example":"contact@acme.com, +34 912 345 678"},"specialty":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Specialty","example":"Robótica y Automatización"},"performance_score":{"anyOf":[{"type":"number","maximum":100.0,"minimum":0.0},{"type":"null"}],"title":"Performance Score","example":95.5}},"type":"object","required":["name"],"title":"ProviderCreate"},"ProviderRead":{"properties":{"name":{"type":"string","title":"Name","example":"Soluciones Industriales ACME"},"contact_info":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Contact Info","example":"contact@acme.com, +34 912 345 678"},"specialty":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Specialty","example":"Robótica y Automatización"},"performance_score":{"anyOf":[{"type":"number","maximum":100.0,"minimum":0.0},{"type":"null"}],"title":"Performance Score","example":95.5},"id":{"type":"string","format":"uuid","title":"Id"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"}},"type":"object","required":["name","id","created_at","updated_at"],"title":"ProviderRead"},"RoleRead":{"properties":{"name":{"type":"string","title":"Name","example":"Operator"},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description","example":"Rol para operadores de planta."},"uuid":{"type":"string","format":"uuid","title":"Uuid"},"permissions":{"items":{"$ref":"#/components/schemas/PermissionRead"},"type":"array","title":"Permissions","default":[]}},"type":"object","required":["name","uuid"],"title":"RoleRead"},"SectorCreate":{"properties":{"name":{"type":"string","title":"Name","example":"Línea de Ensamblaje 1"},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description","example":"Sector de ensamblaje de chasis."}},"type":"object","required":["name"],"title":"SectorCreate"},"SectorRead":{"properties":{"uuid":{"type":"string","format":"uuid","title":"Uuid"},"name":{"type":"string","title":"Name"}},"type":"object","required":["uuid","name"],"title":"SectorRead"},"SensorReadingCreate":{"properties":{"asset_id":{"type":"string","format":"uuid","title":"Asset Id","description":"ID del activo que genera la lectura."},"timestamp":{"type":"string","format":"date-time","title":"Timestamp","description":"Timestamp exacto de la medición."},"metric_name":{"type":"string","title":"Metric Name","example":"temperature_celsius"},"value":{"type":"number","title":"Value","example":45.7}},"type":"object","required":["asset_id","timestamp","metric_name","value"],"title":"SensorReadingCreate"},"TokenWithUser":{"properties":{"access_token":{"type":"string","title":"Access Token"},"token_type":{"type":"string","title":"Token Type","default":"bearer"},"user":{"$ref":"#/components/schemas/UserRead"}},"type":"object","required":["access_token","user"],"title":"TokenWithUser"},"UserCreate":{"properties":{"email":{"type":"string","format":"email","title":"Email","example":"operario1@astruxa.com"},"name":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Name","example":"Juan Pérez"},"avatarUrl":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Avatarurl","example":"https://example.com/avatar.png"},"password":{"type":"string","minLength":8,"title":"Password"},"role_ids":{"items":{"type":"string","format":"uuid"},"type":"array","title":"Role Ids","description":"Lista de IDs de roles para asignar al usuario.","default":[]},"sector_ids":{"items":{"type":"string","format":"uuid"},"type":"array","title":"Sector Ids","description":"Lista de IDs de sectores a los que el usuario está asignado.","default":[]}},"type":"object","required":["email","password"],"title":"UserCreate"},"UserLogin":{"properties":{"email":{"type":"string","format":"email","title":"Email"},"password":{"type":"string","title":"Password"}},"type":"object","required":["email","password"],"title":"UserLogin"},"UserRead":{"properties":{"email":{"type":"string","format":"email","title":"Email","example":"operario1@astruxa.com"},"name":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Name","example":"Juan Pérez"},"avatarUrl":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Avatarurl","example":"https://example.com/avatar.png"},"uuid":{"type":"string","format":"uuid","title":"Uuid"},"isActive":{"type":"boolean","title":"Isactive"},"createdAt":{"type":"string","format":"date-time","title":"Createdat"},"updatedAt":{"type":"string","format":"date-time","title":"Updatedat"},"roles":{"items":{"$ref":"#/components/schemas/RoleRead"},"type":"array","title":"Roles","default":[]},"assignedSectors":{"items":{"$ref":"#/components/schemas/SectorRead"},"type":"array","title":"Assignedsectors","default":[]}},"type":"object","required":["email","uuid","isActive","createdAt","updatedAt"],"title":"UserRead"},"ValidationError":{"properties":{"loc":{"items":{"anyOf":[{"type":"string"},{"type":"integer"}]},"type":"array","title":"Location"},"msg":{"type":"string","title":"Message"},"type":{"type":"string","title":"Error Type"}},"type":"object","required":["loc","msg","type"],"title":"ValidationError"},"WorkOrderCreate":{"properties":{"asset_id":{"type":"string","format":"uuid","title":"Asset Id","description":"ID del activo que requiere mantenimiento."},"category":{"type":"string","title":"Category","description":"CORRECTIVE, PREVENTIVE, PREDICTIVE, IMPROVEMENT","example":"PREDICTIVE"},"status":{"type":"string","title":"Status","default":"OPEN","example":"OPEN"},"priority":{"type":"string","title":"Priority","default":"MEDIUM","example":"MEDIUM"},"summary":{"type":"string","title":"Summary","example":"Fallo inminente detectado en el motor principal."},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description","example":"El análisis de vibraciones indica un desgaste del 85% en el rodamiento A-3."},"due_date":{"anyOf":[{"type":"string","format":"date"},{"type":"null"}],"title":"Due Date"},"source_trigger":{"anyOf":[{"type":"string","contentMediaType":"application/json","contentSchema":{}},{"type":"null"}],"title":"Source Trigger","description":"JSON data explaining the origin of the work order."}},"type":"object","required":["asset_id","category","summary"],"title":"WorkOrderCreate"},"WorkOrderProviderAssignmentCreate":{"properties":{"work_order_id":{"type":"string","format":"uuid","title":"Work Order Id"},"provider_id":{"type":"string","format":"uuid","title":"Provider Id"}},"type":"object","required":["work_order_id","provider_id"],"title":"WorkOrderProviderAssignmentCreate"},"WorkOrderRead":{"properties":{"asset_id":{"type":"string","format":"uuid","title":"Asset Id","description":"ID del activo que requiere mantenimiento."},"category":{"type":"string","title":"Category","description":"CORRECTIVE, PREVENTIVE, PREDICTIVE, IMPROVEMENT","example":"PREDICTIVE"},"status":{"type":"string","title":"Status","default":"OPEN","example":"OPEN"},"priority":{"type":"string","title":"Priority","default":"MEDIUM","example":"MEDIUM"},"summary":{"type":"string","title":"Summary","example":"Fallo inminente detectado en el motor principal."},"description":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Description","example":"El análisis de vibraciones indica un desgaste del 85% en el rodamiento A-3."},"due_date":{"anyOf":[{"type":"string","format":"date"},{"type":"null"}],"title":"Due Date"},"source_trigger":{"anyOf":[{},{"type":"null"}],"title":"Source Trigger","description":"JSON data explaining the origin of the work order."},"id":{"type":"string","format":"uuid","title":"Id"},"created_at":{"type":"string","format":"date-time","title":"Created At"},"updated_at":{"type":"string","format":"date-time","title":"Updated At"},"completed_at":{"anyOf":[{"type":"string","format":"date-time"},{"type":"null"}],"title":"Completed At"},"asset":{"$ref":"#/components/schemas/AssetReadDTO"},"tasks":{"items":{"$ref":"#/components/schemas/MaintenanceTaskRead"},"type":"array","title":"Tasks","default":[]},"assigned_users":{"items":{"$ref":"#/components/schemas/UserRead"},"type":"array","title":"Assigned Users","default":[]},"assigned_provider":{"anyOf":[{"$ref":"#/components/schemas/ProviderRead"},{"type":"null"}]}},"type":"object","required":["asset_id","category","summary","id","created_at","updated_at","asset"],"title":"WorkOrderRead"},"WorkOrderUserAssignmentCreate":{"properties":{"work_order_id":{"type":"string","format":"uuid","title":"Work Order Id"},"user_id":{"type":"string","format":"uuid","title":"User Id"}},"type":"object","required":["work_order_id","user_id"],"title":"WorkOrderUserAssignmentCreate"}},"securitySchemes":{"HTTPBearer":{"type":"http","scheme":"bearer"}}}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Astruxa",
+    "description": "Backend para el Orquestador Industrial 5.0 de Astruxa.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login For Access Token",
+        "operationId": "login_for_access_token_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenWithUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Read Users Me",
+        "operationId": "read_users_me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/users/{user_id}": {
+      "put": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Update User",
+        "description": "Actualiza la información de un usuario existente.",
+        "operationId": "update_user_api_v1_auth_users__user_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Delete User",
+        "description": "Desactiva (soft delete) a un usuario existente.",
+        "operationId": "delete_user_api_v1_auth_users__user_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/tfa/setup": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Setup Tfa",
+        "description": "Genera un nuevo secreto 2FA para el usuario y devuelve la URL para el código QR.",
+        "operationId": "setup_tfa_api_v1_auth_tfa_setup_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Setup Tfa Api V1 Auth Tfa Setup Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/tfa/enable": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Enable Tfa",
+        "description": "Verifica el token inicial y activa el 2FA para la cuenta del usuario.",
+        "operationId": "enable_tfa_api_v1_auth_tfa_enable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TfaToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/verify-token": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Verify Tfa Token",
+        "description": "Verifica un token 2FA para una operación crítica.",
+        "operationId": "verify_tfa_token_api_v1_auth_verify_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TfaToken"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "type": "object",
+                  "title": "Response Verify Tfa Token Api V1 Auth Verify Token Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register User",
+        "operationId": "register_user_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenWithUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/sessions/clear-all": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Clear All Sessions",
+        "operationId": "clear_all_sessions_api_v1_auth_sessions_clear_all_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/assets/": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Obtener todos los Activos con filtros",
+        "description": "Devuelve una lista de todos los activos, con soporte para filtros.",
+        "operationId": "list_assets_api_v1_assets__get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "sectorId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sectorid"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AssetReadDTO"
+                  },
+                  "title": "Response List Assets Api V1 Assets  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Crear una nueva instancia de activo físico",
+        "description": "Registra un nuevo activo físico en la planta y registra la acción.",
+        "operationId": "create_asset_api_v1_assets__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetReadDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{uuid}": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Obtener un Activo por su UUID",
+        "description": "Devuelve los detalles de un activo específico.",
+        "operationId": "get_asset_api_v1_assets__uuid__get",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetReadDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assets/{uuid}/status": {
+      "patch": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Actualizar el Estado de un Activo",
+        "description": "Actualiza el estado operativo de un activo específico y registra la acción.",
+        "operationId": "update_asset_status_api_v1_assets__uuid__status_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssetStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetReadDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/telemetry/readings": {
+      "post": {
+        "tags": [
+          "Telemetry"
+        ],
+        "summary": "Ingesta masiva de lecturas de sensores",
+        "description": "Recibe un lote de lecturas de sensores para su procesamiento.",
+        "operationId": "ingest_sensor_readings_api_v1_telemetry_readings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkSensorReadingCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkIngestionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/telemetry/readings/{asset_id}": {
+      "get": {
+        "tags": [
+          "Telemetry"
+        ],
+        "summary": "Obtener datos de telemetría agregados para un activo",
+        "description": "Obtiene datos de series temporales agregados para un activo específico,\nideal para la visualización en gráficos. La consulta queda registrada en la auditoría.",
+        "operationId": "get_aggregated_readings_api_v1_telemetry_readings__asset_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Asset Id"
+            }
+          },
+          {
+            "name": "metric_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric Name"
+            }
+          },
+          {
+            "name": "start_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start Time"
+            }
+          },
+          {
+            "name": "end_time",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End Time"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "1 minute",
+              "title": "Interval"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AggregatedReadingDTO"
+                  },
+                  "title": "Response Get Aggregated Readings Api V1 Telemetry Readings  Asset Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/procurement/providers": {
+      "post": {
+        "tags": [
+          "Procurement"
+        ],
+        "summary": "Crear un nuevo proveedor",
+        "description": "Registra un nuevo proveedor en el sistema.",
+        "operationId": "create_provider_api_v1_procurement_providers_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Procurement"
+        ],
+        "summary": "Listar todos los proveedores",
+        "description": "Obtiene una lista paginada de todos los proveedores.",
+        "operationId": "list_providers_api_v1_procurement_providers_get",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProviderRead"
+                  },
+                  "title": "Response List Providers Api V1 Procurement Providers Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/work-orders": {
+      "post": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Crear una nueva orden de trabajo",
+        "description": "Crea una nueva orden de trabajo y registra la acción en la auditoría.",
+        "operationId": "create_work_order_api_v1_maintenance_work_orders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/maintenance/work-orders/{work_order_id}": {
+      "get": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Obtener detalles de una orden de trabajo",
+        "description": "Obtiene toda la información de una orden de trabajo.",
+        "operationId": "get_work_order_api_v1_maintenance_work_orders__work_order_id__get",
+        "parameters": [
+          {
+            "name": "work_order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Order Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/work-orders/{work_order_id}/status": {
+      "patch": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Actualizar el estado de una orden de trabajo",
+        "description": "Actualiza el estado de una orden de trabajo y registra la acción.",
+        "operationId": "update_work_order_status_api_v1_maintenance_work_orders__work_order_id__status_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "work_order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Work Order Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/work-orders/assign-user": {
+      "post": {
+        "tags": [
+          "Maintenance"
+        ],
+        "summary": "Asignar un técnico a una orden de trabajo",
+        "description": "Asigna un usuario a una orden de trabajo y registra la acción.",
+        "operationId": "assign_user_to_work_order_api_v1_maintenance_work_orders_assign_user_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkOrderUserAssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/core-engine/data-sources": {
+      "post": {
+        "tags": [
+          "Core Engine"
+        ],
+        "summary": "Crear una nueva fuente de datos",
+        "description": "Registra una nueva fuente de datos (ej: un PLC) en el sistema.",
+        "operationId": "create_data_source_api_v1_core_engine_data_sources_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataSourceCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataSourceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Core Engine"
+        ],
+        "summary": "Listar todas las fuentes de datos",
+        "description": "Obtiene una lista paginada de todas las fuentes de datos configuradas.",
+        "operationId": "list_data_sources_api_v1_core_engine_data_sources_get",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataSourceRead"
+                  },
+                  "title": "Response List Data Sources Api V1 Core Engine Data Sources Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sectors/": {
+      "post": {
+        "tags": [
+          "Sectors"
+        ],
+        "summary": "Crear un nuevo sector",
+        "description": "Crea un nuevo sector en la planta.",
+        "operationId": "create_sector_api_v1_sectors__post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SectorCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectorRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Sectors"
+        ],
+        "summary": "Listar todos los sectores",
+        "description": "Obtiene una lista paginada de todos los sectores.",
+        "operationId": "list_sectors_api_v1_sectors__get",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SectorRead"
+                  },
+                  "title": "Response List Sectors Api V1 Sectors  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auditing/logs": {
+      "get": {
+        "tags": [
+          "Auditing"
+        ],
+        "summary": "[Admin] Obtener el historial de operaciones",
+        "description": "Devuelve una lista paginada de todos los registros de auditoría del sistema.",
+        "operationId": "list_audit_logs_api_v1_auditing_logs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLogRead"
+                  },
+                  "title": "Response List Audit Logs Api V1 Auditing Logs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/parameters": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "[SuperUser] Obtener todos los Parámetros de Configuración",
+        "description": "Devuelve una lista de todos los parámetros de configuración del sistema.",
+        "operationId": "list_parameters_api_v1_configuration_parameters_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigurationParameterRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Parameters Api V1 Configuration Parameters Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/configuration/parameters/{key}": {
+      "patch": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "[SuperUser] Actualizar un Parámetro de Configuración",
+        "description": "Actualiza el valor de un parámetro de configuración específico.",
+        "operationId": "update_parameter_api_v1_configuration_parameters__key__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigurationParameterUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigurationParameterRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/configuration/enums": {
+      "get": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "[SuperUser] Obtener todos los Enums Dinámicos",
+        "description": "Devuelve una lista de todos los tipos de enums gestionables y sus valores.",
+        "operationId": "list_enum_types_api_v1_configuration_enums_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EnumTypeRead"
+                  },
+                  "type": "array",
+                  "title": "Response List Enum Types Api V1 Configuration Enums Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/configuration/enums/{enum_name}/values": {
+      "post": {
+        "tags": [
+          "Configuration"
+        ],
+        "summary": "[SuperUser] Añadir un Valor a un Enum",
+        "description": "Añade un nuevo valor a un enum existente (ej: un nuevo estado para las órdenes de trabajo).",
+        "operationId": "add_value_to_enum_api_v1_configuration_enums__enum_name__values_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "enum_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Enum Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnumValueCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnumTypeRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/alarming/rules": {
+      "post": {
+        "tags": [
+          "Alarming"
+        ],
+        "summary": "Create Alarm Rule",
+        "description": "Crea una nueva regla de alarma.",
+        "operationId": "create_alarm_rule_api_v1_alarming_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlarmRuleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlarmRule"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/alarming/alarms/active": {
+      "get": {
+        "tags": [
+          "Alarming"
+        ],
+        "summary": "List Active Alarms",
+        "description": "Obtiene una lista de todas las alarmas que están actualmente activas (no reconocidas).",
+        "operationId": "list_active_alarms_api_v1_alarming_alarms_active_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlarmRule"
+                  },
+                  "type": "array",
+                  "title": "Response List Active Alarms Api V1 Alarming Alarms Active Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/alarming/alarms/{alarm_id}/acknowledge": {
+      "post": {
+        "tags": [
+          "Alarming"
+        ],
+        "summary": "Acknowledge Alarm",
+        "description": "Reconoce (marca como vista) una alarma activa.",
+        "operationId": "acknowledge_alarm_api_v1_alarming_alarms__alarm_id__acknowledge_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "alarm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Alarm Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlarmRule"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Obtener Notificaciones del Usuario Actual",
+        "description": "Devuelve una lista de las notificaciones del usuario autenticado.",
+        "operationId": "get_notifications_api_v1_notifications__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "include_read",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Read"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Notification"
+                  },
+                  "title": "Response Get Notifications Api V1 Notifications  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{notification_id}/mark-read": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Marcar una Notificación como Leída",
+        "description": "Marca una notificación específica del usuario actual como leída.",
+        "operationId": "mark_notification_as_read_api_v1_notifications__notification_id__mark_read_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Notification Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/mark-all-read": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Marcar Todas las Notificaciones como Leídas",
+        "description": "Marca todas las notificaciones no leídas del usuario actual como leídas.",
+        "operationId": "mark_all_notifications_as_read_api_v1_notifications_mark_all_read_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/": {
+      "get": {
+        "tags": [
+          "Root"
+        ],
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AggregatedReadingDTO": {
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Bucket",
+            "description": "El inicio del intervalo de tiempo para la agregación."
+          },
+          "avg_value": {
+            "type": "number",
+            "title": "Avg Value",
+            "description": "El valor promedio de la métrica en el intervalo."
+          },
+          "min_value": {
+            "type": "number",
+            "title": "Min Value",
+            "description": "El valor mínimo de la métrica en el intervalo."
+          },
+          "max_value": {
+            "type": "number",
+            "title": "Max Value",
+            "description": "El valor máximo de la métrica en el intervalo."
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "avg_value",
+          "min_value",
+          "max_value"
+        ],
+        "title": "AggregatedReadingDTO",
+        "description": "Representa un punto de datos agregado para un gráfico de series temporales."
+      },
+      "AlarmRule": {
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Asset Id"
+          },
+          "metric_name": {
+            "type": "string",
+            "title": "Metric Name"
+          },
+          "condition": {
+            "type": "string",
+            "title": "Condition"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "default": "warning"
+          },
+          "is_enabled": {
+            "type": "boolean",
+            "title": "Is Enabled",
+            "default": true
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_id",
+          "metric_name",
+          "condition",
+          "threshold",
+          "id"
+        ],
+        "title": "AlarmRule"
+      },
+      "AlarmRuleCreate": {
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Asset Id"
+          },
+          "metric_name": {
+            "type": "string",
+            "title": "Metric Name"
+          },
+          "condition": {
+            "type": "string",
+            "title": "Condition"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "default": "warning"
+          },
+          "is_enabled": {
+            "type": "boolean",
+            "title": "Is Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_id",
+          "metric_name",
+          "condition",
+          "threshold"
+        ],
+        "title": "AlarmRuleCreate"
+      },
+      "AssetCreate": {
+        "properties": {
+          "asset_type_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Asset Type Id"
+          },
+          "sector_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector Id"
+          },
+          "serial_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial Number"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "properties": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Properties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_type_id"
+        ],
+        "title": "AssetCreate"
+      },
+      "AssetReadDTO": {
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "title": "Isactive"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "properties": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Properties"
+          },
+          "sector": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SectorRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parentid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uuid",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "name",
+          "status"
+        ],
+        "title": "AssetReadDTO"
+      },
+      "AssetStatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "example": "MAINTENANCE"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "AssetStatusUpdate"
+      },
+      "AuditLogRead": {
+        "properties": {
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "ID del usuario que realizó la acción."
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type",
+            "description": "Tipo de la entidad modificada.",
+            "example": "WorkOrder"
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Entity Id",
+            "description": "ID de la entidad modificada."
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "La acción realizada.",
+            "example": "UPDATE_STATUS"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "JSON con los detalles del cambio."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entity_type",
+          "entity_id",
+          "action",
+          "id",
+          "timestamp"
+        ],
+        "title": "AuditLogRead"
+      },
+      "BulkIngestionResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "example": "25 lecturas recibidas y encoladas para procesamiento."
+          },
+          "received_count": {
+            "type": "integer",
+            "title": "Received Count",
+            "example": 25
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "received_count"
+        ],
+        "title": "BulkIngestionResponse"
+      },
+      "BulkSensorReadingCreate": {
+        "properties": {
+          "readings": {
+            "items": {
+              "$ref": "#/components/schemas/SensorReadingCreate"
+            },
+            "type": "array",
+            "title": "Readings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "readings"
+        ],
+        "title": "BulkSensorReadingCreate"
+      },
+      "ConfigurationParameterRead": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "isEditable": {
+            "type": "boolean",
+            "title": "Iseditable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "key",
+          "isEditable"
+        ],
+        "title": "ConfigurationParameterRead"
+      },
+      "ConfigurationParameterUpdate": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "ConfigurationParameterUpdate"
+      },
+      "DataSourceCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "PLC Línea de Ensamblaje 3"
+          },
+          "protocol": {
+            "type": "string",
+            "title": "Protocol",
+            "example": "OPCUA"
+          },
+          "connection_params": {
+            "type": "string",
+            "contentMediaType": "application/json",
+            "contentSchema": {},
+            "title": "Connection Params",
+            "example": "{\"host\": \"192.168.1.10\", \"port\": 4840}"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Habilita o deshabilita la recolección de datos.",
+            "default": false
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "example": "Controlador principal del brazo robótico de soldadura."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "protocol",
+          "connection_params"
+        ],
+        "title": "DataSourceCreate"
+      },
+      "DataSourceRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "PLC Línea de Ensamblaje 3"
+          },
+          "protocol": {
+            "type": "string",
+            "title": "Protocol",
+            "example": "OPCUA"
+          },
+          "connection_params": {
+            "title": "Connection Params",
+            "example": "{\"host\": \"192.168.1.10\", \"port\": 4840}"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Habilita o deshabilita la recolección de datos.",
+            "default": false
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "example": "Controlador principal del brazo robótico de soldadura."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "protocol",
+          "connection_params",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DataSourceRead"
+      },
+      "EnumTypeRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "WorkOrderStatus"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/EnumValueRead"
+            },
+            "type": "array",
+            "title": "Values",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id"
+        ],
+        "title": "EnumTypeRead"
+      },
+      "EnumValueCreate": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value",
+            "example": "IN_PROGRESS"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "example": "En Progreso"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color",
+            "example": "#3b82f6"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "EnumValueCreate"
+      },
+      "EnumValueRead": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value",
+            "example": "IN_PROGRESS"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "example": "En Progreso"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color",
+            "example": "#3b82f6"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "label",
+          "id"
+        ],
+        "title": "EnumValueRead"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MaintenanceTaskRead": {
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "example": "Reemplazar filtro de aceite principal."
+          },
+          "order": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Order",
+            "default": 1,
+            "example": 1
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "is_completed": {
+            "type": "boolean",
+            "title": "Is Completed"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "description",
+          "id",
+          "is_completed",
+          "created_at"
+        ],
+        "title": "MaintenanceTaskRead"
+      },
+      "Notification": {
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "isRead": {
+            "type": "boolean",
+            "title": "Isread"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "referenceId": {
+            "type": "string",
+            "title": "Referenceid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uuid",
+          "createdAt",
+          "isRead",
+          "message",
+          "type",
+          "referenceId"
+        ],
+        "title": "Notification"
+      },
+      "PermissionRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "asset:read"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "example": "Permite leer la información de los activos."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id"
+        ],
+        "title": "PermissionRead"
+      },
+      "ProviderCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Soluciones Industriales ACME"
+          },
+          "contact_info": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Info",
+            "example": "contact@acme.com, +34 912 345 678"
+          },
+          "specialty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialty",
+            "example": "Robótica y Automatización"
+          },
+          "performance_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Performance Score",
+            "example": 95.5
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProviderCreate"
+      },
+      "ProviderRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Soluciones Industriales ACME"
+          },
+          "contact_info": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Info",
+            "example": "contact@acme.com, +34 912 345 678"
+          },
+          "specialty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialty",
+            "example": "Robótica y Automatización"
+          },
+          "performance_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Performance Score",
+            "example": 95.5
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProviderRead"
+      },
+      "RoleRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Operator"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "example": "Rol para operadores de planta."
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionRead"
+            },
+            "type": "array",
+            "title": "Permissions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "uuid"
+        ],
+        "title": "RoleRead"
+      },
+      "SectorCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "example": "Línea de Ensamblaje 1"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description",
+            "example": "Sector de ensamblaje de chasis."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "SectorCreate"
+      },
+      "SectorRead": {
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uuid",
+          "name"
+        ],
+        "title": "SectorRead"
+      },
+      "SensorReadingCreate": {
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Asset Id",
+            "description": "ID del activo que genera la lectura."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "Timestamp exacto de la medición."
+          },
+          "metric_name": {
+            "type": "string",
+            "title": "Metric Name",
+            "example": "temperature_celsius"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value",
+            "example": 45.7
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_id",
+          "timestamp",
+          "metric_name",
+          "value"
+        ],
+        "title": "SensorReadingCreate"
+      },
+      "TfaToken": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 6,
+            "minLength": 6,
+            "title": "Token",
+            "example": "123456"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "TfaToken",
+        "description": "Esquema para recibir un token de 2FA."
+      },
+      "TokenWithUser": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserRead"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "user"
+        ],
+        "title": "TokenWithUser"
+      },
+      "UserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "example": "operario1@astruxa.com"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "example": "Juan Pérez"
+          },
+          "avatarUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarurl",
+            "example": "https://example.com/avatar.png"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          },
+          "role_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Role Ids",
+            "description": "Lista de IDs de roles para asignar al usuario.",
+            "default": []
+          },
+          "sector_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Sector Ids",
+            "description": "Lista de IDs de sectores a los que el usuario está asignado.",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserCreate"
+      },
+      "UserLogin": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserLogin"
+      },
+      "UserRead": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email",
+            "example": "operario1@astruxa.com"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "example": "Juan Pérez"
+          },
+          "avatarUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatarurl",
+            "example": "https://example.com/avatar.png"
+          },
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Uuid"
+          },
+          "isActive": {
+            "type": "boolean",
+            "title": "Isactive"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleRead"
+            },
+            "type": "array",
+            "title": "Roles",
+            "default": []
+          },
+          "assignedSectors": {
+            "items": {
+              "$ref": "#/components/schemas/SectorRead"
+            },
+            "type": "array",
+            "title": "Assignedsectors",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "uuid",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ],
+        "title": "UserRead"
+      },
+      "UserUpdate": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "role_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Ids"
+          },
+          "sector_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sector Ids"
+          }
+        },
+        "type": "object",
+        "title": "UserUpdate"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WorkOrderCreate": {
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Asset Id",
+            "description": "ID del activo que requiere mantenimiento."
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "example": "PREDICTIVE"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "OPEN",
+            "example": "OPEN"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority",
+            "default": "MEDIUM",
+            "example": "MEDIUM"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "example": "Fallo inminente detectado en el motor principal."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "source_trigger": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/json",
+                "contentSchema": {}
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Trigger"
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_id",
+          "category",
+          "summary"
+        ],
+        "title": "WorkOrderCreate"
+      },
+      "WorkOrderRead": {
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Asset Id",
+            "description": "ID del activo que requiere mantenimiento."
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "example": "PREDICTIVE"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "OPEN",
+            "example": "OPEN"
+          },
+          "priority": {
+            "type": "string",
+            "title": "Priority",
+            "default": "MEDIUM",
+            "example": "MEDIUM"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "example": "Fallo inminente detectado en el motor principal."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "source_trigger": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Trigger"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "asset": {
+            "$ref": "#/components/schemas/AssetReadDTO"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceTaskRead"
+            },
+            "type": "array",
+            "title": "Tasks",
+            "default": []
+          },
+          "assigned_users": {
+            "items": {
+              "$ref": "#/components/schemas/UserRead"
+            },
+            "type": "array",
+            "title": "Assigned Users",
+            "default": []
+          },
+          "assigned_provider": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProviderRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_id",
+          "category",
+          "summary",
+          "id",
+          "created_at",
+          "updated_at",
+          "asset"
+        ],
+        "title": "WorkOrderRead"
+      },
+      "WorkOrderStatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "example": "IN_PROGRESS"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "WorkOrderStatusUpdate",
+        "description": "Esquema para actualizar el estado de una orden de trabajo."
+      },
+      "WorkOrderUserAssignmentCreate": {
+        "properties": {
+          "work_order_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Work Order Id"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "work_order_id",
+          "user_id"
+        ],
+        "title": "WorkOrderUserAssignmentCreate"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

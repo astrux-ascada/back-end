@@ -15,8 +15,7 @@ from app.core.database import get_db
 from app.core.redis import get_redis_client
 from app.core.security import verify_jwt_token
 from app.core.exceptions import AuthenticationException
-from app.identity.models import User
-from app.identity.repository import UserRepository
+from app.identity.models import User, Role
 from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger("app.dependency.auth")
@@ -54,8 +53,7 @@ def get_current_active_user(
     except ValueError:
         raise AuthenticationException("Token inválido: el identificador del sujeto no es un UUID válido.")
 
-    # Usamos joinedload para cargar los roles y permisos en una sola consulta
-    user = db.query(User).options(joinedload(User.roles).joinedload(models.Role.permissions)).filter(User.id == user_id).first()
+    user = db.query(User).options(joinedload(User.roles).joinedload(Role.permissions)).filter(User.id == user_id).first()
 
     if not user or not user.is_active:
         raise AuthenticationException("Credenciales de autenticación no válidas o usuario inactivo.")
@@ -65,15 +63,26 @@ def get_current_active_user(
 def get_current_admin_user(
     current_user: User = Depends(get_current_active_user),
 ) -> User:
-    """Dependencia que obtiene el usuario activo y verifica que tenga el rol 'Administrator'."""
-    if not any(role.name == "Administrator" for role in current_user.roles):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Se requieren permisos de Administrador.")
+    """Dependencia que obtiene el usuario activo y verifica que tenga el rol 'Admin' o 'Super User'."""
+    # Nombres de roles estandarizados (insensible a mayúsculas)
+    admin_roles = ["admin", "super user"]
+    user_roles = [role.name.lower() for role in current_user.roles]
+    
+    if not any(role_name in user_roles for role_name in admin_roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Se requieren permisos de Administrador o superiores."
+        )
     return current_user
 
 def get_current_superuser(
     current_user: User = Depends(get_current_active_user),
 ) -> User:
-    """Dependencia que obtiene el usuario activo y verifica que tenga el rol 'SuperUser'."""
-    if not any(role.name == "SuperUser" for role in current_user.roles):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Se requieren permisos de SuperUsuario.")
+    """Dependencia que obtiene el usuario activo y verifica que tenga el rol 'Super User'."""
+    user_roles = [role.name.lower() for role in current_user.roles]
+    if "super user" not in user_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Se requieren permisos de Super User."
+        )
     return current_user

@@ -33,6 +33,11 @@ class RoleBase(BaseModel):
 class RoleCreate(RoleBase):
     permission_ids: List[uuid.UUID] = Field([], description="Lista de IDs de permisos para asignar al rol.")
 
+class RoleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    permission_ids: Optional[List[uuid.UUID]] = None
+
 class RoleRead(RoleBase):
     id: uuid.UUID = Field(..., alias="uuid")
     permissions: List[PermissionRead] = []
@@ -52,6 +57,13 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     role_ids: List[uuid.UUID] = Field([], description="Lista de IDs de roles para asignar al usuario.")
     sector_ids: List[uuid.UUID] = Field([], description="Lista de IDs de sectores a los que el usuario está asignado.")
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    role_ids: Optional[List[uuid.UUID]] = None
+    sector_ids: Optional[List[uuid.UUID]] = None
 
 class UserLogin(BaseModel):
     email: EmailStr

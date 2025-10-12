@@ -13,7 +13,8 @@ from app.core.redis import get_redis_client
 
 # --- Import services from Astruxa's modules ---
 from app.identity.auth_service import AuthService
-from app.identity.tfa_service import TfaService # Añadido el nuevo servicio de 2FA
+from app.identity.role_service import RoleService
+from app.identity.tfa_service import TfaService
 from app.assets.service import AssetService
 from app.assets.repository import AssetRepository
 from app.telemetry.service import TelemetryService
@@ -48,8 +49,12 @@ def get_auth_service(
     redis_client: redis.Redis = Depends(get_redis_client)
 ) -> AuthService:
     """Provides an instance of the AuthService with all its dependencies."""
-    tfa_service = TfaService() # TfaService no tiene dependencias
+    tfa_service = TfaService()
     return AuthService(db=db, redis_client=redis_client, tfa_service=tfa_service)
+
+def get_role_service(db: Session = Depends(get_db)) -> RoleService:
+    """Provides an instance of the RoleService."""
+    return RoleService(db)
 
 def get_asset_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> AssetService:
     return AssetService(db=db, audit_service=audit_service)
@@ -61,17 +66,22 @@ def get_telemetry_service(
 ) -> TelemetryService:
     return TelemetryService(db=db, audit_service=audit_service, alarming_service=alarming_service)
 
+
 def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
     return ProcurementService(db)
+
 
 def get_maintenance_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> MaintenanceService:
     return MaintenanceService(db=db, audit_service=audit_service)
 
+
 def get_core_engine_service(db: Session = Depends(get_db)) -> CoreEngineService:
     return CoreEngineService(db, telemetry_service=None)
 
+
 def get_sector_service(db: Session = Depends(get_db)) -> SectorService:
     return SectorService(db)
+
 
 def get_configuration_service(db: Session = Depends(get_db)) -> ConfigurationService:
     return ConfigurationService(db)

@@ -45,10 +45,13 @@ def create_access_token(user: User) -> Tuple[str, str]:
     )
     jti = str(uuid.uuid4())
     
+    # Comprobar si el usuario tiene el rol de 'admin'
+    is_admin = any(role.name.lower() == 'admin' for role in user.roles)
+    
     token_payload = {
         "sub": str(user.id),
         "email": user.email,
-        "is_admin": user.is_admin,
+        "is_admin": is_admin,
         "exp": expire,
         "jti": jti,  # JWT ID: Identificador único para este token
     }

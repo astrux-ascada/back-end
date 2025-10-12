@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Any
 
-from pydantic import PostgresDsn, field_validator, ValidationInfo
+from pydantic import PostgresDsn, field_validator, ValidationInfo, EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.logging_config import LOGGING_CONFIG
@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # --- Configuración de la Aplicación ---
     ENV: str = "development"
     PROJECT_NAME: str = "Astruxa"
-    BASE_URL: str = "http://localhost:8000"
+    BASE_URL: str = "http://localhost:8071"
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
     GOOGLE_API_KEY: Optional[str] = None
 
@@ -42,9 +42,9 @@ class Settings(BaseSettings):
     def assemble_db_connection(cls, v: Optional[str], info: ValidationInfo) -> Any:
         if isinstance(v, str) and "USER" not in v and "HOST" not in v:
             return v.replace("postgresql://", "postgresql+psycopg://")
-        
-        if info.data.get("POSTGRES_HOST") and info.data.get("POSTGRES_USER") and info.data.get("POSTGRES_DB"):
 
+        if info.data.get("POSTGRES_HOST") and info.data.get("POSTGRES_USER") and info.data.get(
+                "POSTGRES_DB"):
             return str(
                 PostgresDsn.build(
                     scheme="postgresql+psycopg",
@@ -55,14 +55,16 @@ class Settings(BaseSettings):
                     path=str(info.data.get("POSTGRES_DB")).lstrip("/"),
                 )
             )
-raise ValueError("La configuración de la base de datos está incompleta.")
+        raise ValueError("La configuración de la base de datos está incompleta.")
 
     # --- Configuración de JWT ---
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
- 
-    JWT_EXPIRE_MINUTES: int = 1080 # 18 horas
- 
+    JWT_EXPIRE_MINUTES: int = 1080  # 18 horas
+
+    # --- Configuración del Superusuario Inicial ---
+    FIRST_SUPERUSER_EMAIL: EmailStr = "admin@astruxa.com"
+    FIRST_SUPERUSER_PASSWORD: str = "AstruxaAdmin2024!"
 
     # --- Configuración de Almacenamiento ---
     STORAGE_PATH: Path = ROOT_PATH / "storage"

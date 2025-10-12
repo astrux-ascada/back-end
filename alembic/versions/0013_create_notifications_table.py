@@ -1,7 +1,7 @@
 """Create notifications table
 
 Revision ID: 0013
-Revises: 0012
+Revises: 0011
 Create Date: 2024-07-23 10:00:00.000000
 
 """
@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 # revision identifiers, used by Alembic.
 revision = '0013'
-down_revision = '0012'
+down_revision = '0011'
 branch_labels = None
 depends_on = None
 

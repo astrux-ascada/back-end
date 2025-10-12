@@ -1,96 +1,96 @@
 # /app/db/seeding/_seed_identity.py
 """
-Script de siembra para el módulo de Identidad (Permissions, Roles, Users).
+Script para sembrar la base de datos con datos iniciales de Identidad (Permisos, Roles, Usuario Admin).
 """
-
 import logging
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.identity.models import Permission, Role, User
-from app.sectors.models import Sector
-from app.core.security import hash_password
+from app.identity.schemas import UserCreate
+from app.identity.repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
-# --- Datos de Siembra Predefinidos ---
-
-PERMISSIONS_DATA = {
-    "admin:full-access": "Acceso total a todas las funcionalidades.",
-    "user:read": "Leer información de usuarios.",
-    "user:create": "Crear nuevos usuarios.",
-    "asset:read": "Leer información de activos.",
-    "asset:create": "Crear nuevos activos.",
-    "asset:update": "Actualizar información de activos.",
-    "workorder:read": "Leer órdenes de trabajo.",
-    "workorder:create": "Crear nuevas órdenes de trabajo.",
-    "workorder:assign": "Asignar órdenes de trabajo a técnicos o proveedores.",
-}
-
-ROLES_DATA = {
-    "Administrator": ["admin:full-access"],
-    "Supervisor": ["asset:read", "workorder:read", "workorder:create", "workorder:assign"],
-    "Technician": ["asset:read", "workorder:read"],
-    "Operator": ["asset:read"],
-}
-
-USERS_DATA = [
-    {
-        "email": "admin@astruxa.com",
-        "name": "Alice Admin",
-        "password": "admin_password",
-        "roles": ["Administrator"],
-        "sectors": ["Línea de Estampado 1", "Línea de Estampado 2", "Control de Calidad", "Área de Mantenimiento"]
-    },
-    {
-        "email": "supervisor@astruxa.com",
-        "name": "Bob Supervisor",
-        "password": "supervisor_password",
-        "roles": ["Supervisor"],
-        "sectors": ["Línea de Estampado 1", "Línea de Estampado 2"]
-    },
-    {
-        "email": "tech@astruxa.com",
-        "name": "Charlie Technician",
-        "password": "tech_password",
-        "roles": ["Technician"],
-        "sectors": ["Área de Mantenimiento"]
-    }
+# --- Definición de Permisos Esenciales ---
+# Estructura: "entidad:acción"
+PERMISSIONS = [
+    # Permisos de Activos
+    "asset:create", "asset:read", "asset:update", "asset:delete",
+    # Permisos de Usuarios
+    "user:create", "user:read", "user:update", "user:delete",
+    # Permisos de Roles
+    "role:create", "role:read", "role:update", "role:delete",
+    # Permisos de Sectores
+    "sector:create", "sector:read", "sector:update", "sector:delete",
+    # Permisos de Mantenimiento
+    "maintenance:create", "maintenance:read", "maintenance:update",
+    # Permisos de Compras
+    "procurement:create", "procurement:read", "procurement:update",
+    # Permisos de Telemetría y Alertas
+    "telemetry:read", "alarming:read", "alarming:update",
+    # Permisos de Auditoría
+    "auditing:read"
 ]
 
-def seed_identity(db: Session):
-    logger.info("Iniciando siembra de datos para Identidad...")
+def seed_identity(db: Session) -> None:
+    """Crea permisos, roles y un usuario superusuario si no existen."""
+    logger.info("Iniciando el sembrado de datos de Identidad...")
 
-    # 1. Sembrar Permisos
-    for name, desc in PERMISSIONS_DATA.items():
-        if not db.query(Permission).filter(Permission.name == name).first():
-            db.add(Permission(name=name, description=desc))
+    # --- 1. Crear Permisos ---
+    all_permissions = []
+    for perm_name in PERMISSIONS:
+        db_perm = db.query(Permission).filter(Permission.name == perm_name).first()
+        if not db_perm:
+            db_perm = Permission(name=perm_name, description=f"Permite la acción '{perm_name.split(':')[1]}' en la entidad '{perm_name.split(':')[0]}'.")
+            db.add(db_perm)
+            logger.info(f"Creando permiso: {perm_name}")
+        all_permissions.append(db_perm)
     db.commit()
-    logger.info("Permisos sembrados.")
 
-    # 2. Sembrar Roles y asignar Permisos
-    for name, perm_names in ROLES_DATA.items():
-        if not db.query(Role).filter(Role.name == name).first():
-            permissions = db.query(Permission).filter(Permission.name.in_(perm_names)).all()
-            db_role = Role(name=name, permissions=permissions)
-            db.add(db_role)
+    # --- 2. Crear Roles Estandarizados ---
+    
+    # Rol de Super User
+    super_user_role = db.query(Role).filter(Role.name == "Super User").first()
+    if not super_user_role:
+        super_user_role = Role(name="Super User", description="Acceso total a todas las funcionalidades del sistema.")
+        super_user_role.permissions = all_permissions
+        db.add(super_user_role)
+        logger.info("Creando rol estandarizado: Super User")
+
+    # Rol de Admin
+    admin_role = db.query(Role).filter(Role.name == "Admin").first()
+    if not admin_role:
+        # Los Admins tienen todos los permisos excepto la gestión de roles.
+        admin_permissions = [p for p in all_permissions if not p.name.startswith("role:")]
+        admin_role = Role(name="Admin", description="Acceso administrativo para la gestión de usuarios, activos y otras funcionalidades, pero sin permiso para gestionar roles.")
+        admin_role.permissions = admin_permissions
+        db.add(admin_role)
+        logger.info("Creando rol estandarizado: Admin")
+
+    # Rol de Operador
+    operator_role = db.query(Role).filter(Role.name == "Operator").first()
+    if not operator_role:
+        operator_permissions = [p for p in all_permissions if "read" in p.name]
+        operator_role = Role(name="Operator", description="Acceso de solo lectura a la mayoría de las funcionalidades.")
+        operator_role.permissions = operator_permissions
+        db.add(operator_role)
+        logger.info("Creando rol estandarizado: Operator")
     db.commit()
-    logger.info("Roles y asignación de permisos sembrados.")
 
-    # 3. Sembrar Usuarios y asignar Roles/Sectores
-    for user_data in USERS_DATA:
-        if not db.query(User).filter(User.email == user_data["email"]).first():
-            roles = db.query(Role).filter(Role.name.in_(user_data["roles"])).all()
-            sectors = db.query(Sector).filter(Sector.name.in_(user_data["sectors"])).all()
-            
-            db_user = User(
-                email=user_data["email"],
-                name=user_data["name"],
-                hashed_password=hash_password(user_data["password"]),
-                roles=roles,
-                assigned_sectors=sectors
-            )
-            db.add(db_user)
-    db.commit()
-    logger.info("Usuarios y asignación de roles/sectores sembrados.")
+    # --- 3. Crear Usuario Super User ---
+    superuser_user = db.query(User).filter(User.email == settings.FIRST_SUPERUSER_EMAIL).first()
+    if not superuser_user:
+        user_repo = UserRepository(db)
+        user_in = UserCreate(
+            email=settings.FIRST_SUPERUSER_EMAIL,
+            password=settings.FIRST_SUPERUSER_PASSWORD,
+            name="Super User",
+            role_ids=[super_user_role.id]
+        )
+        superuser_user = user_repo.create(user_in=user_in)
+        logger.info(f"Creando usuario Super User: {settings.FIRST_SUPERUSER_EMAIL}")
+    else:
+        logger.info("El usuario Super User ya existe, no se realizaron cambios.")
 
-    logger.info("Siembra de datos para Identidad completada.")
+    logger.info("Sembrado de datos de Identidad completado.")

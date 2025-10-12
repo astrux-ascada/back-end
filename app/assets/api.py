@@ -12,8 +12,8 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from app.assets import schemas
 from app.assets.service import AssetService
 from app.dependencies.services import get_asset_service
-# --- MEJORA: Importar dependencias de autenticación y el modelo de usuario ---
-from app.dependencies.auth import get_current_active_user
+# --- MODIFICADO: Importar dependencias de autenticación y el modelo de usuario ---
+from app.dependencies.auth import get_current_active_user, get_current_admin_user
 from app.identity.models import User
 
 logger = logging.getLogger("app.assets.api")
@@ -53,25 +53,6 @@ def get_asset(
     return asset
 
 
-@router.patch(
-    "/{uuid}/status",
-    summary="Actualizar el Estado de un Activo",
-    response_model=schemas.AssetReadDTO,
-)
-def update_asset_status(
-    uuid: uuid.UUID,
-    status_update: schemas.AssetStatusUpdate,
-    asset_service: AssetService = Depends(get_asset_service),
-    # --- MEJORA: Proteger el endpoint y obtener el usuario para la auditoría ---
-    current_user: User = Depends(get_current_active_user),
-):
-    """Actualiza el estado operativo de un activo específico y registra la acción."""
-    updated_asset = asset_service.update_asset_status(uuid, status_update, current_user)
-    if not updated_asset:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    return updated_asset
-
-
 @router.post(
     "/",
     summary="Crear una nueva instancia de activo físico",
@@ -81,8 +62,44 @@ def update_asset_status(
 def create_asset(
     asset_in: schemas.AssetCreate,
     asset_service: AssetService = Depends(get_asset_service),
-    # --- MEJORA: Proteger el endpoint y obtener el usuario para la auditoría ---
     current_user: User = Depends(get_current_active_user),
 ):
     """Registra un nuevo activo físico en la planta y registra la acción."""
     return asset_service.create_asset(asset_in, current_user)
+
+
+@router.put(
+    "/{asset_id}",
+    summary="Actualizar un activo existente",
+    response_model=schemas.AssetReadDTO,
+    dependencies=[Depends(get_current_admin_user)] # <-- AÑADIDO: Endpoint protegido
+)
+def update_asset(
+    asset_id: uuid.UUID,
+    asset_in: schemas.AssetUpdate,
+    asset_service: AssetService = Depends(get_asset_service),
+    current_user: User = Depends(get_current_admin_user),
+):
+    """Actualiza los detalles de un activo existente. Solo para Admins y Super Users."""
+    updated_asset = asset_service.update_asset(asset_id, asset_in, current_user)
+    if not updated_asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return updated_asset
+
+
+@router.patch(
+    "/{uuid}/status",
+    summary="Actualizar el Estado de un Activo",
+    response_model=schemas.AssetReadDTO,
+)
+def update_asset_status(
+    uuid: uuid.UUID,
+    status_update: schemas.AssetStatusUpdate,
+    asset_service: AssetService = Depends(get_asset_service),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Actualiza el estado operativo de un activo específico y registra la acción."""
+    updated_asset = asset_service.update_asset_status(uuid, status_update, current_user)
+    if not updated_asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return updated_asset
