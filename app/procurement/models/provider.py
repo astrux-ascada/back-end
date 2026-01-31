@@ -8,6 +8,7 @@ import uuid
 
 from sqlalchemy import Column, String, Float, func, TIMESTAMP, Boolean
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
 
@@ -22,11 +23,12 @@ class Provider(Base):
     contact_info = Column(String(255), nullable=True, comment="Email, phone, or address of the provider.")
     specialty = Column(String(100), index=True, nullable=True, comment="Area of expertise, e.g., Robotics, HVAC, PLC Programming.")
     
-    # --- MODIFICADO: Añadido campo para Soft Delete ---
     is_active = Column(Boolean, default=True, nullable=False, index=True)
 
-    # Campo clave para la IA: Puntuación de rendimiento del proveedor.
     performance_score = Column(Float, nullable=True, index=True, comment="A score from 0-100 representing provider performance.")
+
+    # --- Relación Inversa ---
+    spare_parts = relationship("SparePart", back_populates="provider")
 
     # --- Campos de Auditoría ---
     created_at = Column(

@@ -1,6 +1,6 @@
 # /app/alarming/models.py
 import uuid
-from sqlalchemy import Column, String, Float, ForeignKey, DateTime, Boolean, func
+from sqlalchemy import Column, String, Float, ForeignKey, DateTime, Boolean, func, TIMESTAMP
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -24,9 +24,15 @@ class Alarm(Base):
     __tablename__ = "alarms"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    rule_id = Column(UUID(as_uuid=True), ForeignKey("alarm_rules.id"), nullable=False, index=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    triggering_value = Column(Float, nullable=False)
-    is_acknowledged = Column(Boolean, default=False, nullable=False)
+    # Corrección: Nombres alineados con la migración 65f0b5777baa
+    alarm_rule_id = Column(UUID(as_uuid=True), ForeignKey("alarm_rules.id"), nullable=False, index=True)
+    asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
+    
+    triggered_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    triggered_value = Column(Float, nullable=False)
+    
+    acknowledged = Column(Boolean, default=False, nullable=True)
+    acknowledged_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    severity = Column(String, nullable=True)
 
     rule = relationship("AlarmRule", back_populates="alarms")
