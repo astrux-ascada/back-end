@@ -11,16 +11,20 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # --- 2. Importación de Componentes Clave de la Aplicación ---
 from app.core.config import settings
-# --- MEJORA: Importar la Base correcta y todos los modelos de los módulos ---
 from app.db.base_class import Base
+
+# --- Importar todos los modelos para que Alembic los detecte ---
 from app.identity.models import *
 from app.assets.models import *
 from app.telemetry.models import *
 from app.procurement.models import *
 from app.maintenance.models import *
-
-from app.sectors.models import * # Añadido el nuevo módulo de sectores
-
+from app.sectors.models import *
+from app.core_engine.models import *
+from app.auditing.models import *
+from app.configuration.models import *
+from app.notifications.models import *
+from app.alarming.models import * # <-- La importación clave que faltaba
 
 config = context.config
 
@@ -30,10 +34,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # --- 3. Definición del Objetivo para Autogenerate ---
-# Alembic usará los metadatos de nuestra Base para detectar cambios.
 target_metadata = Base.metadata
 
-# El resto del archivo es el boilerplate estándar de Alembic
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     url = config.get_main_option("sqlalchemy.url")

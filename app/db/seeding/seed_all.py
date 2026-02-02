@@ -1,9 +1,6 @@
 # /app/db/seeding/seed_all.py
 """
 Script de siembra maestro para la base de datos de Astruxa.
-
-Ejecuta todos los scripts de siembra de los módulos en el orden correcto
-de dependencia para poblar la base de datos con datos iniciales.
 """
 
 import logging
@@ -11,24 +8,27 @@ from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
 
-# --- SOLUCIÓN: Importar todos los modelos aquí ---
-# Esto asegura que SQLAlchemy pueda resolver todas las relaciones (mappers)
-# antes de que se realice la primera consulta a la base de datos.
-from app.assets.models.asset import Asset
-from app.assets.models.asset_type import AssetType
-from app.identity.models.user import User
-from app.identity.models.role import Role
-from app.identity.models.permission import Permission
-from app.sectors.models import Sector
-from app.configuration.models import ConfigurationParameter
-from app.alarming.models import Alarm, AlarmRule
+# --- Importar todos los modelos para que Alembic los vea ---
+from app.assets.models import *
+from app.identity.models import *
+from app.sectors.models import *
+from app.configuration.models import *
+from app.alarming.models import *
+from app.telemetry.models import *
+from app.core_engine.models import *
+from app.notifications.models import *
+from app.procurement.models import *
+from app.maintenance.models import *
 
-# --- Importar todos los nuevos seeders de nuestros módulos ---
-from app.db.seeding._seed_configuration import seed_configuration
-from app.db.seeding._seed_sectors import seed_sectors
-from app.db.seeding._seed_identity import seed_identity
-from app.db.seeding._seed_assets import seed_assets
-from app.db.seeding._seed_core_engine import seed_core_engine
+# --- Importar todos los seeders de nuestros módulos ---
+from ._seed_configuration import seed_configuration
+from ._seed_sectors import seed_sectors
+from ._seed_identity import seed_identity
+from ._seed_assets import seed_assets
+from ._seed_core_engine import seed_core_engine
+from ._seed_alarming import seed_alarming
+from ._seed_procurement import seed_procurement
+from ._seed_maintenance import seed_maintenance
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,11 +41,14 @@ def seed_all(db: Session):
     logger.info("--- Iniciando Proceso de Siembra Maestro para Astruxa ---")
     
     # El orden es crucial para respetar las claves foráneas y las dependencias.
-    seed_configuration(db) # Parámetros y Enums
-    seed_sectors(db)       # Áreas de la planta
-    seed_identity(db)      # Permisos, Roles y Usuarios
-    seed_assets(db)        # Catálogo y Activos Físicos
-    seed_core_engine(db)   # Conexiones a hardware
+    seed_configuration(db)
+    seed_sectors(db)
+    seed_identity(db)
+    seed_assets(db)
+    seed_core_engine(db)
+    seed_alarming(db)
+    seed_procurement(db)
+    seed_maintenance(db)
     
     logger.info("--- Proceso de Siembra Maestro Finalizado ---")
 

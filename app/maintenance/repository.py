@@ -2,63 +2,131 @@
 """
 Capa de Repositorio para el módulo de Mantenimiento.
 """
-
 from typing import List, Optional
-import uuid
+from uuid import UUID
+from sqlalchemy.orm import Session
+from sqlalchemy import desc
 
-from sqlalchemy.orm import Session, joinedload
-
-from app.maintenance import models, schemas
-
+from app.maintenance.models import WorkOrder, MaintenanceTask, WorkOrderUserAssignment, WorkOrderSparePart
+from app.maintenance import schemas
+from app.identity.models import User
 
 class MaintenanceRepository:
-    """Realiza operaciones CRUD en la base de datos para el módulo de Mantenimiento."""
-
     def __init__(self, db: Session):
         self.db = db
 
-    def create_work_order(self, work_order_in: schemas.WorkOrderCreate) -> models.WorkOrder:
-        db_work_order = models.WorkOrder(**work_order_in.model_dump())
-        self.db.add(db_work_order)
+    # --- Work Orders ---
+
+    def create(self, order_in: schemas.WorkOrderCreate) -> WorkOrder:
+        order_data = order_in.model_dump(exclude={"tasks", "assigned_user_ids"})
+        db_order = WorkOrder(**order_data)
+        
+        self.db.add(db_order)
         self.db.commit()
-        self.db.refresh(db_work_order)
-        return db_work_order
+        self.db.refresh(db_order)
 
-    def get_work_order(self, work_order_id: uuid.UUID) -> Optional[models.WorkOrder]:
-        return (
-            self.db.query(models.WorkOrder)
-            .options(
-                joinedload(models.WorkOrder.asset).joinedload(models.Asset.asset_type),
-                joinedload(models.WorkOrder.tasks),
-                joinedload(models.WorkOrder.assigned_users),
-                joinedload(models.WorkOrder.assigned_provider),
-            )
-            .filter(models.WorkOrder.id == work_order_id)
-            .first()
-        )
+        if order_in.tasks:
+            for task_in in order_in.tasks:
+                db_task = MaintenanceTask(work_order_id=db_order.id, **task_in.model_dump())
+                self.db.add(db_task)
+        
+        if order_in.assigned_user_ids:
+            for user_id in order_in.assigned_user_ids:
+                assignment = WorkOrderUserAssignment(work_order_id=db_order.id, user_id=user_id)
+                self.db.add(assignment)
 
-    def list_work_orders(self, skip: int = 0, limit: int = 100) -> List[models.WorkOrder]:
-        return self.db.query(models.WorkOrder).offset(skip).limit(limit).all()
+        self.db.commit()
+        self.db.refresh(db_order)
+        return db_order
 
-    def update_work_order_status(self, work_order_id: uuid.UUID, new_status: str) -> Optional[models.WorkOrder]:
-        """Actualiza el campo de estado de una orden de trabajo específica."""
-        db_work_order = self.get_work_order(work_order_id)
-        if db_work_order:
-            db_work_order.status = new_status
+    def get(self, order_id: UUID) -> Optional[WorkOrder]:
+        return self.db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+
+    def get_multi(self, skip: int = 0, limit: int = 100, status: Optional[str] = None, asset_id: Optional[UUID] = None) -> List[WorkOrder]:
+        query = self.db.query(WorkOrder)
+        if status:
+            query = query.filter(WorkOrder.status == status)
+        if asset_id:
+            query = query.filter(WorkOrder.asset_id == asset_id)
+        return query.order_by(desc(WorkOrder.created_at)).offset(skip).limit(limit).all()
+
+    def update(self, db_order: WorkOrder, order_in: schemas.WorkOrderUpdate) -> WorkOrder:
+        update_data = order_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_order, field, value)
+        self.db.add(db_order)
+        self.db.commit()
+        self.db.refresh(db_order)
+        return db_order
+
+    # --- Maintenance Tasks ---
+
+    def create_task(self, work_order_id: UUID, task_in: schemas.MaintenanceTaskCreate) -> MaintenanceTask:
+        db_task = MaintenanceTask(work_order_id=work_order_id, **task_in.model_dump())
+        self.db.add(db_task)
+        self.db.commit()
+        self.db.refresh(db_task)
+        return db_task
+
+    def get_task(self, task_id: UUID) -> Optional[MaintenanceTask]:
+        return self.db.query(MaintenanceTask).filter(MaintenanceTask.id == task_id).first()
+
+    def update_task(self, db_task: MaintenanceTask, task_in: schemas.MaintenanceTaskUpdate) -> MaintenanceTask:
+        update_data = task_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_task, field, value)
+        self.db.add(db_task)
+        self.db.commit()
+        self.db.refresh(db_task)
+        return db_task
+    
+    def delete_task(self, task_id: UUID) -> bool:
+        db_task = self.get_task(task_id)
+        if db_task:
+            self.db.delete(db_task)
             self.db.commit()
-            self.db.refresh(db_work_order)
-        return db_work_order
+            return True
+        return False
 
-    def assign_user_to_work_order(self, assignment_in: schemas.WorkOrderUserAssignmentCreate) -> models.WorkOrderUserAssignment:
-        db_assignment = models.WorkOrderUserAssignment(**assignment_in.model_dump())
-        self.db.add(db_assignment)
-        self.db.commit()
-        self.db.refresh(db_assignment)
-        return db_assignment
+    # --- User Assignments ---
 
-    def assign_provider_to_work_order(self, assignment_in: schemas.WorkOrderProviderAssignmentCreate) -> models.WorkOrderProviderAssignment:
-        db_assignment = models.WorkOrderProviderAssignment(**assignment_in.model_dump())
-        self.db.add(db_assignment)
+    def assign_user(self, work_order_id: UUID, user_id: UUID) -> bool:
+        exists = self.db.query(WorkOrderUserAssignment).filter_by(work_order_id=work_order_id, user_id=user_id).first()
+        if not exists:
+            assignment = WorkOrderUserAssignment(work_order_id=work_order_id, user_id=user_id)
+            self.db.add(assignment)
+            self.db.commit()
+            return True
+        return False
+
+    def unassign_user(self, work_order_id: UUID, user_id: UUID) -> bool:
+        assignment = self.db.query(WorkOrderUserAssignment).filter_by(work_order_id=work_order_id, user_id=user_id).first()
+        if assignment:
+            self.db.delete(assignment)
+            self.db.commit()
+            return True
+        return False
+
+    # --- Spare Part Assignments ---
+
+    def add_spare_part_to_order(self, order_id: UUID, part_id: UUID, quantity: int) -> Optional[WorkOrderSparePart]:
+        """Asigna un repuesto a una orden o actualiza la cantidad si ya existe."""
+        assignment = self.db.query(WorkOrderSparePart).filter_by(work_order_id=order_id, spare_part_id=part_id).first()
+        if assignment:
+            assignment.quantity_required = quantity
+        else:
+            assignment = WorkOrderSparePart(work_order_id=order_id, spare_part_id=part_id, quantity_required=quantity)
+        
+        self.db.add(assignment)
         self.db.commit()
-        self.db.refresh(db_assignment)
-        return db_assignment
+        self.db.refresh(assignment)
+        return assignment
+
+    def remove_spare_part_from_order(self, order_id: UUID, part_id: UUID) -> bool:
+        """Quita un repuesto de una orden."""
+        assignment = self.db.query(WorkOrderSparePart).filter_by(work_order_id=order_id, spare_part_id=part_id).first()
+        if assignment:
+            self.db.delete(assignment)
+            self.db.commit()
+            return True
+        return False
