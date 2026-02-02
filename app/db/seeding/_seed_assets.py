@@ -17,6 +17,8 @@ ASSET_TYPES_DATA = {
     # Machines & Robots
     "Prensa Hidráulica Schuler 500T": {"category": "MACHINE"},
     "Brazo Robótico KUKA KR 210": {"category": "ROBOT"},
+    # --- MEJORA: Añadir tipo de activo para el simulador Modbus ---
+    "Tanque de Aceite Hidráulico": {"category": "EQUIPMENT"},
     # Sensors
     "Cámara de Visión Cognex-1000": {"category": "SENSOR"},
     "Sensor de Temperatura IFM-T2": {"category": "SENSOR"},
@@ -25,6 +27,8 @@ ASSET_TYPES_DATA = {
     "PLC Siemens S7-1500": {"category": "PLC"},
     "Motor Eléctrico 150kW": {"category": "COMPONENT"},
     "Bomba Hidráulica Rexroth": {"category": "COMPONENT"},
+    # --- MEJORA: Añadir tipo de activo para el simulador de PLC ---
+    "Máquina Cartonera": {"category": "MACHINE"},
 }
 
 ASSET_HIERARCHY_DATA = [
@@ -43,6 +47,11 @@ ASSETS_DATA = [
     {"type": "Prensa Hidráulica Schuler 500T", "serial": "SCH-L2-001", "sector": "Línea de Estampado 2"},
     {"type": "Brazo Robótico KUKA KR 210", "serial": "KUK-L2-001", "sector": "Línea de Estampado 2"},
     {"type": "Cámara de Visión Cognex-1000", "serial": "COG-L2-001", "sector": "Línea de Estampado 2"},
+    # --- MEJORA: Añadir instancia de activo para el simulador Modbus ---
+    {"type": "Tanque de Aceite Hidráulico", "serial": "TNK-HYD-001", "sector": "Área de Mantenimiento"},
+    # --- MEJORA: Añadir instancia de activo para el simulador de PLC ---
+    # Usamos el UUID que definimos en el simulador para que coincida
+    {"type": "Máquina Cartonera", "serial": "CARTONERA-MQ-01", "sector": "Línea de Estampado 1", "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"},
 ]
 
 def seed_assets(db: Session):
@@ -71,7 +80,18 @@ def seed_assets(db: Session):
         if not db.query(Asset).filter(Asset.serial_number == item["serial"]).first():
             asset_type = db.query(AssetType).filter(AssetType.name == item["type"]).one()
             sector = db.query(Sector).filter(Sector.name == item["sector"]).one()
-            db.add(Asset(asset_type_id=asset_type.id, serial_number=item["serial"], sector_id=sector.id, location=sector.name))
+            
+            # Crear el activo, permitiendo especificar el ID si está presente
+            asset_data = {
+                "asset_type_id": asset_type.id,
+                "serial_number": item["serial"],
+                "sector_id": sector.id,
+                "location": sector.name
+            }
+            if "id" in item:
+                asset_data["id"] = item["id"]
+                
+            db.add(Asset(**asset_data))
     db.commit()
     logger.info("Activos (Assets) sembrados.")
 

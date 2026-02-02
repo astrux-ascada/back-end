@@ -1,122 +1,85 @@
 # Guía de Pruebas y Verificación de Astruxa
 
-Este documento proporciona una serie de "smoke tests" para verificar que las funcionalidades clave del backend de Astruxa se comportan como se espera después de una instalación o un cambio importante.
+Este documento proporciona una serie de "smoke tests" para verificar que las funcionalidades clave del backend de Astruxa se comportan como se espera.
 
-**Prerrequisito:** Antes de ejecutar estas pruebas, asegúrate de haber seguido el `Development & Testing Workflow` del archivo `README.md` para tener la aplicación y el PLC simulado corriendo.
+**Prerrequisito:** Antes de ejecutar estas pruebas, asegúrate de haber seguido el `Development & Testing Workflow` del archivo `README.md` para tener la aplicación y los simuladores corriendo.
 
 ---
 
-## Prueba 1: Verificar el Flujo de Datos de Extremo a Extremo (API de Dashboard)
+## Prueba 1: Flujo de Datos de Extremo a Extremo (API de Dashboard)
 
-**Objetivo:** Confirmar que los datos de telemetría generados por el PLC simulado se pueden consultar de forma agregada a través de la API.
+**Objetivo:** Confirmar que los datos de telemetría se pueden consultar de forma agregada a través de la API.
 
 **Pasos:**
+1.  **Autentícate:** Abre la [documentación de la API](http://localhost:8071/api/v1/docs), usa `POST /auth/login` con `admin@astruxa.com` y autoriza las peticiones con el token recibido.
+2.  **Obtén un `asset_id`:** Usa `GET /assets` para encontrar y copiar el `uuid` del activo "Prensa Hidráulica Schuler 500T".
+3.  **Consulta la Telemetría:** Usa `GET /telemetry/readings/{asset_id}`, pega el `uuid` y establece `metric_name` a `temperature_celsius`.
 
-1.  **Abre la Documentación de la API:**
-    -   Navega a [http://localhost:8071/api/v1/docs](http://localhost:8071/api/v1/docs) en tu navegador.
+**Resultado Esperado:** Una respuesta `200 OK` con una lista de datos de temperatura agregados por minuto.
 
-2.  **Obtén un Token de Autenticación:**
-    -   Busca el endpoint `POST /auth/login`.
-    -   Haz clic en "Try it out" e introduce las credenciales del usuario administrador:
+---
+
+## Prueba 2: Sistema de Autodiagnóstico (Creación Automática de OT)
+
+**Objetivo:** Confirmar que la aplicación crea una orden de trabajo cuando un dispositivo falla.
+
+**Pasos:**
+1.  **Observa el Flujo Normal:** Con todo corriendo, mira los logs de `backend_api` (`docker-compose logs -f backend_api`) y confirma que llegan datos.
+2.  **Simula un Fallo:** Detén el `plc_simulator.py` con `Ctrl + C`.
+3.  **Observa la Reacción:** En los logs del backend, verás errores de `Connection refused`, seguidos de un mensaje `INFO` que dice: `Orden de trabajo correctiva creada automáticamente...`.
+4.  **Verifica la OT:** Usa la API (`GET /maintenance/work-orders`) para confirmar que se ha creado una nueva orden de trabajo con el resumen "Fallo de conexión detectado...".
+
+---
+
+## Prueba 3: Sistema de Alertas Proactivo
+
+**Objetivo:** Confirmar que el sistema dispara una alarma cuando se cumple una regla definida por el usuario.
+
+**Pasos:**
+1.  **Crea una Regla de Alerta:** Usa `POST /alarming/rules` con el `uuid` de la prensa y el siguiente cuerpo:
+    ```json
+    {
+      "assetId": "<el-uuid-de-la-prensa>",
+      "metricName": "temperature_celsius",
+      "condition": ">",
+      "threshold": 28,
+      "severity": "CRITICAL"
+    }
+    ```
+2.  **Observa la Reacción:** El PLC simulado genera una temperatura que varía. Espera a que supere los 28 grados. En los logs del backend, busca un `WARNING` que diga: `¡ALERTA! Regla ... disparada ...`.
+3.  **Verifica la Alarma:** Usa `GET /alarming/alarms` para confirmar que se ha creado una nueva alarma en estado `ACTIVE`.
+
+---
+
+## Prueba 4: Flujo de Configuración y Uso de 2FA
+
+**Objetivo:** Confirmar que un usuario puede configurar y utilizar el 2FA para autorizar una acción.
+
+**Pasos:**
+1.  **Prerrequisitos:** Asegúrate de estar autenticado como `admin@astruxa.com` en la documentación de la API.
+
+2.  **Iniciar Configuración de 2FA:**
+    -   Busca y ejecuta el endpoint `POST /auth/tfa/setup`.
+    -   En la respuesta, copia el valor de `otpauth_url`.
+
+3.  **Escanear el Código QR:**
+    -   Pega la `otpauth_url` en un generador de códigos QR online (ej: `www.the-qrcode-generator.com`).
+    -   Escanea el código QR generado con tu aplicación de autenticación (Google Authenticator, Authy, etc.). Verás una nueva cuenta para `admin@astruxa.com`.
+
+4.  **Habilitar 2FA:**
+    -   Busca el endpoint `POST /auth/tfa/enable`.
+    -   Introduce el código de 6 dígitos que muestra tu app en el cuerpo de la petición:
         ```json
         {
-          "email": "admin@astruxa.com",
-          "password": "admin_password"
+          "token": "123456"
         }
         ```
-    -   Ejecuta y copia el `access_token` de la respuesta.
+    -   Ejecuta. Deberías recibir una respuesta `204 No Content`, indicando que el 2FA se ha activado correctamente.
 
-3.  **Autoriza tus Peticiones:**
-    -   En la parte superior derecha, haz clic en el botón "Authorize".
-    -   Pega el `access_token` en el campo "Value" y autoriza.
-
-4.  **Obtén el `uuid` de un Activo:**
-    -   Busca el endpoint `GET /assets`.
-    -   Ejecútalo. En la respuesta, busca el activo cuyo `name` es "Prensa Hidráulica Schuler 500T".
-    -   Copia el valor de su `uuid`.
-
-5.  **Consulta la Telemetría del Activo:**
-    -   Busca el endpoint `GET /telemetry/readings/{asset_id}`.
-    -   Pega el `uuid` del activo en el campo `asset_id`.
-    -   En el campo `metric_name`, escribe `temperature_celsius`.
-    -   Ejecuta la petición.
+5.  **Verificar un Token:**
+    -   Espera a que tu app genere un nuevo código.
+    -   Busca y ejecuta el endpoint `POST /auth/verify-token` con el nuevo código.
 
 **Resultado Esperado:**
 
--   Debes recibir una respuesta `200 OK` con un cuerpo JSON que es una lista de objetos. Cada objeto representará un minuto de datos de temperatura agregados, con los campos `bucket`, `avg_value`, `min_value` y `max_value`.
-
----
-
-## Prueba 2: Verificar el Sistema de Autodiagnóstico
-
-**Objetivo:** Confirmar que la aplicación detecta un fallo de conexión con un PLC y crea automáticamente una orden de trabajo correctiva.
-
-**Pasos:**
-
-1.  **Asegúrate de que el Sistema Esté Estable:**
-    -   Con el PLC simulado y la aplicación corriendo, observa los logs de `backend_api` con `docker-compose logs -f backend_api`.
-    -   Deberías ver los logs de `DEBUG` indicando que se están recibiendo datos del PLC.
-
-2.  **Simula un Fallo Crítico:**
-    -   Ve a la terminal donde está corriendo el `plc_simulator.py`.
-    -   **Detén el simulador** presionando `Ctrl + C`.
-
-3.  **Observa la Reacción del Sistema:**
-    -   Vuelve a la terminal de los logs de `backend_api`.
-    -   Verás que los logs de `DEBUG` se detienen.
-    -   Después de unos segundos, empezarás a ver logs de `ERROR` con el mensaje `Connection refused`.
-    -   **Espera un momento.** Inmediatamente después de los errores, nuestro `AstruxaLogHandler` debería activarse. Busca un log con el siguiente mensaje:
-        ```
-        INFO:app.core_engine.actions:Orden de trabajo correctiva creada automáticamente para el activo [UUID del activo].
-        ```
-
-4.  **Verifica la Creación de la Orden de Trabajo:**
-    -   Vuelve a la documentación de la API en tu navegador (asegúrate de seguir autenticado).
-    -   Busca el endpoint `GET /maintenance/work-orders/{work_order_id}`. Para encontrar el ID de la nueva orden, primero puedes listar todas con `GET /maintenance/work-orders`.
-    -   Al consultar la nueva orden, deberías ver en el `summary` el texto: `Fallo de conexión detectado en la fuente de datos: PLC Simulator`.
-
----
-
-## Prueba 3: Verificar el Sistema de Alertas Proactivo
-
-**Objetivo:** Confirmar que el sistema evalúa los datos de telemetría entrantes y dispara una alarma cuando se cumple una regla definida por el usuario.
-
-**Pasos:**
-
-1.  **Prerrequisitos:**
-    -   Asegúrate de que el sistema completo esté corriendo (PLC simulado y Docker).
-    -   Asegúrate de estar autenticado como `admin@astruxa.com` en la documentación de la API (ver Prueba 1, pasos 2 y 3).
-    -   Obtén el `uuid` del activo "Prensa Hidráulica Schuler 500T" (ver Prueba 1, paso 4).
-
-2.  **Crea una Regla de Alerta:**
-    -   Busca el endpoint `POST /alarming/rules`.
-    -   Haz clic en "Try it out" e introduce el siguiente cuerpo de petición, **reemplazando `"string"` con el `uuid` real del activo** que copiaste:
-        ```json
-        {
-          "assetId": "string",
-          "metricName": "temperature_celsius",
-          "condition": ">",
-          "threshold": 28,
-          "severity": "CRITICAL",
-          "isEnabled": true
-        }
-        ```
-    -   Ejecuta la petición. Deberías recibir una respuesta `201 Created`.
-
-3.  **Observa la Reacción del Sistema:**
-    -   El PLC simulado genera una temperatura que sigue una onda sinusoidal entre 10 y 30 grados. Tarde o temprano, superará los 28 grados.
-    -   Observa los logs de `backend_api` con `docker-compose logs -f backend_api`.
-    -   Espera a ver un log de `WARNING` con un mensaje similar a:
-        ```
-        WARNING:app.alarming.service:¡ALERTA! Regla [UUID de la regla] disparada para el activo [UUID del activo] con valor 28.19
-        ```
-
-4.  **Verifica la Alarma Activa:**
-    -   En la documentación de la API, busca y ejecuta el endpoint `GET /alarming/alarms`.
-    -   En la respuesta, deberías ver un nuevo objeto de alarma en estado `ACTIVE`, correspondiente a la regla que creaste.
-
-5.  **Acusa Recibo de la Alarma (Opcional):**
-    -   Copia el `uuid` de la alarma que acabas de ver.
-    -   Busca el endpoint `POST /alarming/alarms/{alarm_id}/acknowledge`.
-    -   Pega el `uuid` de la alarma en el campo `alarm_id` y ejecuta.
-    -   La respuesta debería mostrar la misma alarma, pero ahora con el `status`: `ACKNOWLEDGED`.
+-   Debes recibir una respuesta `200 OK` con el cuerpo `{"verified": true}`, confirmando que el sistema puede validar los tokens correctamente.

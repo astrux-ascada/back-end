@@ -14,7 +14,9 @@ from sqlalchemy.orm import Session
 
 from app.core_engine import models, schemas
 from app.core_engine.repository import CoreEngineRepository
+# --- MEJORA: Importar todos los conectores disponibles ---
 from app.core_engine.connectors.opcua_connector import OpcUaConnector
+from app.core_engine.connectors.modbus_connector import ModbusConnector
 from app.telemetry.service import TelemetryService
 from app.telemetry.schemas import SensorReadingCreate
 
@@ -37,15 +39,17 @@ class CoreEngineService:
         logger.info(f"Se encontraron {len(active_data_sources)} fuentes de datos activas para monitorear.")
 
         for ds in active_data_sources:
-            if ds.protocol.upper() == "OPCUA":
+            protocol = ds.protocol.upper()
+            if protocol == "OPCUA":
                 connector = OpcUaConnector(ds, self._telemetry_callback)
-                await connector.start()
-                self._running_connectors[ds.id] = connector
-            # elif ds.protocol.upper() == "MODBUS_TCP":
-            #     # Lógica futura para el conector Modbus
-            #     pass
+            # elif protocol == "MODBUS":
+            #     connector = ModbusConnector(ds, self._telemetry_callback)
             else:
                 logger.warning(f"Protocolo '{ds.protocol}' no soportado para la fuente de datos: {ds.name}")
+                continue
+            
+            await connector.start()
+            self._running_connectors[ds.id] = connector
 
     async def stop(self):
         """Detiene todos los conectores de monitoreo de forma segura."""

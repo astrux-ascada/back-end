@@ -52,6 +52,29 @@ class AssetService:
         assets = self.asset_repo.list_assets(skip, limit, category, sector_id)
         return [map_asset_to_dto(asset, self.asset_repo) for asset in assets]
 
+    def update_asset(
+        self, 
+        asset_id: uuid.UUID, 
+        asset_in: schemas.AssetUpdate, 
+        current_user: User
+    ) -> Optional[schemas.AssetReadDTO]:
+        """Actualiza un activo existente y registra la operación en la auditoría."""
+        db_asset = self.asset_repo.get_asset(asset_id)
+        if not db_asset:
+            return None
+
+        updated_asset = self.asset_repo.update_asset(db_asset=db_asset, asset_in=asset_in)
+
+        self.audit_service.log_operation(
+            user=current_user,
+            action="UPDATE_ASSET",
+            entity=updated_asset,
+            details=asset_in.model_dump(exclude_unset=True)
+        )
+        
+        full_updated_asset = self.asset_repo.get_asset(updated_asset.id)
+        return map_asset_to_dto(full_updated_asset, self.asset_repo)
+
     def update_asset_status(
         self, 
         asset_id: uuid.UUID, 

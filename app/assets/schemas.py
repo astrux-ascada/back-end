@@ -36,6 +36,16 @@ class AssetCreate(BaseModel):
     location: Optional[str] = None
     properties: Optional[Dict[str, Any]] = None
 
+class AssetUpdate(BaseModel):
+    """Esquema para actualizar una instancia de activo existente."""
+    sector_id: Optional[uuid.UUID] = None
+    serial_number: Optional[str] = None
+    location: Optional[str] = None
+    status: Optional[str] = None
+    properties: Optional[Dict[str, Any]] = None
+    last_maintenance_at: Optional[date] = None
+    warranty_expires_at: Optional[date] = None
+
 class AssetStatusUpdate(BaseModel):
     status: str = Field(..., example="MAINTENANCE")
 

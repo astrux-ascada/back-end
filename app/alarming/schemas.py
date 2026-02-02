@@ -1,47 +1,41 @@
 # /app/alarming/schemas.py
-"""
-Esquemas Pydantic para el módulo de Alertas.
-"""
 import uuid
 from datetime import datetime
 from typing import Optional
-
 from pydantic import BaseModel, Field
 
-# --- Esquemas para AlarmRule ---
+# --- Alarm Rules ---
 
 class AlarmRuleBase(BaseModel):
-    asset_id: uuid.UUID = Field(..., alias="assetId")
-    metric_name: str = Field(..., example="temperature_celsius", alias="metricName")
-    condition: str = Field(..., example=">")
+    asset_id: uuid.UUID
+    metric_name: str
+    condition: str
     threshold: float
-    severity: str = Field(..., example="CRITICAL")
-    is_enabled: bool = Field(True, alias="isEnabled")
+    severity: str = "warning"
+    is_enabled: bool = True
 
 class AlarmRuleCreate(AlarmRuleBase):
     pass
 
-class AlarmRuleRead(AlarmRuleBase):
-    id: uuid.UUID = Field(..., alias="uuid")
+class AlarmRule(AlarmRuleBase):
+    id: uuid.UUID
 
     class Config:
         from_attributes = True
-        populate_by_name = True
 
-
-# --- Esquemas para Alarm ---
+# --- Alarms ---
 
 class AlarmBase(BaseModel):
-    status: str = Field(..., example="ACTIVE")
-    triggering_value: float = Field(..., alias="triggeringValue")
+    alarm_rule_id: uuid.UUID
+    asset_id: uuid.UUID
+    triggered_value: float
+    severity: str
 
 class AlarmRead(AlarmBase):
-    id: uuid.UUID = Field(..., alias="uuid")
-    triggered_at: datetime = Field(..., alias="triggeredAt")
-    acknowledged_at: Optional[datetime] = Field(None, alias="acknowledgedAt")
-    cleared_at: Optional[datetime] = Field(None, alias="clearedAt")
-    rule: AlarmRuleRead
+    id: uuid.UUID
+    triggered_at: datetime
+    acknowledged: bool
+    acknowledged_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
-        populate_by_name = True

@@ -5,7 +5,7 @@ Capa de Servicio para el módulo de Telemetría.
 Orquesta la lógica de negocio para la ingesta, consulta y evaluación de datos de telemetría.
 """
 
-from typing import List
+from typing import List, Optional
 import uuid
 from datetime import datetime
 
@@ -15,32 +15,44 @@ from app.telemetry import schemas
 from app.telemetry.repository import TelemetryRepository
 from app.auditing.service import AuditService
 from app.identity.models import User
-# --- MEJORA: Importar el servicio de alertas para la evaluación de datos ---
 from app.alarming.service import AlarmingService
+from app.core_engine.state_detector import StateDetector
 
 
 class TelemetryService:
     """Servicio de negocio para la gestión de la telemetría."""
 
-    def __init__(self, db: Session, audit_service: AuditService, alarming_service: AlarmingService):
+    def __init__(
+        self, 
+        db: Session, 
+        audit_service: AuditService, 
+        alarming_service: Optional[AlarmingService] = None,
+        state_detector: Optional[StateDetector] = None
+    ):
         self.db = db
         self.audit_service = audit_service
         self.alarming_service = alarming_service
+        self.state_detector = state_detector
         self.telemetry_repo = TelemetryRepository(self.db)
 
     def ingest_bulk_readings(self, readings_in: List[schemas.SensorReadingCreate]) -> int:
         """
-        Ingesta un lote de lecturas de sensores y luego las evalúa contra las reglas de alerta.
+        Ingesta un lote de lecturas de sensores, las procesa para detectar cambios de estado
+        y las evalúa contra las reglas de alarma.
         """
-        # 1. Guardar los datos en la base de datos
-        inserted_count = self.telemetry_repo.create_bulk_readings(readings_in)
-
-        # 2. Evaluar cada nueva lectura contra las reglas de alerta activas
-        if inserted_count > 0:
+        # 1. Detección de estado en tiempo real
+        if self.state_detector:
             for reading in readings_in:
-                self.alarming_service.evaluate_reading(reading)
+                self.state_detector.process_reading(reading)
+
+        # 2. Evaluación de reglas de alarma
+        if self.alarming_service:
+            self.alarming_service.evaluate_readings(readings_in)
+            
+        # 3. Persistir en la base de datos (TimescaleDB)
+        count = self.telemetry_repo.create_bulk_readings(readings_in)
         
-        return inserted_count
+        return count
 
     def get_aggregated_readings(
         self,
