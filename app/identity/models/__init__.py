@@ -16,6 +16,12 @@ from .role_permission_association import RolePermissionAssociation
 from .user_role_association import UserRoleAssociation
 from .user_sector_association import UserSectorAssociation
 
+# Modelos SaaS (Multi-Tenancy)
+from .saas.partner import Partner
+from .saas.plan import Plan
+from .saas.tenant import Tenant
+from .saas.subscription import Subscription
+
 # Modelos de otros módulos con los que nos relacionamos
 from app.sectors.models.sector import Sector
 
