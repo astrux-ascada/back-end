@@ -8,8 +8,8 @@ Este documento define los requerimientos para el backend del módulo de autentic
 
 El sistema se basa en un modelo de Control de Acceso Basado en Roles (RBAC) con los siguientes perfiles jerárquicos:
 
--   **`SuperUser`**: El "Dueño de la Plataforma". Rol técnico para la configuración del sistema. No participa en las operaciones diarias.
--   **`Administrator`**: El "Jefe de Planta". Gestiona usuarios, roles operativos y catálogos (ej. `AssetTypes`).
+-   **`SuperUser`**: El "Dueño de la Plataforma". Rol técnico para la configuración del sistema.
+-   **`Administrator`**: El "Jefe de Planta". Gestiona usuarios, roles operativos y catálogos.
 -   **`Supervisor`**: El "Jefe de Turno". Gestiona y asigna órdenes de trabajo.
 -   **`Technician`**: El "Técnico de Mantenimiento". Ejecuta órdenes de trabajo asignadas.
 -   **`Operator`**: El "Operario de Máquina". Solo puede visualizar el estado de los activos.
@@ -30,76 +30,66 @@ Un string que representa un permiso atómico en formato `entidad:accion`.
 
 ## 2. Modelos de Datos (DTOs)
 
-### `Role`
-
-```json
-{
-  "uuid": "string",
-  "name": "string", // ej: "SuperUser"
-  "permissions": ["Permission", ...]
-}
-```
-
-### `Sector`
-
-```json
-{
-  "uuid": "string",
-  "name": "string",
-  "description": "string | null"
-}
-```
-
-### `User`
-
-```json
-{
-  "uuid": "string",
-  "isActive": true,
-  "createdAt": "2023-10-27T10:00:00Z",
-  "updatedAt": "2023-10-27T10:00:00Z",
-  "name": "string",
-  "email": "string",
-  "avatarUrl": "string | null",
-  "roles": ["Role", ...],
-  "assignedSectors": ["Sector", ...]
-}
-```
+(Los modelos `User`, `Role`, `Sector` se mantienen como están definidos anteriormente)
 
 ---
 
-## 3. Endpoints
+## 3. Endpoints de Autenticación Principal
 
 ### Iniciar Sesión
 
 -   **Endpoint**: `POST /auth/login`
--   **Descripción**: Autentica a un usuario con email y contraseña.
--   **Request Body**:
-    ```json
-    {
-      "email": "user@example.com",
-      "password": "string"
-    }
-    ```
--   **Success Response**: `200 OK`
-    -   **Body**: Un objeto que contiene el `access_token` (JWT) y el objeto `User` completo.
+-   **Body**: `{ "email": "...", "password": "..." }`
+-   **Response**: `{ "access_token": "...", "user": { ... } }`
 
 ### Obtener Usuario Actual
 
 -   **Endpoint**: `GET /auth/me`
--   **Descripción**: Devuelve el usuario autenticado basado en el token JWT actual.
--   **Success Response**: `200 OK`
-    -   **Body**: El objeto `User` completo.
+-   **Response**: El objeto `User` completo.
 
 ### Cerrar Sesión
 
 -   **Endpoint**: `POST /auth/logout`
--   **Descripción**: Invalida el token JWT actual del usuario, eliminando la sesión del backend (Redis).
+-   **Response**: `204 No Content`
+
+---
+
+## 4. Gestión de 2FA (Two-Factor Authentication)
+
+### Iniciar Configuración de 2FA
+
+-   **Endpoint**: `POST /auth/tfa/setup`
+-   **Descripción**: Genera un nuevo secreto de 2FA para el usuario actual y devuelve la información necesaria para que el usuario lo escanee en su app de autenticación (Google Authenticator, Authy, etc.).
+-   **Success Response**: `200 OK`
+    -   **Body**:
+        ```json
+        {
+          "setup_key": "string", // El secreto en formato base32
+          "otpauth_url": "string" // La URL que se convierte en el código QR
+        }
+        ```
+
+### Habilitar 2FA
+
+-   **Endpoint**: `POST /auth/tfa/enable`
+-   **Descripción**: Verifica el token proporcionado por el usuario y, si es correcto, activa permanentemente el 2FA para su cuenta.
+-   **Request Body**:
+    ```json
+    {
+      "token": "123456" // El código de 6 dígitos de la app de autenticación
+    }
+    ```
 -   **Success Response**: `204 No Content`
 
-### Limpiar Todas las Sesiones (SuperUser)
+### Verificar Token para Operación Crítica
 
--   **Endpoint**: `POST /auth/sessions/clear-all`
--   **Descripción**: Invalida **todas** las sesiones de usuario activas. Acción crítica para cambios de turno.
--   **Permisos**: `admin:full-access`
+-   **Endpoint**: `POST /auth/verify-token`
+-   **Descripción**: Verifica un token de 2FA para autorizar una operación crítica.
+-   **Request Body**:
+    ```json
+    {
+      "token": "123456"
+    }
+    ```
 -   **Success Response**: `200 OK`
+    -   **Body**: `{ "verified": true }`

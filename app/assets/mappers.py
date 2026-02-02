@@ -19,7 +19,8 @@ def map_asset_to_dto(asset: models.Asset, asset_repo: AssetRepository) -> schema
     # Construir el DTO
     return schemas.AssetReadDTO(
         id=asset.id,
-        is_active=asset.asset_type.is_active, # Asumiendo que isActive se refiere al tipo
+        # --- CORREGIDO: El estado de actividad depende del status del activo, no de su tipo.
+        is_active=(asset.status.lower() == 'operational'),
         created_at=asset.created_at,
         updated_at=asset.updated_at,
         status=asset.status,

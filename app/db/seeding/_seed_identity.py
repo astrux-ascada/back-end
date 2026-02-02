@@ -1,96 +1,85 @@
 # /app/db/seeding/_seed_identity.py
 """
-Script de siembra para el módulo de Identidad (Permissions, Roles, Users).
+Script para sembrar la base de datos con datos iniciales de Identidad (Roles y Usuarios).
 """
-
 import logging
 from sqlalchemy.orm import Session
-
-from app.identity.models import Permission, Role, User
-from app.sectors.models import Sector
-from app.core.security import hash_password
+from app.core.config import settings
+from app.identity.models import Role, User
+from app.identity.schemas import UserCreate
+from app.identity.repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
-# --- Datos de Siembra Predefinidos ---
+def seed_identity(db: Session) -> None:
+    """Crea roles y usuarios de ejemplo si no existen."""
+    logger.info("Iniciando el sembrado de datos de Identidad...")
 
-PERMISSIONS_DATA = {
-    "admin:full-access": "Acceso total a todas las funcionalidades.",
-    "user:read": "Leer información de usuarios.",
-    "user:create": "Crear nuevos usuarios.",
-    "asset:read": "Leer información de activos.",
-    "asset:create": "Crear nuevos activos.",
-    "asset:update": "Actualizar información de activos.",
-    "workorder:read": "Leer órdenes de trabajo.",
-    "workorder:create": "Crear nuevas órdenes de trabajo.",
-    "workorder:assign": "Asignar órdenes de trabajo a técnicos o proveedores.",
-}
-
-ROLES_DATA = {
-    "Administrator": ["admin:full-access"],
-    "Supervisor": ["asset:read", "workorder:read", "workorder:create", "workorder:assign"],
-    "Technician": ["asset:read", "workorder:read"],
-    "Operator": ["asset:read"],
-}
-
-USERS_DATA = [
-    {
-        "email": "admin@astruxa.com",
-        "name": "Alice Admin",
-        "password": "admin_password",
-        "roles": ["Administrator"],
-        "sectors": ["Línea de Estampado 1", "Línea de Estampado 2", "Control de Calidad", "Área de Mantenimiento"]
-    },
-    {
-        "email": "supervisor@astruxa.com",
-        "name": "Bob Supervisor",
-        "password": "supervisor_password",
-        "roles": ["Supervisor"],
-        "sectors": ["Línea de Estampado 1", "Línea de Estampado 2"]
-    },
-    {
-        "email": "tech@astruxa.com",
-        "name": "Charlie Technician",
-        "password": "tech_password",
-        "roles": ["Technician"],
-        "sectors": ["Área de Mantenimiento"]
+    # --- 1. Crear Roles Estandarizados ---
+    roles_to_create = {
+        "SUPERUSER": "Acceso total a todas las funcionalidades.",
+        "ADMINISTRATOR": "Acceso administrativo a la mayoría de funcionalidades.",
+        "MAINTENANCE_MANAGER": "Gestiona órdenes de trabajo, planes y técnicos.",
+        "TECHNICIAN": "Ejecuta órdenes de trabajo de mantenimiento.",
+        "VIEWER": "Acceso de solo lectura a la información operativa."
     }
-]
-
-def seed_identity(db: Session):
-    logger.info("Iniciando siembra de datos para Identidad...")
-
-    # 1. Sembrar Permisos
-    for name, desc in PERMISSIONS_DATA.items():
-        if not db.query(Permission).filter(Permission.name == name).first():
-            db.add(Permission(name=name, description=desc))
+    
+    created_roles = {}
+    for role_name, role_desc in roles_to_create.items():
+        role = db.query(Role).filter(Role.name == role_name).first()
+        if not role:
+            role = Role(name=role_name, description=role_desc)
+            db.add(role)
+            logger.info(f"Creando rol: {role_name}")
+        created_roles[role_name] = role
     db.commit()
-    logger.info("Permisos sembrados.")
+    
+    # Refrescar para obtener IDs
+    for name, role in created_roles.items():
+        if not role.id:
+            created_roles[name] = db.query(Role).filter(Role.name == name).first()
 
-    # 2. Sembrar Roles y asignar Permisos
-    for name, perm_names in ROLES_DATA.items():
-        if not db.query(Role).filter(Role.name == name).first():
-            permissions = db.query(Permission).filter(Permission.name.in_(perm_names)).all()
-            db_role = Role(name=name, permissions=permissions)
-            db.add(db_role)
-    db.commit()
-    logger.info("Roles y asignación de permisos sembrados.")
+    # --- 2. Crear Usuarios de Ejemplo ---
+    user_repo = UserRepository(db)
+    users_to_create = [
+        {
+            "email": settings.FIRST_SUPERUSER_EMAIL,
+            "password": settings.FIRST_SUPERUSER_PASSWORD,
+            "name": "Super User",
+            "role_name": "SUPERUSER"
+        },
+        {
+            "email": "manager@astruxa.com",
+            "password": "manager123",
+            "name": "Manager de Mantenimiento",
+            "role_name": "MAINTENANCE_MANAGER"
+        },
+        {
+            "email": "technician@astruxa.com",
+            "password": "tech1234", # CORREGIDO: Contraseña con 8 caracteres
+            "name": "Técnico de Campo",
+            "role_name": "TECHNICIAN"
+        },
+        {
+            "email": "viewer@astruxa.com",
+            "password": "viewer123",
+            "name": "Gerente de Planta",
+            "role_name": "VIEWER"
+        }
+    ]
 
-    # 3. Sembrar Usuarios y asignar Roles/Sectores
-    for user_data in USERS_DATA:
+    for user_data in users_to_create:
         if not db.query(User).filter(User.email == user_data["email"]).first():
-            roles = db.query(Role).filter(Role.name.in_(user_data["roles"])).all()
-            sectors = db.query(Sector).filter(Sector.name.in_(user_data["sectors"])).all()
-            
-            db_user = User(
-                email=user_data["email"],
-                name=user_data["name"],
-                hashed_password=hash_password(user_data["password"]),
-                roles=roles,
-                assigned_sectors=sectors
-            )
-            db.add(db_user)
-    db.commit()
-    logger.info("Usuarios y asignación de roles/sectores sembrados.")
+            role_name = user_data.pop("role_name")
+            role = created_roles.get(role_name)
+            if role:
+                user_in = UserCreate(
+                    email=user_data["email"],
+                    password=user_data["password"],
+                    name=user_data["name"],
+                    role_ids=[role.id]
+                )
+                user_repo.create(user_in=user_in)
+                logger.info(f"Creando usuario: {user_data['email']} con rol {role_name}")
 
-    logger.info("Siembra de datos para Identidad completada.")
+    logger.info("Sembrado de datos de Identidad completado.")

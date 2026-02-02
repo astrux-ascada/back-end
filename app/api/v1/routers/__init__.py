@@ -9,6 +9,7 @@ from fastapi import APIRouter
 
 # --- Routers de Módulos de Astruxa ---
 from app.identity import api as identity_api
+from app.identity import api_roles as identity_roles_api
 from app.assets import api as assets_api
 from app.telemetry import api as telemetry_api
 from app.procurement import api as procurement_api
@@ -18,13 +19,14 @@ from app.sectors import api as sectors_api
 from app.auditing import api as auditing_api
 from app.configuration import api as configuration_api
 from app.alarming import api as alarming_api
-from app.notifications import api as notifications_api # Añadido el nuevo router
-
+from app.notifications import api as notifications_api
+from app.reporting import api as reporting_api
 
 api_router = APIRouter(prefix="/api/v1")
 
 # --- REGISTRO DE ROUTERS DE MÓDULOS ---
 api_router.include_router(identity_api.router)
+api_router.include_router(identity_roles_api.router)
 api_router.include_router(assets_api.router)
 api_router.include_router(telemetry_api.router)
 api_router.include_router(procurement_api.router)
@@ -34,4 +36,5 @@ api_router.include_router(sectors_api.router)
 api_router.include_router(auditing_api.router)
 api_router.include_router(configuration_api.router)
 api_router.include_router(alarming_api.router)
-api_router.include_router(notifications_api.router) # El prefijo "/notifications" ya está en el router
+api_router.include_router(notifications_api.router)
+api_router.include_router(reporting_api.router)

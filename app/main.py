@@ -26,6 +26,7 @@ from app.telemetry.service import TelemetryService
 from app.auditing.service import AuditService
 from app.core.log_handler import astruxa_log_handler
 from app.core_engine.log_actions import handle_connector_error
+from app.core_engine.state_detector import StateDetector
 
 logger = logging.getLogger(__name__)
 
@@ -47,15 +48,22 @@ async def lifespan(app: FastAPI):
     
     # --- Configuración de Servicios ---
     audit_service = AuditService(db)
-    telemetry_service = TelemetryService(db, audit_service)
+    
+    # --- CORRECCIÓN: Inyectar la sesión de BD en el StateDetector ---
+    app.state.state_detector = StateDetector(db=db)
+    
+    # Inyectar el detector de estado en el servicio de telemetría
+    telemetry_service = TelemetryService(
+        db, 
+        audit_service, 
+        state_detector=app.state.state_detector
+    )
+
     app.state.core_engine_service = CoreEngineService(db, telemetry_service)
 
     # --- Configuración del Handler de Logs para Acciones Automáticas ---
-    # 1. Crear una función parcial con la sesión de la BD inyectada.
     error_handler_with_db = partial(handle_connector_error, db=db)
-    # 2. Registrar el manejador de eventos en nuestro handler de logs.
     astruxa_log_handler.event_handlers["handle_connection_error"] = error_handler_with_db
-    # 3. Añadir nuestro handler al logger raíz para que escuche todos los logs.
     logging.getLogger().addHandler(astruxa_log_handler)
     logger.info("Handler de logs de Astruxa para acciones automáticas activado.")
 

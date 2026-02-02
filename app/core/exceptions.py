@@ -3,7 +3,6 @@ from app.core.error_messages import ErrorMessages
 
 class CustomBaseException(Exception):
     """Clase base para las excepciones personalizadas de la aplicación."""
-
     pass
 
 
@@ -41,7 +40,7 @@ class AuthenticationException(CustomBaseException):
     Resulta en un 401 Unauthorized.
     """
 
-    def __init__(self, detail: str = ErrorMessages.AUTHENTICATION_FAILED):
+    def __init__(self, detail: str = ErrorMessages.AUTH_FAILED):
         self.detail = detail
         super().__init__(self.detail)
 
@@ -49,7 +48,6 @@ class AuthenticationException(CustomBaseException):
 class ValidationException(CustomBaseException):
     """
     Lanzada para errores de validación de lógica de negocio (resulta en un 422).
-    Útil cuando la validación va más allá de lo que Pydantic puede hacer.
     """
 
     def __init__(self, detail: str = ErrorMessages.VALIDATION_ERROR):
@@ -59,8 +57,7 @@ class ValidationException(CustomBaseException):
 
 class PayloadTooLargeException(CustomBaseException):
     """
-    Lanzada cuando el tamaño de una petición (ej. subida de archivo)
-    excede el límite configurado (resulta en un 413).
+    Lanzada cuando el tamaño de una petición excede el límite configurado (resulta en un 413).
     """
 
     def __init__(self, detail: str = ErrorMessages.PAYLOAD_TOO_LARGE):
@@ -73,7 +70,8 @@ class DuplicateRegistrationError(ConflictException):
 
     def __init__(self, email: str):
         self.email = email
-        detail = ErrorMessages.DUPLICATE_EMAIL.replace("e_mai_l", email)
+        # Usamos la clave genérica de duplicado, el frontend puede interpolar el email si es necesario
+        detail = ErrorMessages.DUPLICATE_EMAIL 
         super().__init__(detail=detail, context={"email": email})
 
 
@@ -91,7 +89,6 @@ class ReferentialIntegrityException(ConflictException):
         super().__init__(detail)
 
 
-# python
 class RateLimitExceededException(CustomBaseException):
     """Lanzada cuando se excede el límite de solicitudes permitido."""
 
@@ -100,7 +97,6 @@ class RateLimitExceededException(CustomBaseException):
         super().__init__(self.detail)
 
 
-# python
 class DatabaseConnectionException(CustomBaseException):
     """Lanzada cuando hay problemas de conexión con la base de datos."""
 
@@ -109,7 +105,6 @@ class DatabaseConnectionException(CustomBaseException):
         super().__init__(self.detail)
 
 
-# python
 class TimeoutException(CustomBaseException):
     """Lanzada cuando una operación excede el tiempo de espera permitido."""
 
@@ -118,16 +113,14 @@ class TimeoutException(CustomBaseException):
         super().__init__(self.detail)
 
 
-# python
 class InvalidCredentialsException(CustomBaseException):
     """Lanzada cuando las credenciales proporcionadas son inválidas."""
 
-    def __init__(self, detail: str = ErrorMessages.INVALID_CREDENTIALS):
+    def __init__(self, detail: str = ErrorMessages.AUTH_INVALID_CREDENTIALS):
         self.detail = detail
         super().__init__(self.detail)
 
 
-# python
 class ServiceUnavailableException(CustomBaseException):
     """Lanzada cuando un servicio externo no está disponible."""
 
@@ -140,22 +133,22 @@ class InvalidEmailException(FormatException):
     """Lanzada cuando el correo electrónico proporcionado no es válido."""
 
     def __init__(self, email: str):
-        detail = ErrorMessages.INVALID_EMAIL_FORMAT
+        detail = ErrorMessages.INVALID_FORMAT # Usamos clave genérica
         super().__init__(detail=detail)
 
 
 class DuplicateEntryError(ConflictException):
     """Lanzada cuando se intenta crear una entrada que viola una restricción de unicidad."""
 
-    def __init__(self, detail: str = "La entrada ya existe o viola una restricción de unicidad."):
+    def __init__(self, detail: str = ErrorMessages.CONFLICT):
         super().__init__(detail=detail)
 
 
 # -- Address --
 class AddressNotFoundException(NotFoundException):
-    """Lanzada cuando una dirección no se encuentra o no pertenece al usuario."""
+    """Lanzada cuando una dirección no se encuentra."""
 
-    def __init__(self, detail: str = "Dirección no encontrada o no pertenece al usuario."):
+    def __init__(self, detail: str = ErrorMessages.RESOURCE_NOT_FOUND):
         super().__init__(detail)
 
 
@@ -163,17 +156,12 @@ class AddressNotFoundException(NotFoundException):
 class EmergDataNotFoundException(NotFoundException):
     """Lanzada cuando los datos de emergencia de un cliente no se encuentran."""
 
-    def __init__(
-        self, detail: str = "Los datos de emergencia para este cliente no fueron encontrados."
-    ):
+    def __init__(self, detail: str = ErrorMessages.RESOURCE_NOT_FOUND):
         super().__init__(detail)
 
 
 class EmergDataAlreadyExistsException(ConflictException):
     """Lanzada cuando un cliente intenta crear datos de emergencia por segunda vez."""
 
-    def __init__(
-        self,
-        detail: str = "Este cliente ya tiene datos de emergencia registrados. Para modificarlos, utilice la ruta de actualización (PUT).",
-    ):
+    def __init__(self, detail: str = ErrorMessages.CONFLICT):
         super().__init__(detail)

@@ -26,6 +26,9 @@ class Asset(Base):
     sector_id = Column(UUID(as_uuid=True), ForeignKey("sectors.id"), nullable=True, index=True)
     # La relación `sector` se definirá en el __init__.py del módulo para evitar importaciones circulares.
 
+    # Add the missing alarm_rules relationship
+    alarm_rules = relationship("AlarmRule", back_populates="asset")
+
     # --- Campos de Instancia Única ---
     serial_number = Column(String(100), unique=True, nullable=True, index=True)
     location = Column(String(150), nullable=True)
