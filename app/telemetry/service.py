@@ -2,7 +2,7 @@
 """
 Capa de Servicio para el módulo de Telemetría.
 
-Orquesta la lógica de negocio para la ingesta y consulta de datos de telemetría.
+Orquesta la lógica de negocio para la ingesta, consulta y evaluación de datos de telemetría.
 """
 
 from typing import List, Optional
