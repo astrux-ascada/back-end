@@ -23,11 +23,19 @@ logger = logging.getLogger(__name__)
 class AlarmingService:
     """Servicio de negocio para la gestión de reglas y alarmas."""
 
-    def __init__(self, db: Session, notification_service: NotificationService, asset_repo: AssetRepository, audit_service: AuditService):
+    def __init__(
+        self, 
+        db: Session, 
+        notification_service: NotificationService, 
+        asset_repo: AssetRepository, 
+        audit_service: AuditService,
+        maintenance_service: Optional[MaintenanceService] = None
+    ):
         self.db = db
         self.notification_service = notification_service
         self.asset_repo = asset_repo
         self.audit_service = audit_service
+        self.maintenance_service = maintenance_service
         self.alarming_repo = AlarmingRepository(self.db)
         # La carga de reglas ahora debe ser por tenant, por lo que no se puede hacer en el init.
 
@@ -63,13 +71,40 @@ class AlarmingService:
                     self.audit_alarm_creation(alarm)
                     self.notify_relevant_users(alarm, tenant_id)
 
-    def audit_alarm_creation(self, alarm: models.Alarm):
+    def trigger_maintenance_order(self, alarm: models.Alarm, rule: models.AlarmRule):
+        """Crea automáticamente una orden de trabajo correctiva."""
+        if not self.maintenance_service:
+            logger.warning("MaintenanceService no disponible, no se puede crear orden automática.")
+            return
+
+        try:
+            asset = self.asset_repo.get_asset(rule.asset_id)
+            asset_name = asset.name if asset else "Unknown Asset"
+            
+            order_in = WorkOrderCreate(
+                summary=f"Alarma Crítica: {rule.metric_name} en {asset_name}",
+                description=f"Orden generada automáticamente por alarma {alarm.id}. Valor disparador: {alarm.triggered_value}. Regla: {rule.condition} {rule.threshold}",
+                priority="URGENT",
+                category="CORRECTIVE",
+                asset_id=rule.asset_id,
+                source_trigger={"type": "ALARM", "alarm_id": str(alarm.id), "rule_id": str(rule.id)}
+            )
+            
+            # Crear la orden sin usuario (sistema)
+            order = self.maintenance_service.create_order(order_in, current_user=None)
+            logger.info(f"Orden de trabajo {order.id} creada automáticamente para alarma {alarm.id}")
+            
+        except Exception as e:
+            logger.error(f"Error al crear orden de trabajo automática: {e}")
+
+    def audit_alarm_creation(self, alarm: models.Alarm, rule: models.AlarmRule):
         """Registra la creación de una alarma en el log de auditoría."""
         self.audit_service.log_operation(
             user=None, # Acción del sistema
             action="ALARM_TRIGGERED",
-            entity=alarm,
-            details={"triggering_value": alarm.triggering_value, "severity": alarm.rule.severity}
+            entity_type="Alarm",
+            entity_id=alarm.id,
+            details={"triggering_value": alarm.triggered_value, "severity": rule.severity}
         )
 
     def notify_relevant_users(self, alarm: models.Alarm, tenant_id: uuid.UUID):
@@ -78,7 +113,7 @@ class AlarmingService:
             logger.warning(f"No se encontraron usuarios para notificar para la alarma {alarm.id}")
             return
 
-        message = f"Alarma {alarm.rule.severity}: {asset.asset_type.name} ({asset.serial_number}) ha superado el umbral. Valor: {alarm.triggering_value:.2f}"
+        message = f"Alarma {rule.severity}: {asset.asset_type.name} ({asset.serial_number}) ha superado el umbral. Valor: {alarm.triggered_value:.2f}"
         
         for user in asset.sector.users:
             self.notification_service.create_notification_for_user(

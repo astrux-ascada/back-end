@@ -2,7 +2,6 @@
 """
 Capa de Repositorio para el módulo de Mantenimiento.
 """
-
 from typing import List, Optional
 import uuid
 
@@ -12,8 +11,6 @@ from app.maintenance import models, schemas
 from app.assets.models import Asset # Importar Asset para el join
 
 class MaintenanceRepository:
-    """Realiza operaciones CRUD en la base de datos para el módulo de Mantenimiento."""
-
     def __init__(self, db: Session):
         self.db = db
 
@@ -60,13 +57,67 @@ class MaintenanceRepository:
         db_assignment = models.WorkOrderUserAssignment(**assignment_in.model_dump())
         self.db.add(db_assignment)
         self.db.commit()
-        self.db.refresh(db_assignment)
-        return db_assignment
+        self.db.refresh(db_task)
+        return db_task
+
+    def get_task(self, task_id: UUID) -> Optional[MaintenanceTask]:
+        return self.db.query(MaintenanceTask).filter(MaintenanceTask.id == task_id).first()
 
     def assign_provider_to_work_order(self, assignment_in: schemas.WorkOrderProviderAssignmentCreate) -> models.WorkOrderProviderAssignment:
         # Aquí necesitaríamos validar que tanto la WorkOrder como el Provider pertenecen al mismo tenant
         db_assignment = models.WorkOrderProviderAssignment(**assignment_in.model_dump())
         self.db.add(db_assignment)
         self.db.commit()
-        self.db.refresh(db_assignment)
-        return db_assignment
+        self.db.refresh(db_task)
+        return db_task
+    
+    def delete_task(self, task_id: UUID) -> bool:
+        db_task = self.get_task(task_id)
+        if db_task:
+            self.db.delete(db_task)
+            self.db.commit()
+            return True
+        return False
+
+    # --- User Assignments ---
+
+    def assign_user(self, work_order_id: UUID, user_id: UUID) -> bool:
+        exists = self.db.query(WorkOrderUserAssignment).filter_by(work_order_id=work_order_id, user_id=user_id).first()
+        if not exists:
+            assignment = WorkOrderUserAssignment(work_order_id=work_order_id, user_id=user_id)
+            self.db.add(assignment)
+            self.db.commit()
+            return True
+        return False
+
+    def unassign_user(self, work_order_id: UUID, user_id: UUID) -> bool:
+        assignment = self.db.query(WorkOrderUserAssignment).filter_by(work_order_id=work_order_id, user_id=user_id).first()
+        if assignment:
+            self.db.delete(assignment)
+            self.db.commit()
+            return True
+        return False
+
+    # --- Spare Part Assignments ---
+
+    def add_spare_part_to_order(self, order_id: UUID, part_id: UUID, quantity: int) -> Optional[WorkOrderSparePart]:
+        """Asigna un repuesto a una orden o actualiza la cantidad si ya existe."""
+        assignment = self.db.query(WorkOrderSparePart).filter_by(work_order_id=order_id, spare_part_id=part_id).first()
+        if assignment:
+            assignment.quantity_required = quantity
+        else:
+            assignment = WorkOrderSparePart(work_order_id=order_id, spare_part_id=part_id, quantity_required=quantity)
+        
+        self.db.add(assignment)
+        self.db.commit()
+        self.db.refresh(assignment)
+        return assignment
+
+    def remove_spare_part_from_order(self, order_id: UUID, part_id: UUID) -> bool:
+        """Quita un repuesto de una orden."""
+        assignment = self.db.query(WorkOrderSparePart).filter_by(work_order_id=order_id, spare_part_id=part_id).first()
+        if assignment:
+            self.db.delete(assignment)
+            self.db.commit()
+            return True
+        return False

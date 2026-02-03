@@ -1,28 +1,52 @@
 class ErrorMessages:
-    # --- Errores Generales y de Autenticación ---
-    AUTHENTICATION_FAILED = "Credenciales de autenticación no válidas."
-    PERMISSION_DENIED = "No tienes permiso para realizar esta acción."
-    RESOURCE_NOT_FOUND = "El recurso solicitado no existe."
-    CONFLICT = "Ya existe un recurso con los mismos datos."
-    VALIDATION_ERROR = "Error de validación en los datos proporcionados."
-    PAYLOAD_TOO_LARGE = "La carga útil de la petición es demasiado grande."
-    UNEXPECTED_ERROR = "Ocurrió un error inesperado en el servidor."
-    INVALID_FORMAT = "El formato del campo es inválido."
-    REFERENTIAL_INTEGRITY = "Error de integridad referencial."
-    RATE_LIMIT_EXCEEDED = "Se ha excedido el límite de solicitudes permitido."
-    DATABASE_CONNECTION = "No se pudo conectar a la base de datos."
-    TIMEOUT = "La operación ha excedido el tiempo de espera."
-    INVALID_CREDENTIALS = "Las credenciales proporcionadas son inválidas."
-    SERVICE_UNAVAILABLE = "El servicio solicitado no está disponible en este momento."
-    INVALID_TOKEN = "Token inválido: falta el identificador."
-    EXPIRED_TOKEN = "El token ha expirado."  # CORRECCIÓN: "a" -> "ha", "expidrado" -> "expirado"
+    """
+    Centro de Mensajes y Claves de Traducción (I18N).
+    
+    El backend devuelve estas CLAVES. El Frontend es responsable de traducir
+    estas claves al idioma del usuario usando sus archivos JSON locales.
+    
+    Formato: MODULO_ERROR_DETALLE
+    """
+    
+    # --- GLOBAL / SYSTEM ---
+    UNEXPECTED_ERROR = "GLOBAL.UNEXPECTED_ERROR"
+    SERVICE_UNAVAILABLE = "GLOBAL.SERVICE_UNAVAILABLE"
+    TIMEOUT = "GLOBAL.TIMEOUT"
+    DATABASE_CONNECTION = "GLOBAL.DATABASE_CONNECTION"
+    VALIDATION_ERROR = "GLOBAL.VALIDATION_ERROR"
+    INVALID_FORMAT = "GLOBAL.INVALID_FORMAT"
+    PAYLOAD_TOO_LARGE = "GLOBAL.PAYLOAD_TOO_LARGE"
+    RATE_LIMIT_EXCEEDED = "GLOBAL.RATE_LIMIT_EXCEEDED"
+    RESOURCE_NOT_FOUND = "GLOBAL.RESOURCE_NOT_FOUND"
+    CONFLICT = "GLOBAL.CONFLICT"
+    PERMISSION_DENIED = "GLOBAL.PERMISSION_DENIED"
 
-    # --- Errores Específicos de Dominio ---
-    DUPLICATE_EMAIL = "El email {email} ya está registrado."
-    INVALID_EMAIL = "El correo electrónico proporcionado no tiene un formato válido."
-    DUPLICATE_ENTRY = "La entrada ya existe o viola una restricción de unicidad."
+    # --- AUTHENTICATION (AUTH) ---
+    AUTH_FAILED = "AUTH.FAILED"
+    AUTH_INVALID_CREDENTIALS = "AUTH.INVALID_CREDENTIALS"
+    AUTH_INVALID_TOKEN = "AUTH.INVALID_TOKEN"
+    AUTH_EXPIRED_TOKEN = "AUTH.EXPIRED_TOKEN"
+    AUTH_USER_NOT_FOUND = "AUTH.USER_NOT_FOUND"
+    AUTH_USER_LOCKED = "AUTH.USER_LOCKED"
+    AUTH_TFA_REQUIRED = "AUTH.TFA_REQUIRED"
+    AUTH_TFA_INVALID = "AUTH.TFA_INVALID"
 
-    # --- NUEVOS MENSAJES CENTRALIZADOS ---
-    ADDRESS_NOT_FOUND = "Dirección no encontrada o no pertenece al usuario."
-    EMERG_DATA_NOT_FOUND = "Los datos de emergencia para este cliente no fueron encontrados."
-    EMERG_DATA_ALREADY_EXISTS = "Este cliente ya tiene datos de emergencia registrados. Para modificarlos, utilice la ruta de actualización (PUT)."
+    # --- SAAS / SUBSCRIPTION (SUB) ---
+    SUB_PAYMENT_REQUIRED = "SUB.PAYMENT_REQUIRED"
+    SUB_PLAN_LIMIT_REACHED = "SUB.PLAN_LIMIT_REACHED"
+    SUB_TENANT_SUSPENDED = "SUB.TENANT_SUSPENDED"
+    SUB_FEATURE_NOT_ENABLED = "SUB.FEATURE_NOT_ENABLED"
+
+    # --- MAINTENANCE (MAINT) ---
+    MAINT_ASSET_NOT_FOUND = "MAINT.ASSET_NOT_FOUND"
+    MAINT_WORK_ORDER_NOT_FOUND = "MAINT.WORK_ORDER_NOT_FOUND"
+    MAINT_SPARE_PART_NO_STOCK = "MAINT.SPARE_PART_NO_STOCK"
+    
+    # --- LEGACY (Mapeo temporal para no romper código viejo inmediatamente) ---
+    # TODO: Refactorizar usos antiguos para usar las nuevas claves
+    AUTHENTICATION_FAILED = AUTH_FAILED
+    INVALID_CREDENTIALS = AUTH_INVALID_CREDENTIALS
+    INVALID_TOKEN = AUTH_INVALID_TOKEN
+    EXPIRED_TOKEN = AUTH_EXPIRED_TOKEN
+    DUPLICATE_EMAIL = "AUTH.EMAIL_ALREADY_EXISTS"
+    REFERENTIAL_INTEGRITY = "GLOBAL.REFERENTIAL_INTEGRITY_ERROR"

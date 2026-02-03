@@ -12,8 +12,6 @@ from app.procurement import models, schemas
 
 
 class ProcurementRepository:
-    """Realiza operaciones CRUD en la base de datos para el módulo de Compras."""
-
     def __init__(self, db: Session):
         self.db = db
 

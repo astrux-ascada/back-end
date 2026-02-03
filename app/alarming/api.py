@@ -1,13 +1,15 @@
 # /app/alarming/api.py
 """
-API Router para la gestión de reglas de alarma y visualización de alarmas.
+API Router para el módulo de Alarming.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 import uuid
 from typing import List
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.alarming import schemas
+from app.alarming.schemas import AlarmRead
 from app.alarming.service import AlarmingService
 from app.dependencies.services import get_alarming_service
 from app.dependencies.auth import get_current_active_user # Cambiado a active_user para que más roles puedan ver

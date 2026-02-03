@@ -5,18 +5,22 @@ Capa de Servicio para el módulo de Compras (Procurement).
 
 from typing import List, Optional
 import uuid
+import logging
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import NotFoundException
 from app.procurement import models, schemas
 from app.procurement.repository import ProcurementRepository
 
+logger = logging.getLogger(__name__)
 
 class ProcurementService:
-    """Servicio de negocio para la gestión de compras y proveedores."""
-
+    """
+    Servicio principal para la gestión de compras.
+    """
     def __init__(self, db: Session):
         self.db = db
-        self.procurement_repo = ProcurementRepository(self.db)
+        self.repo = ProcurementRepository(self.db)
 
     # --- Métodos para Provider ---
 
