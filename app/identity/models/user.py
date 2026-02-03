@@ -4,7 +4,7 @@ Modelo de la base de datos para la entidad User.
 """
 import uuid
 
-from sqlalchemy import Boolean, Column, String, func, TIMESTAMP
+from sqlalchemy import Boolean, Column, String, Integer, func, TIMESTAMP, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -16,6 +16,10 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    # --- Relación Multi-Tenant ---
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True, comment="Organización a la que pertenece. NULL = Super Admin Global")
+    tenant = relationship("Tenant", back_populates="users")
 
     # --- Relaciones Muchos-a-Muchos ---
     roles = relationship("Role", secondary="user_roles", back_populates="users")
@@ -37,6 +41,16 @@ class User(Base):
     # --- MEJORA: Campos para 2FA ---
     tfa_secret = Column(String(255), nullable=True, comment="Secreto para la autenticación de dos factores (2FA).")
     is_tfa_enabled = Column(Boolean, default=False, nullable=False, comment="Indica si el 2FA está habilitado para el usuario.")
+
+    # --- MEJORA: Seguridad de Sesión (Hardening) ---
+    failed_login_attempts = Column(Integer, default=0, nullable=False, comment="Contador de intentos fallidos consecutivos")
+    locked_until = Column(TIMESTAMP(timezone=True), nullable=True, comment="Fecha hasta la cual el usuario está bloqueado temporalmente")
+    last_login_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    last_login_ip = Column(String(45), nullable=True)
+
+    # --- MEJORA: Trazabilidad Legal (Términos y Condiciones) ---
+    terms_accepted_at = Column(TIMESTAMP(timezone=True), nullable=True, comment="Fecha de aceptación de los términos")
+    terms_version = Column(String(20), nullable=True, comment="Versión de los términos aceptada (ej: v1.2)")
 
     # --- Campos de Auditoría ---
     created_at = Column(

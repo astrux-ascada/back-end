@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.exception_handlers import add_exception_handlers
 from app.core.limiter import limiter
+from app.core.middlewares.tenant_middleware import TenantMiddleware # Importar el nuevo middleware
 
 # --- Importar los componentes para el sistema de acción por logs ---
 from app.core_engine.service import CoreEngineService
@@ -51,11 +52,8 @@ async def lifespan(app: FastAPI):
     app.state.core_engine_service = CoreEngineService(db, telemetry_service)
 
     # --- Configuración del Handler de Logs para Acciones Automáticas ---
-    # 1. Crear una función parcial con la sesión de la BD inyectada.
     error_handler_with_db = partial(handle_connector_error, db=db)
-    # 2. Registrar el manejador de eventos en nuestro handler de logs.
     astruxa_log_handler.event_handlers["handle_connection_error"] = error_handler_with_db
-    # 3. Añadir nuestro handler al logger raíz para que escuche todos los logs.
     logging.getLogger().addHandler(astruxa_log_handler)
     logger.info("Handler de logs de Astruxa para acciones automáticas activado.")
 
@@ -82,6 +80,10 @@ app = FastAPI(
 )
 
 # --- Configuración de Middlewares ---
+# El orden es importante. TenantMiddleware debe ir después del middleware de autenticación
+# (que en FastAPI suele estar integrado o se añade antes) y antes de las rutas.
+app.add_middleware(TenantMiddleware)
+
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,

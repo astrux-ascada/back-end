@@ -20,9 +20,9 @@ class AssetRepository:
         self.db = db
 
     # --- Métodos para AssetType ---
-
-    def create_asset_type(self, asset_type_in: schemas.AssetTypeCreate) -> models.AssetType:
-        db_asset_type = models.AssetType(**asset_type_in.model_dump())
+    # Los AssetType son globales o por tenant? Asumimos por ahora que son por tenant.
+    def create_asset_type(self, asset_type_in: schemas.AssetTypeCreate, tenant_id: uuid.UUID) -> models.AssetType:
+        db_asset_type = models.AssetType(**asset_type_in.model_dump(), tenant_id=tenant_id)
         self.db.add(db_asset_type)
         self.db.commit()
         self.db.refresh(db_asset_type)
@@ -30,33 +30,39 @@ class AssetRepository:
 
     # --- Métodos para Asset (Instancia Física) ---
 
-    def create_asset(self, asset_in: schemas.AssetCreate) -> models.Asset:
-        db_asset = models.Asset(**asset_in.model_dump())
+    def create_asset(self, asset_in: schemas.AssetCreate, tenant_id: uuid.UUID) -> models.Asset:
+        db_asset = models.Asset(**asset_in.model_dump(), tenant_id=tenant_id)
         self.db.add(db_asset)
         self.db.commit()
         self.db.refresh(db_asset)
         return db_asset
 
-    def get_asset(self, asset_id: uuid.UUID) -> Optional[models.Asset]:
+    def get_asset(self, asset_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[models.Asset]:
         return (
             self.db.query(models.Asset)
             .options(joinedload(models.Asset.asset_type), joinedload(models.Asset.sector))
-            .filter(models.Asset.id == asset_id)
+            .filter(models.Asset.id == asset_id, models.Asset.tenant_id == tenant_id) # Filtro por tenant
             .first()
         )
 
     def list_assets(
-        self, 
+        self,
+        tenant_id: uuid.UUID,
         skip: int = 0, 
         limit: int = 100, 
         category: Optional[str] = None, 
         sector_id: Optional[uuid.UUID] = None
     ) -> List[models.Asset]:
         query = self.db.query(models.Asset).options(joinedload(models.Asset.asset_type), joinedload(models.Asset.sector))
+        
+        # Filtro principal por tenant
+        query = query.filter(models.Asset.tenant_id == tenant_id)
+
         if category:
             query = query.join(models.AssetType).filter(models.AssetType.category == category)
         if sector_id:
             query = query.filter(models.Asset.sector_id == sector_id)
+            
         return query.offset(skip).limit(limit).all()
 
     def update_asset(self, db_asset: models.Asset, asset_in: schemas.AssetUpdate) -> models.Asset:
@@ -70,9 +76,9 @@ class AssetRepository:
         self.db.refresh(db_asset)
         return db_asset
 
-    def update_asset_status(self, asset_id: uuid.UUID, new_status: str) -> Optional[models.Asset]:
+    def update_asset_status(self, asset_id: uuid.UUID, tenant_id: uuid.UUID, new_status: str) -> Optional[models.Asset]:
         """Actualiza el campo de estado de un activo específico."""
-        db_asset = self.get_asset(asset_id) # Reutilizamos get_asset para obtener el objeto
+        db_asset = self.get_asset(asset_id, tenant_id) # Reutilizamos get_asset para asegurar pertenencia al tenant
         if db_asset:
             db_asset.status = new_status
             self.db.commit()
@@ -80,16 +86,23 @@ class AssetRepository:
         return db_asset
 
     # --- Métodos para AssetHierarchy ---
-
-    def add_component_to_hierarchy(self, hierarchy_in: schemas.AssetHierarchyCreate) -> models.AssetHierarchy:
+    # La jerarquía también debería ser por tenant
+    def add_component_to_hierarchy(self, hierarchy_in: schemas.AssetHierarchyCreate, tenant_id: uuid.UUID) -> models.AssetHierarchy:
+        # Aquí necesitaríamos validar que ambos asset types pertenecen al tenant_id
         db_hierarchy = models.AssetHierarchy(**hierarchy_in.model_dump())
         self.db.add(db_hierarchy)
         self.db.commit()
         self.db.refresh(db_hierarchy)
         return db_hierarchy
 
-    def get_parent_asset_type(self, child_asset_type_id: uuid.UUID) -> Optional[models.AssetType]:
+    def get_parent_asset_type(self, child_asset_type_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[models.AssetType]:
+        # Validar que el child_asset_type_id pertenece al tenant
+        child_type = self.db.query(models.AssetType).filter(models.AssetType.id == child_asset_type_id, models.AssetType.tenant_id == tenant_id).first()
+        if not child_type:
+            return None
+
         parent_assoc = self.db.query(models.AssetHierarchy).filter(models.AssetHierarchy.child_asset_type_id == child_asset_type_id).first()
         if parent_assoc:
-            return self.db.query(models.AssetType).filter(models.AssetType.id == parent_assoc.parent_asset_type_id).first()
+            # Validar que el parent_asset_type_id también pertenece al tenant
+            return self.db.query(models.AssetType).filter(models.AssetType.id == parent_assoc.parent_asset_type_id, models.AssetType.tenant_id == tenant_id).first()
         return None

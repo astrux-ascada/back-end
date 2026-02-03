@@ -34,18 +34,19 @@ class RoleRepository:
     def get_by_id(self, role_id: uuid.UUID) -> Optional[Role]:
         return self.db.query(Role).options(joinedload(Role.permissions)).filter(Role.id == role_id).first()
 
-    def get_by_name(self, name: str) -> Optional[Role]:
-        return self.db.query(Role).filter(Role.name == name).first()
+    def get_by_name(self, name: str, tenant_id: uuid.UUID) -> Optional[Role]:
+        # Los roles también deberían ser por tenant
+        return self.db.query(Role).filter(Role.name == name, Role.tenant_id == tenant_id).first()
 
-    def list_all(self) -> List[Role]:
-        return self.db.query(Role).options(joinedload(Role.permissions)).all()
+    def list_all(self, tenant_id: uuid.UUID) -> List[Role]:
+        return self.db.query(Role).filter(Role.tenant_id == tenant_id).options(joinedload(Role.permissions)).all()
 
     def get_by_ids(self, role_ids: List[uuid.UUID]) -> List[Role]:
         return self.db.query(Role).filter(Role.id.in_(role_ids)).all()
 
-    def create(self, role_in: RoleCreate) -> Role:
+    def create(self, role_in: RoleCreate, tenant_id: uuid.UUID) -> Role:
         role_data = role_in.model_dump(exclude={"permission_ids"})
-        db_role = Role(**role_data)
+        db_role = Role(**role_data, tenant_id=tenant_id)
 
         if role_in.permission_ids:
             permissions = self.permission_repo.get_by_ids(role_in.permission_ids)
@@ -87,17 +88,21 @@ class UserRepository:
     def get_by_id(self, user_id: uuid.UUID) -> User | None:
         return self.db.query(User).filter(User.id == user_id).first()
 
+    def get_by_id_and_tenant(self, user_id: uuid.UUID, tenant_id: uuid.UUID) -> User | None:
+        return self.db.query(User).filter(User.id == user_id, User.tenant_id == tenant_id).first()
+
     def get_by_email(self, email: str) -> User | None:
+        # El email es único en toda la plataforma, no necesita filtro de tenant
         return self.db.query(User).filter(User.email == email).first()
 
-    def list_users(self, skip: int = 0, limit: int = 100) -> List[User]:
-        """Devuelve una lista de usuarios."""
-        return self.db.query(User).offset(skip).limit(limit).all()
+    def list_users(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[User]:
+        """Devuelve una lista de usuarios para un tenant específico."""
+        return self.db.query(User).filter(User.tenant_id == tenant_id).offset(skip).limit(limit).all()
 
-    def create(self, user_in: UserCreate) -> User:
+    def create(self, user_in: UserCreate, tenant_id: Optional[uuid.UUID] = None) -> User:
         user_data = user_in.model_dump(exclude={"password", "role_ids", "sector_ids"})
         user_data["hashed_password"] = hash_password(user_in.password)
-        db_user = User(**user_data)
+        db_user = User(**user_data, tenant_id=tenant_id)
 
         if user_in.role_ids:
             roles = self.role_repo.get_by_ids(user_in.role_ids)
