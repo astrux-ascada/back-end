@@ -8,7 +8,7 @@ y transforma los modelos de la base de datos en los DTOs para la API.
 
 from typing import List, Optional
 import uuid
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload # Importar joinedload para optimización
 
 from app.assets import models, schemas
 from app.assets.repository import AssetRepository
@@ -26,15 +26,15 @@ class AssetService:
         self.asset_repo = AssetRepository(self.db)
 
     def create_asset(self, asset_in: schemas.AssetCreate, user: User, tenant_id: uuid.UUID) -> schemas.AssetReadDTO:
+        # El repositorio ya devuelve el objeto con algunas relaciones cargadas si se usa joinedload en el repo
         db_asset = self.asset_repo.create_asset(asset_in, tenant_id)
-        full_asset = self.asset_repo.get_asset(db_asset.id, tenant_id)
         
         self.audit_service.log_operation(
             user=user,
             action="CREATE_ASSET",
-            entity=full_asset
+            entity=db_asset # Usar db_asset directamente
         )
-        return map_asset_to_dto(full_asset, self.asset_repo)
+        return map_asset_to_dto(db_asset, self.asset_repo) # Pasar db_asset directamente
 
     def get_asset(self, asset_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[schemas.AssetReadDTO]:
         asset = self.asset_repo.get_asset(asset_id, tenant_id)
@@ -70,12 +70,11 @@ class AssetService:
         self.audit_service.log_operation(
             user=user,
             action="UPDATE_ASSET",
-            entity=updated_asset,
+            entity=updated_asset, # Usar updated_asset directamente
             details=asset_in.model_dump(exclude_unset=True)
         )
         
-        full_updated_asset = self.asset_repo.get_asset(updated_asset.id, tenant_id)
-        return map_asset_to_dto(full_updated_asset, self.asset_repo)
+        return map_asset_to_dto(updated_asset, self.asset_repo) # Pasar updated_asset directamente
 
     def update_asset_status(
         self, 

@@ -21,10 +21,7 @@ class Settings(BaseSettings):
     ENV: str = "development"
     PROJECT_NAME: str = "Astruxa"
     BASE_URL: str = "http://localhost:8071"
-    
-    # En producción, esto DEBE ser una lista de URLs específicas, no "*"
     BACKEND_CORS_ORIGINS: List[Union[str, AnyHttpUrl]] = []
-    
     GOOGLE_API_KEY: Optional[str] = None
 
     # --- Configuración de Base de Datos ---
@@ -33,80 +30,70 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
     POSTGRES_PORT: int = 5432
-
     DATABASE_URL: Optional[PostgresDsn] = None
+    DATABASE_POOL_SIZE: int = 10
+    DATABASE_POOL_OVERFLOW: int = 5
+    DATABASE_POOL_TIMEOUT: int = 30
 
     # --- Configuración de Redis ---
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+
+    # --- Configuración de JWT ---
+    JWT_SECRET: str
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 1080
+
+    # --- Configuración del Superusuario Inicial ---
+    FIRST_SUPERUSER_EMAIL: EmailStr
+    FIRST_SUPERUSER_PASSWORD: str
+
+    # --- Políticas de Contraseña ---
+    PASSWORD_MIN_LENGTH: int = 12
+    PASSWORD_REQUIRE_UPPERCASE: bool = True
+    PASSWORD_REQUIRE_LOWERCASE: bool = True
+    PASSWORD_REQUIRE_NUMBERS: bool = True
+    PASSWORD_REQUIRE_SPECIAL_CHARS: bool = True
+
+    # --- Configuración de Almacenamiento (Media Manager) ---
+    STORAGE_TYPE: str = "local"
+    STORAGE_PATH: Path = ROOT_PATH / "storage"
+    MAX_FILE_SIZE_MB: int = 10
+    ALLOWED_MIME_TYPES: dict[str, str] = {
+        "image/jpeg": "jpg", "image/png": "png", "image/gif": "gif",
+        "image/webp": "webp", "application/pdf": "pdf"
+    }
+    S3_BUCKET_NAME: Optional[str] = None
+    S3_ACCESS_KEY: Optional[str] = None
+    S3_SECRET_KEY: Optional[str] = None
+    S3_ENDPOINT_URL: Optional[str] = None
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_PATH, case_sensitive=False, extra="ignore"
+    )
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def assemble_db_connection(cls, v: Optional[str], info: ValidationInfo) -> Any:
         if isinstance(v, str) and "USER" not in v and "HOST" not in v:
             return v.replace("postgresql://", "postgresql+psycopg://")
-
-        if info.data.get("POSTGRES_HOST") and info.data.get("POSTGRES_USER") and info.data.get(
-                "POSTGRES_DB"):
-            return str(
-                PostgresDsn.build(
-                    scheme="postgresql+psycopg",
-                    username=info.data.get("POSTGRES_USER"),
-                    password=info.data.get("POSTGRES_PASSWORD"),
-                    host=info.data.get("POSTGRES_HOST"),
-                    port=info.data.get("POSTGRES_PORT"),
-                    path=str(info.data.get("POSTGRES_DB")).lstrip("/"),
-                )
-            )
+        if info.data.get("POSTGRES_HOST"):
+            return str(PostgresDsn.build(
+                scheme="postgresql+psycopg",
+                username=info.data.get("POSTGRES_USER"),
+                password=info.data.get("POSTGRES_PASSWORD"),
+                host=info.data.get("POSTGRES_HOST"),
+                port=info.data.get("POSTGRES_PORT"),
+                path=str(info.data.get("POSTGRES_DB")).lstrip("/"),
+            ))
         raise ValueError("La configuración de la base de datos está incompleta.")
-
-    # --- Configuración de JWT ---
-    JWT_SECRET: str
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 1080  # 18 horas
-
-    # --- Configuración del Superusuario Inicial ---
-    # Estos valores DEBEN venir del entorno. No hay valores por defecto en código.
-    FIRST_SUPERUSER_EMAIL: EmailStr
-    FIRST_SUPERUSER_PASSWORD: str
-
-    # --- Configuración de Almacenamiento (Media Manager) ---
-    STORAGE_TYPE: str = "local"  # 'local' o 's3'
-    STORAGE_PATH: Path = ROOT_PATH / "storage"
-    MAX_FILE_SIZE_MB: int = 10
-    ALLOWED_MIME_TYPES: dict[str, str] = {
-        "image/jpeg": "jpg",
-        "image/png": "png",
-        "image/gif": "gif",
-        "image/webp": "webp",
-        "application/pdf": "pdf"
-    }
-
-    # --- Configuración para S3 (si STORAGE_TYPE = 's3') ---
-    S3_BUCKET_NAME: Optional[str] = None
-    S3_ACCESS_KEY: Optional[str] = None
-    S3_SECRET_KEY: Optional[str] = None
-    S3_ENDPOINT_URL: Optional[str] = None # Para MinIO
-
-    # --- Configuración avanzada de la Base de Datos ---
-    DATABASE_POOL_SIZE: int = 10
-    DATABASE_POOL_OVERFLOW: int = 5
-    DATABASE_POOL_TIMEOUT: int = 30
-
-    model_config = SettingsConfigDict(
-        env_file=ENV_PATH,
-        case_sensitive=False,
-        extra="ignore",
-    )
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
+        return v
 
     @field_validator("JWT_SECRET")
     @classmethod
@@ -125,7 +112,6 @@ class Settings(BaseSettings):
             raise ValueError("S3_BUCKET_NAME es requerido cuando STORAGE_TYPE es 's3'.")
         return v
 
-
 settings = Settings()
 
 # --- Configuración de Logging ---
@@ -142,6 +128,5 @@ logger = logging.getLogger("app")
 # --- Validación de entorno ---
 if settings.ENV == "production":
     logger.info("Aplicación corriendo en entorno de PRODUCCIÓN.")
-    # Validaciones adicionales de producción
     if "*" in settings.BACKEND_CORS_ORIGINS:
-         raise ValueError("BACKEND_CORS_ORIGINS no puede contener '*' en producción.")
+        raise ValueError("BACKEND_CORS_ORIGINS no puede contener '*' en producción.")
