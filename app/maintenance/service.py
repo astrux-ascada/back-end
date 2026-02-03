@@ -14,7 +14,10 @@ from fastapi import HTTPException, status
 from app.maintenance import schemas
 from app.maintenance.models import WorkOrder, MaintenanceTask, MaintenancePlan
 from app.maintenance.repository import MaintenanceRepository
-from app.procurement.repository import ProcurementRepository as ProcurementRepo
+from app.assets.repository import AssetRepository
+from app.identity.repository import UserRepository
+from app.procurement.repository import ProcurementRepository
+from app.assets.mappers import map_asset_to_dto
 from app.auditing.service import AuditService
 from app.identity.models import User
 
@@ -32,100 +35,43 @@ class MaintenanceService:
         self.repo = MaintenanceRepository(db)
         self.procurement_repo = ProcurementRepo(db)
 
-    # --- Work Orders ---
+    def create_work_order(self, work_order_in: schemas.WorkOrderCreate, user: User, tenant_id: uuid.UUID) -> schemas.WorkOrderRead:
+        """Crea una nueva orden de trabajo y registra la acción."""
+        # Validar que el activo pertenece al tenant
+        asset = self.asset_repo.get_asset(work_order_in.asset_id, tenant_id)
+        if not asset:
+            raise ValueError(f"Asset with id {work_order_in.asset_id} not found in this tenant.")
 
-    def create_order(self, order_in: schemas.WorkOrderCreate, current_user: Optional[User] = None) -> WorkOrder:
-        """
-        Crea una nueva Orden de Trabajo.
-        
-        Args:
-            order_in: Datos de la orden.
-            current_user: Usuario que realiza la acción (puede ser None si es sistema).
-        """
-        logger.info(f"Creando nueva Orden de Trabajo. Resumen: '{order_in.summary}', Prioridad: {order_in.priority}")
-        order = self.repo.create(order_in)
+        db_work_order = self.maintenance_repo.create_work_order(work_order_in, tenant_id)
         
         self.audit_service.log_operation(
-            user=current_user, 
-            action="CREATE_WORK_ORDER", 
-            entity_type="WorkOrder", 
-            entity_id=order.id, 
-            details={"summary": order.summary, "priority": order.priority}
+            user=user,
+            action="CREATE_WORK_ORDER",
+            entity=db_work_order
         )
-        logger.info(f"Orden de Trabajo creada exitosamente. ID: {order.id}")
-        return order
+        
+        return self.get_work_order(db_work_order.id, tenant_id)
 
-    def get_order(self, order_id: UUID) -> Optional[WorkOrder]:
-        """Obtiene una orden por su ID."""
-        return self.repo.get(order_id)
-
-    def list_orders(self, skip: int = 0, limit: int = 100, status: str = None, asset_id: UUID = None) -> List[WorkOrder]:
-        """Lista órdenes con filtros opcionales."""
-        return self.repo.get_multi(skip, limit, status, asset_id)
-
-    def update_order(self, order_id: UUID, order_in: schemas.WorkOrderUpdate, current_user: User) -> Optional[WorkOrder]:
-        """
-        Actualiza una orden existente. Maneja la validación y descuento de stock al completar.
-        """
-        logger.info(f"Actualizando Orden de Trabajo {order_id}. Datos: {order_in.model_dump(exclude_unset=True)}")
-        order = self.repo.get(order_id)
-        if not order:
-            logger.warning(f"Intento de actualizar orden inexistente: {order_id}")
+    def get_work_order(self, work_order_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[schemas.WorkOrderRead]:
+        work_order = self.maintenance_repo.get_work_order(work_order_id, tenant_id)
+        if not work_order:
             return None
-        
-        old_status = order.status
-        
-        # Validar stock antes de completar
-        if order_in.status == "COMPLETED" and old_status != "COMPLETED":
-            logger.info(f"Validando stock para completar la orden {order_id}...")
-            self._validate_stock_for_completion(order)
+        # El asset ya viene filtrado por tenant desde el repo de mantenimiento
+        asset_dto = map_asset_to_dto(work_order.asset, self.asset_repo)
+        return schemas.WorkOrderRead(**work_order.__dict__, asset=asset_dto)
 
-        updated_order = self.repo.update(order, order_in)
-        
-        # Descontar stock después de completar
-        if updated_order.status == "COMPLETED" and old_status != "COMPLETED":
-            self._deduct_stock_for_order(updated_order)
+    def list_work_orders(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[schemas.WorkOrderRead]:
+        work_orders = self.maintenance_repo.list_work_orders(tenant_id, skip, limit)
+        # Optimizacion: Evitar N+1 queries llamando a get_work_order repetidamente
+        return [
+            schemas.WorkOrderRead(**wo.__dict__, asset=map_asset_to_dto(wo.asset, self.asset_repo))
+            for wo in work_orders
+        ]
 
-        self.audit_service.log_operation(
-            user=current_user, 
-            action="UPDATE_WORK_ORDER", 
-            entity_type="WorkOrder", 
-            entity_id=order.id, 
-            details=order_in.model_dump(exclude_unset=True)
-        )
-        return updated_order
-
-    def _validate_stock_for_completion(self, order: WorkOrder):
-        """
-        Verifica si hay stock suficiente para todos los repuestos requeridos.
-        Lanza HTTPException 409 si no hay stock.
-        """
-        for item in order.required_spare_parts:
-            part = self.procurement_repo.get_spare_part(item.spare_part_id)
-            if not part or part.current_stock < item.quantity_required:
-                error_msg = f"Stock insuficiente. Repuesto: '{part.name if part else 'Desconocido'}'. Req: {item.quantity_required}, Disp: {part.current_stock if part else 'N/A'}"
-                logger.error(f"Error de validación de stock en orden {order.id}: {error_msg}")
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=error_msg
-                )
-
-    def _deduct_stock_for_order(self, order: WorkOrder):
-        """Descuenta del inventario los repuestos usados."""
-        logger.info(f"Iniciando descuento de stock para orden {order.id}")
-        for item in order.required_spare_parts:
-            part = self.procurement_repo.get_spare_part(item.spare_part_id)
-            if part:
-                old_stock = part.current_stock
-                new_stock = old_stock - item.quantity_required
-                self.procurement_repo.update_spare_part(part, schemas.SparePartUpdate(current_stock=new_stock))
-                logger.info(f"Stock actualizado para '{part.name}': {old_stock} -> {new_stock}")
-
-    # --- Maintenance Tasks ---
-
-    def add_task_to_order(self, order_id: UUID, task_in: schemas.MaintenanceTaskCreate, current_user: User) -> Optional[MaintenanceTask]:
-        """Añade una tarea a una orden."""
-        if not self.repo.get(order_id): 
+    def update_work_order_status(self, work_order_id: uuid.UUID, status_update: schemas.WorkOrderStatusUpdate, user: User, tenant_id: uuid.UUID) -> Optional[schemas.WorkOrderRead]:
+        """Actualiza el estado de una orden de trabajo y registra la acción."""
+        work_order_before_update = self.maintenance_repo.get_work_order(work_order_id, tenant_id)
+        if not work_order_before_update:
             return None
         
         task = self.repo.create_task(order_id, task_in)
@@ -140,11 +86,7 @@ class MaintenanceService:
         )
         return task
 
-    def update_task(self, task_id: UUID, task_in: schemas.MaintenanceTaskUpdate, current_user: User) -> Optional[MaintenanceTask]:
-        """Actualiza una tarea (ej: marcar como completada)."""
-        task = self.repo.get_task(task_id)
-        if not task: 
-            return None
+        updated_work_order = self.maintenance_repo.update_work_order_status(work_order_id, tenant_id, new_status)
         
         updated_task = self.repo.update_task(task, task_in)
         logger.info(f"Tarea {task_id} actualizada. Completada: {updated_task.is_completed}")
@@ -186,33 +128,29 @@ class MaintenanceService:
         if success:
             logger.info(f"Usuario {user_id} desasignado de orden {order_id}")
             self.audit_service.log_operation(
-                user=current_user, 
-                action="UNASSIGN_USER", 
-                entity_type="WorkOrder", 
-                entity_id=order_id, 
-                details={"unassigned_user_id": str(user_id)}
+                user=user,
+                action="UPDATE_WORK_ORDER_STATUS",
+                entity=updated_work_order,
+                details={"from": old_status, "to": new_status}
             )
-        return success
+            return self.get_work_order(updated_work_order.id, tenant_id)
+        return None
 
-    # --- Spare Part Assignments ---
-
-    def add_spare_part_to_order(self, order_id: UUID, request: schemas.AddSparePartRequest, current_user: User) -> Optional[WorkOrder]:
-        """Vincula un repuesto a una orden."""
-        order = self.repo.get(order_id)
-        part = self.procurement_repo.get_spare_part(request.spare_part_id)
-        if not order or not part:
-            logger.warning(f"Fallo al añadir repuesto. Orden {order_id} o Parte {request.spare_part_id} no encontrados.")
-            return None
+    def assign_user_to_work_order(self, assignment_in: schemas.WorkOrderUserAssignmentCreate, user: User, tenant_id: uuid.UUID) -> models.WorkOrderUserAssignment:
+        work_order = self.maintenance_repo.get_work_order(assignment_in.work_order_id, tenant_id)
+        # Validar que el usuario a asignar pertenece al mismo tenant
+        user_to_assign = self.user_repo.get_by_id_and_tenant(assignment_in.user_id, tenant_id)
+        if not work_order or not user_to_assign:
+            raise ValueError("Work Order or User not found in this tenant.")
         
         self.repo.add_spare_part_to_order(order_id, request.spare_part_id, request.quantity_required)
         logger.info(f"Repuesto '{part.name}' (x{request.quantity_required}) añadido a orden {order_id}")
         
         self.audit_service.log_operation(
-            user=current_user, 
-            action="ADD_SPARE_PART", 
-            entity_type="WorkOrder", 
-            entity_id=order_id, 
-            details={"spare_part_id": str(request.spare_part_id), "quantity": request.quantity_required}
+            user=user,
+            action="ASSIGN_USER_TO_WORK_ORDER",
+            entity=work_order,
+            details={"assigned_user_id": str(user_to_assign.id), "assigned_user_email": user_to_assign.email}
         )
         return self.repo.get(order_id)
 

@@ -3,67 +3,59 @@
 Capa de Repositorio para el módulo de Mantenimiento.
 """
 from typing import List, Optional
-from uuid import UUID
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
+import uuid
 
-from app.maintenance.models import WorkOrder, MaintenanceTask, WorkOrderUserAssignment, WorkOrderSparePart
-from app.maintenance import schemas
-from app.identity.models import User
+from sqlalchemy.orm import Session, joinedload
+
+from app.maintenance import models, schemas
+from app.assets.models import Asset # Importar Asset para el join
 
 class MaintenanceRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    # --- Work Orders ---
-
-    def create(self, order_in: schemas.WorkOrderCreate) -> WorkOrder:
-        order_data = order_in.model_dump(exclude={"tasks", "assigned_user_ids"})
-        db_order = WorkOrder(**order_data)
-        
-        self.db.add(db_order)
+    def create_work_order(self, work_order_in: schemas.WorkOrderCreate, tenant_id: uuid.UUID) -> models.WorkOrder:
+        db_work_order = models.WorkOrder(**work_order_in.model_dump(), tenant_id=tenant_id)
+        self.db.add(db_work_order)
         self.db.commit()
-        self.db.refresh(db_order)
+        self.db.refresh(db_work_order)
+        return db_work_order
 
-        if order_in.tasks:
-            for task_in in order_in.tasks:
-                db_task = MaintenanceTask(work_order_id=db_order.id, **task_in.model_dump())
-                self.db.add(db_task)
-        
-        if order_in.assigned_user_ids:
-            for user_id in order_in.assigned_user_ids:
-                assignment = WorkOrderUserAssignment(work_order_id=db_order.id, user_id=user_id)
-                self.db.add(assignment)
+    def get_work_order(self, work_order_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[models.WorkOrder]:
+        return (
+            self.db.query(models.WorkOrder)
+            .options(
+                joinedload(models.WorkOrder.asset).joinedload(Asset.asset_type),
+                joinedload(models.WorkOrder.tasks),
+                joinedload(models.WorkOrder.assigned_users),
+                joinedload(models.WorkOrder.assigned_provider),
+            )
+            .filter(models.WorkOrder.id == work_order_id, models.WorkOrder.tenant_id == tenant_id) # Filtro por tenant
+            .first()
+        )
 
-        self.db.commit()
-        self.db.refresh(db_order)
-        return db_order
+    def list_work_orders(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[models.WorkOrder]:
+        return (
+            self.db.query(models.WorkOrder)
+            .filter(models.WorkOrder.tenant_id == tenant_id) # Filtro por tenant
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
-    def get(self, order_id: UUID) -> Optional[WorkOrder]:
-        return self.db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    def update_work_order_status(self, work_order_id: uuid.UUID, tenant_id: uuid.UUID, new_status: str) -> Optional[models.WorkOrder]:
+        """Actualiza el campo de estado de una orden de trabajo específica."""
+        db_work_order = self.get_work_order(work_order_id, tenant_id) # Reutilizamos para asegurar pertenencia
+        if db_work_order:
+            db_work_order.status = new_status
+            self.db.commit()
+            self.db.refresh(db_work_order)
+        return db_work_order
 
-    def get_multi(self, skip: int = 0, limit: int = 100, status: Optional[str] = None, asset_id: Optional[UUID] = None) -> List[WorkOrder]:
-        query = self.db.query(WorkOrder)
-        if status:
-            query = query.filter(WorkOrder.status == status)
-        if asset_id:
-            query = query.filter(WorkOrder.asset_id == asset_id)
-        return query.order_by(desc(WorkOrder.created_at)).offset(skip).limit(limit).all()
-
-    def update(self, db_order: WorkOrder, order_in: schemas.WorkOrderUpdate) -> WorkOrder:
-        update_data = order_in.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(db_order, field, value)
-        self.db.add(db_order)
-        self.db.commit()
-        self.db.refresh(db_order)
-        return db_order
-
-    # --- Maintenance Tasks ---
-
-    def create_task(self, work_order_id: UUID, task_in: schemas.MaintenanceTaskCreate) -> MaintenanceTask:
-        db_task = MaintenanceTask(work_order_id=work_order_id, **task_in.model_dump())
-        self.db.add(db_task)
+    def assign_user_to_work_order(self, assignment_in: schemas.WorkOrderUserAssignmentCreate) -> models.WorkOrderUserAssignment:
+        # Aquí necesitaríamos validar que tanto la WorkOrder como el User pertenecen al mismo tenant
+        db_assignment = models.WorkOrderUserAssignment(**assignment_in.model_dump())
+        self.db.add(db_assignment)
         self.db.commit()
         self.db.refresh(db_task)
         return db_task
@@ -71,11 +63,10 @@ class MaintenanceRepository:
     def get_task(self, task_id: UUID) -> Optional[MaintenanceTask]:
         return self.db.query(MaintenanceTask).filter(MaintenanceTask.id == task_id).first()
 
-    def update_task(self, db_task: MaintenanceTask, task_in: schemas.MaintenanceTaskUpdate) -> MaintenanceTask:
-        update_data = task_in.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(db_task, field, value)
-        self.db.add(db_task)
+    def assign_provider_to_work_order(self, assignment_in: schemas.WorkOrderProviderAssignmentCreate) -> models.WorkOrderProviderAssignment:
+        # Aquí necesitaríamos validar que tanto la WorkOrder como el Provider pertenecen al mismo tenant
+        db_assignment = models.WorkOrderProviderAssignment(**assignment_in.model_dump())
+        self.db.add(db_assignment)
         self.db.commit()
         self.db.refresh(db_task)
         return db_task

@@ -23,18 +23,23 @@ from app.maintenance.service import MaintenanceService
 from app.core_engine.service import CoreEngineService
 from app.sectors.service import SectorService
 from app.auditing.service import AuditService
+from app.auditing.approval_service import ApprovalService # Importar nuevo servicio
 from app.configuration.service import ConfigurationService
 from app.alarming.service import AlarmingService
 from app.notifications.service import NotificationService
-from app.reporting.service import ReportingService
-from app.core_engine.state_detector import StateDetector
-from app.reporting.stoppage_service import StoppageService
+from app.media.service import MediaService # Importar MediaService
 
 
 # --- Service Injectors for Astruxa Modules ---
 
 def get_audit_service(db: Session = Depends(get_db)) -> AuditService:
     return AuditService(db)
+
+def get_approval_service(db: Session = Depends(get_db)) -> ApprovalService:
+    return ApprovalService(db)
+
+def get_media_service(db: Session = Depends(get_db)) -> MediaService:
+    return MediaService(db)
 
 def get_notification_service(db: Session = Depends(get_db)) -> NotificationService:
     return NotificationService(db)

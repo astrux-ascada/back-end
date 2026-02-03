@@ -8,7 +8,7 @@ y transforma los modelos de la base de datos en los DTOs para la API.
 
 from typing import List, Optional
 import uuid
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload # Importar joinedload para optimización
 
 from app.assets import models, schemas
 from app.assets.repository import AssetRepository
@@ -25,75 +25,77 @@ class AssetService:
         self.audit_service = audit_service
         self.asset_repo = AssetRepository(self.db)
 
-    def create_asset(self, asset_in: schemas.AssetCreate, current_user: User) -> schemas.AssetReadDTO:
-        db_asset = self.asset_repo.create_asset(asset_in)
-        full_asset = self.asset_repo.get_asset(db_asset.id)
+    def create_asset(self, asset_in: schemas.AssetCreate, user: User, tenant_id: uuid.UUID) -> schemas.AssetReadDTO:
+        # El repositorio ya devuelve el objeto con algunas relaciones cargadas si se usa joinedload en el repo
+        db_asset = self.asset_repo.create_asset(asset_in, tenant_id)
         
         self.audit_service.log_operation(
-            user=current_user,
+            user=user,
             action="CREATE_ASSET",
-            entity=full_asset
+            entity=db_asset # Usar db_asset directamente
         )
-        return map_asset_to_dto(full_asset, self.asset_repo)
+        return map_asset_to_dto(db_asset, self.asset_repo) # Pasar db_asset directamente
 
-    def get_asset(self, asset_id: uuid.UUID) -> Optional[schemas.AssetReadDTO]:
-        asset = self.asset_repo.get_asset(asset_id)
+    def get_asset(self, asset_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[schemas.AssetReadDTO]:
+        asset = self.asset_repo.get_asset(asset_id, tenant_id)
         if asset:
             return map_asset_to_dto(asset, self.asset_repo)
         return None
 
     def list_assets(
-        self, 
+        self,
+        tenant_id: uuid.UUID,
         skip: int = 0, 
         limit: int = 100, 
         category: Optional[str] = None, 
         sector_id: Optional[uuid.UUID] = None
     ) -> List[schemas.AssetReadDTO]:
-        assets = self.asset_repo.list_assets(skip, limit, category, sector_id)
+        assets = self.asset_repo.list_assets(tenant_id, skip, limit, category, sector_id)
         return [map_asset_to_dto(asset, self.asset_repo) for asset in assets]
 
     def update_asset(
         self, 
         asset_id: uuid.UUID, 
         asset_in: schemas.AssetUpdate, 
-        current_user: User
+        user: User,
+        tenant_id: uuid.UUID
     ) -> Optional[schemas.AssetReadDTO]:
         """Actualiza un activo existente y registra la operación en la auditoría."""
-        db_asset = self.asset_repo.get_asset(asset_id)
+        db_asset = self.asset_repo.get_asset(asset_id, tenant_id)
         if not db_asset:
             return None
 
         updated_asset = self.asset_repo.update_asset(db_asset=db_asset, asset_in=asset_in)
 
         self.audit_service.log_operation(
-            user=current_user,
+            user=user,
             action="UPDATE_ASSET",
-            entity=updated_asset,
+            entity=updated_asset, # Usar updated_asset directamente
             details=asset_in.model_dump(exclude_unset=True)
         )
         
-        full_updated_asset = self.asset_repo.get_asset(updated_asset.id)
-        return map_asset_to_dto(full_updated_asset, self.asset_repo)
+        return map_asset_to_dto(updated_asset, self.asset_repo) # Pasar updated_asset directamente
 
     def update_asset_status(
         self, 
         asset_id: uuid.UUID, 
         status_update: schemas.AssetStatusUpdate, 
-        current_user: User
+        user: User,
+        tenant_id: uuid.UUID
     ) -> Optional[schemas.AssetReadDTO]:
         """Actualiza el estado de un activo y registra la operación en la auditoría."""
-        asset_before_update = self.asset_repo.get_asset(asset_id)
+        asset_before_update = self.asset_repo.get_asset(asset_id, tenant_id)
         if not asset_before_update:
             return None
         
         old_status = asset_before_update.status
         new_status = status_update.status
 
-        updated_asset = self.asset_repo.update_asset_status(asset_id, new_status)
+        updated_asset = self.asset_repo.update_asset_status(asset_id, tenant_id, new_status)
         
         if updated_asset:
             self.audit_service.log_operation(
-                user=current_user,
+                user=user,
                 action="UPDATE_STATUS",
                 entity=updated_asset,
                 details={"from": old_status, "to": new_status}
@@ -103,8 +105,8 @@ class AssetService:
 
     # --- Métodos para AssetType y Hierarchy ---
 
-    def create_asset_type(self, asset_type_in: schemas.AssetTypeCreate) -> models.AssetType:
-        return self.asset_repo.create_asset_type(asset_type_in)
+    def create_asset_type(self, asset_type_in: schemas.AssetTypeCreate, tenant_id: uuid.UUID) -> models.AssetType:
+        return self.asset_repo.create_asset_type(asset_type_in, tenant_id)
 
-    def add_component_to_hierarchy(self, hierarchy_in: schemas.AssetHierarchyCreate) -> models.AssetHierarchy:
-        return self.asset_repo.add_component_to_hierarchy(hierarchy_in)
+    def add_component_to_hierarchy(self, hierarchy_in: schemas.AssetHierarchyCreate, tenant_id: uuid.UUID) -> models.AssetHierarchy:
+        return self.asset_repo.add_component_to_hierarchy(hierarchy_in, tenant_id)

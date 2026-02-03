@@ -2,6 +2,9 @@
 """
 API Router para el módulo de Alarming.
 """
+
+from fastapi import APIRouter, Depends, HTTPException, status
+import uuid
 from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,42 +12,41 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.alarming.schemas import AlarmRead
 from app.alarming.service import AlarmingService
 from app.dependencies.services import get_alarming_service
-from app.dependencies.auth import get_current_active_user
-from app.identity.models import User
+from app.dependencies.auth import get_current_active_user # Cambiado a active_user para que más roles puedan ver
+from app.dependencies.tenant import get_tenant_id
 
-router = APIRouter(prefix="/alarming", tags=["Alarming"])
+router = APIRouter(prefix="/alarming", tags=["Alarming"], dependencies=[Depends(get_current_active_user)])
+
+@router.post("/rules", response_model=schemas.AlarmRule, status_code=201)
+def create_alarm_rule(
+    rule_in: schemas.AlarmRuleCreate, 
+    alarming_service: AlarmingService = Depends(get_alarming_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id)
+):
+    """Crea una nueva regla de alarma para el tenant actual."""
+    try:
+        return alarming_service.create_alarm_rule(rule_in, tenant_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
-@router.get(
-    "/active",
-    summary="Listar todas las alarmas activas (no reconocidas)",
-    response_model=List[AlarmRead],
-)
+@router.get("/alarms/active", response_model=List[schemas.Alarm])
 def list_active_alarms(
     alarming_service: AlarmingService = Depends(get_alarming_service),
-    current_user: User = Depends(get_current_active_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id)
 ):
-    """
-    Devuelve una lista de todas las alarmas que están actualmente activas y
-    no han sido reconocidas.
-    """
-    return alarming_service.list_active_alarms()
+    """Obtiene una lista de todas las alarmas activas del tenant actual."""
+    return alarming_service.list_active_alarms(tenant_id)
 
 
-@router.post(
-    "/{alarm_id}/acknowledge",
-    summary="Reconocer una alarma activa",
-    response_model=AlarmRead,
-)
+@router.post("/alarms/{alarm_id}/acknowledge", response_model=schemas.Alarm)
 def acknowledge_alarm(
-    alarm_id: UUID,
+    alarm_id: uuid.UUID, 
     alarming_service: AlarmingService = Depends(get_alarming_service),
-    current_user: User = Depends(get_current_active_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id)
 ):
-    """
-    Marca una alarma como reconocida. Esto la elimina de la lista de alarmas activas.
-    """
-    alarm = alarming_service.acknowledge_alarm(alarm_id, current_user)
+    """Reconoce (marca como vista) una alarma activa del tenant actual."""
+    alarm = alarming_service.acknowledge_alarm(alarm_id, tenant_id)
     if not alarm:
-        raise HTTPException(status_code=404, detail="Alarma no encontrada o ya reconocida.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Alarm not found")
     return alarm

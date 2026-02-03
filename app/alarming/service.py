@@ -16,8 +16,6 @@ from app.notifications.service import NotificationService
 from app.assets.repository import AssetRepository
 from app.auditing.service import AuditService
 from app.identity.models import User
-from app.maintenance.service import MaintenanceService
-from app.maintenance.schemas import WorkOrderCreate
 
 logger = logging.getLogger(__name__)
 
@@ -39,43 +37,39 @@ class AlarmingService:
         self.audit_service = audit_service
         self.maintenance_service = maintenance_service
         self.alarming_repo = AlarmingRepository(self.db)
-        self.active_rules: List[models.AlarmRule] = []
-        self.load_rules()
+        # La carga de reglas ahora debe ser por tenant, por lo que no se puede hacer en el init.
 
-    def load_rules(self):
-        self.active_rules = self.alarming_repo.list_all_enabled_rules()
-        logger.info(f"{len(self.active_rules)} reglas de alerta activas cargadas en memoria.")
+    def load_rules_for_tenant(self, tenant_id: uuid.UUID) -> List[models.AlarmRule]:
+        rules = self.alarming_repo.list_all_enabled_rules(tenant_id)
+        logger.info(f"{len(rules)} reglas de alerta activas cargadas para el tenant {tenant_id}.")
+        return rules
 
-    def create_alarm_rule(self, rule_in: schemas.AlarmRuleCreate) -> models.AlarmRule:
-        new_rule = self.alarming_repo.create_alarm_rule(rule_in)
-        self.load_rules()
-        return new_rule
+    def create_alarm_rule(self, rule_in: schemas.AlarmRuleCreate, tenant_id: uuid.UUID) -> models.AlarmRule:
+        # Validar que el asset pertenece al tenant
+        asset = self.asset_repo.get_asset(rule_in.asset_id, tenant_id)
+        if not asset:
+            raise ValueError(f"Asset with id {rule_in.asset_id} not found in this tenant.")
+        
+        return self.alarming_repo.create_alarm_rule(rule_in, tenant_id)
 
-    def evaluate_readings(self, readings: List[SensorReadingCreate]):
-        """
-        Evalúa una lista de lecturas de sensores contra las reglas de alarma activas.
-        """
-        for reading in readings:
-            for rule in self.active_rules:
-                if rule.asset_id == reading.asset_id and rule.metric_name == reading.metric_name:
-                    condition_met = False
-                    if rule.condition == ">" and reading.value > rule.threshold:
-                        condition_met = True
-                    elif rule.condition == "<" and reading.value < rule.threshold:
-                        condition_met = True
+    def evaluate_reading(self, reading: SensorReadingCreate, tenant_id: uuid.UUID):
+        """Evalúa una lectura de sensor, y si se dispara una alarma, la audita y notifica."""
+        active_rules = self.load_rules_for_tenant(tenant_id)
+
+        for rule in active_rules:
+            if rule.asset_id == reading.asset_id and rule.metric_name == reading.metric_name:
+                condition_met = False
+                if rule.condition == ">" and reading.value > rule.threshold:
+                    condition_met = True
+                elif rule.condition == "<" and reading.value < rule.threshold:
+                    condition_met = True
+                
+                if condition_met:
+                    logger.warning(f"¡ALERTA! Regla {rule.id} disparada para el activo {reading.asset_id} con valor {reading.value}")
+                    alarm = self.alarming_repo.create_alarm(rule.id, reading.value, tenant_id)
                     
-                    if condition_met:
-                        # Evitar crear alarmas duplicadas si ya hay una activa para la misma regla
-                        if not self.alarming_repo.has_active_alarm(rule.id):
-                            logger.warning(f"¡ALERTA! Regla {rule.id} disparada para el activo {reading.asset_id} con valor {reading.value}")
-                            alarm = self.alarming_repo.create_alarm(rule, reading)
-                            
-                            self.audit_alarm_creation(alarm, rule)
-                            self.notify_relevant_users(alarm, rule)
-                            
-                            # Integración con Mantenimiento: Crear Orden de Trabajo si es CRÍTICA
-                            if rule.severity.lower() == "critical":
-                                self.trigger_maintenance_order(alarm, rule)
+                    self.audit_alarm_creation(alarm)
+                    self.notify_relevant_users(alarm, tenant_id)
 
     def trigger_maintenance_order(self, alarm: models.Alarm, rule: models.AlarmRule):
         """Crea automáticamente una orden de trabajo correctiva."""
@@ -113,8 +107,8 @@ class AlarmingService:
             details={"triggering_value": alarm.triggered_value, "severity": rule.severity}
         )
 
-    def notify_relevant_users(self, alarm: models.Alarm, rule: models.AlarmRule):
-        asset = self.asset_repo.get_asset(rule.asset_id)
+    def notify_relevant_users(self, alarm: models.Alarm, tenant_id: uuid.UUID):
+        asset = self.asset_repo.get_asset(alarm.rule.asset_id, tenant_id)
         if not asset or not asset.sector or not asset.sector.users:
             logger.warning(f"No se encontraron usuarios para notificar para la alarma {alarm.id}")
             return
@@ -129,16 +123,8 @@ class AlarmingService:
                 reference_id=str(alarm.id)
             )
 
-    def list_active_alarms(self) -> List[models.Alarm]:
-        return self.alarming_repo.get_active_alarms()
+    def list_active_alarms(self, tenant_id: uuid.UUID) -> List[models.Alarm]:
+        return self.alarming_repo.get_active_alarms(tenant_id)
 
-    def acknowledge_alarm(self, alarm_id: uuid.UUID, user: User) -> Optional[models.Alarm]:
-        alarm = self.alarming_repo.acknowledge_alarm(alarm_id)
-        if alarm:
-            self.audit_service.log_operation(
-                user=user,
-                action="ALARM_ACKNOWLEDGED",
-                entity_type="Alarm",
-                entity_id=alarm.id
-            )
-        return alarm
+    def acknowledge_alarm(self, alarm_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[models.Alarm]:
+        return self.alarming_repo.acknowledge_alarm(alarm_id, tenant_id)

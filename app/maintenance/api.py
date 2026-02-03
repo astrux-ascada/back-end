@@ -10,7 +10,8 @@ from app.maintenance import schemas
 from app.maintenance.service import MaintenanceService
 from app.maintenance.scheduler import MaintenanceScheduler
 from app.dependencies.services import get_maintenance_service
-from app.dependencies.auth import require_role
+from app.dependencies.auth import get_current_active_user
+from app.dependencies.tenant import get_tenant_id # Importar dependencia de tenant
 from app.identity.models import User
 from app.core.database import get_db
 from sqlalchemy.orm import Session
@@ -55,35 +56,91 @@ def get_work_order(order_id: UUID, service: MaintenanceService = Depends(get_mai
         raise HTTPException(status_code=404, detail="Orden de trabajo no encontrada")
     return order
 
-@router.patch("/orders/{order_id}", response_model=schemas.WorkOrderRead, dependencies=[Depends(require_role([TECHNICIAN, MANAGER]))])
-def update_work_order(order_id: UUID, order_in: schemas.WorkOrderUpdate, service: MaintenanceService = Depends(get_maintenance_service), current_user: User = Depends(require_role([TECHNICIAN, MANAGER]))):
-    order = service.update_order(order_id, order_in, current_user)
-    if not order:
-        raise HTTPException(status_code=404, detail="Orden de trabajo no encontrada")
-    return order
+@router.post(
+    "/work-orders",
+    summary="Crear una nueva orden de trabajo",
+    status_code=status.HTTP_201_CREATED,
+    response_model=schemas.WorkOrderRead,
+)
+def create_work_order(
+    work_order_in: schemas.WorkOrderCreate,
+    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
+    current_user: User = Depends(get_current_active_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+):
+    """Crea una nueva orden de trabajo para el tenant actual."""
+    try:
+        return maintenance_service.create_work_order(work_order_in, current_user, tenant_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
-# --- Tasks Endpoints ---
 
-@router.post("/orders/{order_id}/tasks", response_model=schemas.MaintenanceTaskRead, status_code=201, dependencies=[Depends(require_role([TECHNICIAN, MANAGER]))])
-def add_task_to_order(order_id: UUID, task_in: schemas.MaintenanceTaskCreate, service: MaintenanceService = Depends(get_maintenance_service), current_user: User = Depends(require_role([TECHNICIAN, MANAGER]))):
-    task = service.add_task_to_order(order_id, task_in, current_user)
-    if not task:
-        raise HTTPException(status_code=404, detail="Orden de trabajo no encontrada")
-    return task
+@router.get(
+    "/work-orders/{work_order_id}",
+    summary="Obtener detalles de una orden de trabajo",
+    response_model=schemas.WorkOrderRead,
+)
+def get_work_order(
+    work_order_id: uuid.UUID,
+    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+):
+    """Obtiene la información de una orden de trabajo del tenant actual."""
+    work_order = maintenance_service.get_work_order(work_order_id, tenant_id)
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work Order not found")
+    return work_order
 
-@router.patch("/tasks/{task_id}", response_model=schemas.MaintenanceTaskRead, dependencies=[Depends(require_role([TECHNICIAN, MANAGER]))])
-def update_task(task_id: UUID, task_in: schemas.MaintenanceTaskUpdate, service: MaintenanceService = Depends(get_maintenance_service), current_user: User = Depends(require_role([TECHNICIAN, MANAGER]))):
-    task = service.update_task(task_id, task_in, current_user)
-    if not task:
-        raise HTTPException(status_code=404, detail="Tarea no encontrada")
-    return task
+@router.get(
+    "/work-orders",
+    summary="Listar órdenes de trabajo",
+    response_model=List[schemas.WorkOrderRead],
+)
+def list_work_orders(
+    skip: int = 0,
+    limit: int = 100,
+    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+):
+    """Lista las órdenes de trabajo del tenant actual."""
+    return maintenance_service.list_work_orders(tenant_id, skip, limit)
 
-# --- User Assignment Endpoints ---
 
-@router.post("/orders/{order_id}/assign/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role([MANAGER]))])
-def assign_user_to_order(order_id: UUID, user_id: UUID, service: MaintenanceService = Depends(get_maintenance_service), current_user: User = Depends(require_role([MANAGER]))):
-    if not service.assign_user_to_order(order_id, user_id, current_user):
-        raise HTTPException(status_code=404, detail="Orden de trabajo o usuario no encontrado")
+@router.patch(
+    "/work-orders/{work_order_id}/status",
+    summary="Actualizar el estado de una orden de trabajo",
+    response_model=schemas.WorkOrderRead,
+)
+def update_work_order_status(
+    work_order_id: uuid.UUID,
+    status_update: schemas.WorkOrderStatusUpdate,
+    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
+    current_user: User = Depends(get_current_active_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+):
+    """Actualiza el estado de una orden de trabajo del tenant actual."""
+    updated_work_order = maintenance_service.update_work_order_status(work_order_id, status_update, current_user, tenant_id)
+    if not updated_work_order:
+        raise HTTPException(status_code=404, detail="Work Order not found")
+    return updated_work_order
+
+
+@router.post(
+    "/work-orders/assign-user",
+    summary="Asignar un técnico a una orden de trabajo",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def assign_user_to_work_order(
+    assignment_in: schemas.WorkOrderUserAssignmentCreate,
+    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
+    current_user: User = Depends(get_current_active_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+):
+    """Asigna un usuario a una orden de trabajo, validando que ambos pertenezcan al tenant."""
+    try:
+        maintenance_service.assign_user_to_work_order(assignment_in, current_user, tenant_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     return None
 
 @router.delete("/orders/{order_id}/assign/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role([MANAGER]))])

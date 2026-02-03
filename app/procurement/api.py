@@ -12,69 +12,93 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from app.procurement import schemas
 from app.procurement.service import ProcurementService
 from app.dependencies.services import get_procurement_service
-from app.dependencies.auth import require_role
-from app.core.exceptions import NotFoundException
+from app.dependencies.tenant import get_tenant_id
+from app.dependencies.subscription import require_feature # Importar la nueva dependencia
 
 logger = logging.getLogger("app.procurement.api")
 
-router = APIRouter(prefix="/procurement", tags=["Procurement"])
+# Añadir la dependencia a nivel de router. Todas las rutas en este archivo
+# requerirán que la feature 'module_procurement' esté activa.
+router = APIRouter(
+    prefix="/procurement", 
+    tags=["Procurement"],
+    dependencies=[Depends(require_feature("module_procurement"))]
+)
 
-# --- Roles ---
-VIEWER = "VIEWER"
-TECHNICIAN = "TECHNICIAN"
-MANAGER = "MAINTENANCE_MANAGER"
+# --- Endpoints para Proveedores (Providers) ---
 
-# --- Provider Endpoints ---
+@router.post(
+    "/providers",
+    summary="Crear un nuevo proveedor",
+    status_code=status.HTTP_201_CREATED,
+    response_model=schemas.ProviderRead,
+)
+def create_provider(
+    provider_in: schemas.ProviderCreate,
+    procurement_service: ProcurementService = Depends(get_procurement_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+):
+    """Registra un nuevo proveedor para el tenant actual."""
+    return procurement_service.create_provider(provider_in, tenant_id)
 
-@router.post("/providers", summary="Crear un nuevo proveedor", status_code=status.HTTP_201_CREATED, response_model=schemas.ProviderRead, dependencies=[Depends(require_role([MANAGER]))])
-def create_provider(provider_in: schemas.ProviderCreate, service: ProcurementService = Depends(get_procurement_service)):
-    return service.create_provider(provider_in)
 
-@router.get("/providers", summary="Listar proveedores activos", response_model=List[schemas.ProviderRead], dependencies=[Depends(require_role([VIEWER, TECHNICIAN, MANAGER]))])
-def list_providers(skip: int = 0, limit: int = 100, service: ProcurementService = Depends(get_procurement_service)):
-    return service.list_providers(skip=skip, limit=limit)
+@router.get(
+    "/providers",
+    summary="Listar todos los proveedores",
+    response_model=List[schemas.ProviderRead],
+)
+def list_providers(
+    skip: int = 0,
+    limit: int = 100,
+    procurement_service: ProcurementService = Depends(get_procurement_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+):
+    """Obtiene una lista paginada de todos los proveedores del tenant actual."""
+    return procurement_service.list_providers(tenant_id, skip=skip, limit=limit)
 
-@router.get("/providers/{provider_id}", summary="Obtener un proveedor", response_model=schemas.ProviderRead, dependencies=[Depends(require_role([VIEWER, TECHNICIAN, MANAGER]))])
-def get_provider(provider_id: uuid.UUID, service: ProcurementService = Depends(get_procurement_service)):
-    provider = service.get_provider(provider_id)
-    if not provider:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proveedor no encontrado.")
-    return provider
+# --- Endpoints para Repuestos (Spare Parts) ---
 
-@router.put("/providers/{provider_id}", summary="Actualizar un proveedor", response_model=schemas.ProviderRead, dependencies=[Depends(require_role([MANAGER]))])
-def update_provider(provider_id: uuid.UUID, provider_in: schemas.ProviderUpdate, service: ProcurementService = Depends(get_procurement_service)):
-    try:
-        return service.update_provider(provider_id, provider_in)
-    except NotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+@router.post(
+    "/spare-parts",
+    summary="Crear un nuevo repuesto",
+    status_code=status.HTTP_201_CREATED,
+    response_model=schemas.SparePartRead,
+)
+def create_spare_part(
+    spare_part_in: schemas.SparePartCreate,
+    procurement_service: ProcurementService = Depends(get_procurement_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+):
+    """Registra un nuevo repuesto en el catálogo del tenant actual."""
+    return procurement_service.create_spare_part(spare_part_in, tenant_id)
 
-@router.delete("/providers/{provider_id}", summary="Desactivar un proveedor", response_model=schemas.ProviderRead, dependencies=[Depends(require_role([MANAGER]))])
-def delete_provider(provider_id: uuid.UUID, service: ProcurementService = Depends(get_procurement_service)):
-    try:
-        return service.soft_delete_provider(provider_id)
-    except NotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-# --- Spare Part Endpoints ---
+@router.get(
+    "/spare-parts",
+    summary="Listar todos los repuestos",
+    response_model=List[schemas.SparePartRead],
+)
+def list_spare_parts(
+    skip: int = 0,
+    limit: int = 100,
+    procurement_service: ProcurementService = Depends(get_procurement_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+):
+    """Obtiene una lista paginada de todos los repuestos del tenant actual."""
+    return procurement_service.list_spare_parts(tenant_id, skip=skip, limit=limit)
 
-@router.post("/spare-parts", summary="Crear un nuevo repuesto", status_code=status.HTTP_201_CREATED, response_model=schemas.SparePartRead, dependencies=[Depends(require_role([MANAGER]))])
-def create_spare_part(part_in: schemas.SparePartCreate, service: ProcurementService = Depends(get_procurement_service)):
-    return service.create_spare_part(part_in)
-
-@router.get("/spare-parts", summary="Listar repuestos activos", response_model=List[schemas.SparePartRead], dependencies=[Depends(require_role([VIEWER, TECHNICIAN, MANAGER]))])
-def list_spare_parts(skip: int = 0, limit: int = 100, service: ProcurementService = Depends(get_procurement_service)):
-    return service.list_spare_parts(skip=skip, limit=limit)
-
-@router.get("/spare-parts/{part_id}", summary="Obtener un repuesto", response_model=schemas.SparePartRead, dependencies=[Depends(require_role([VIEWER, TECHNICIAN, MANAGER]))])
-def get_spare_part(part_id: uuid.UUID, service: ProcurementService = Depends(get_procurement_service)):
-    part = service.get_spare_part(part_id)
-    if not part:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repuesto no encontrado.")
-    return part
-
-@router.put("/spare-parts/{part_id}", summary="Actualizar un repuesto", response_model=schemas.SparePartRead, dependencies=[Depends(require_role([MANAGER]))])
-def update_spare_part(part_id: uuid.UUID, part_in: schemas.SparePartUpdate, service: ProcurementService = Depends(get_procurement_service)):
-    try:
-        return service.update_spare_part(part_id, part_in)
-    except NotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+@router.get(
+    "/spare-parts/{spare_part_id}",
+    summary="Obtener un repuesto por su ID",
+    response_model=schemas.SparePartRead,
+)
+def get_spare_part(
+    spare_part_id: uuid.UUID,
+    procurement_service: ProcurementService = Depends(get_procurement_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+):
+    """Obtiene los detalles de un repuesto específico del tenant actual."""
+    spare_part = procurement_service.get_spare_part(spare_part_id, tenant_id)
+    if not spare_part:
+        raise HTTPException(status_code=404, detail="Spare Part not found")
+    return spare_part

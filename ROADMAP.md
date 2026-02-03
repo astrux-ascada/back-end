@@ -1,44 +1,80 @@
-# Roadmap del Proyecto Astruxa
+# 🗺️ Roadmap Técnico - Astruxa SaaS (Industrial Orchestrator 5.0)
 
-Este documento proporciona una visión de alto nivel del estado actual del proyecto, las funcionalidades implementadas y los objetivos a futuro.
-
----
-
-## Visión del Producto
-
-Astruxa aspira a ser un **Orquestador Industrial 5.0**, un sistema nervioso central para operaciones industriales que no solo monitorea, sino que también audita, analiza y reacciona de forma proactiva. Su arquitectura modular y segura está diseñada para integrar sistemas dispares (SCADA, MES, ERP) y habilitar capacidades de autodiagnóstico e inteligencia artificial.
+> **Estado del Proyecto:** Fase de Cimientos SaaS Completada (Backend Ready).
+> **Objetivo:** Plataforma Multi-Tenant Global para la Industria 5.0.
 
 ---
 
-## ✅ Funcionalidades Implementadas
+## ✅ Hito 1: Cimientos SaaS & Seguridad (COMPLETADO)
 
-Esta sección lista las capacidades que están completas, probadas o listas para la prueba final.
+Hemos transformado el backend monolítico en una arquitectura SaaS Enterprise robusta.
 
-| Módulo/Funcionalidad | Descripción | Estado |
-| :--- | :--- | :--- |
-| **Arquitectura del Núcleo** | Implementación de una arquitectura limpia, modular y basada en dominios de negocio. | ✅ Completado |
-| **Gestión de Identidad (RBAC)** | Sistema completo de Roles y Permisos, incluyendo `SuperUser` y `Administrator`. | ✅ Completado |
-| **Gestión de Sesiones (Redis)** | Ciclo de vida de sesión robusto con creación, validación y logout individual/masivo. | ✅ Completado |
-| **Módulo de Sectores** | Gestión de áreas físicas/lógicas de la planta. | ✅ Completado |
-| **Módulo de Activos** | Gestión del catálogo de activos, jerarquías (BOM) e instancias físicas. | ✅ Completado |
-| **Motor de Comunicación (OPC UA)** | El `CoreEngine` se conecta a un PLC (simulado) vía OPC UA y recibe datos. | ✅ Completado |
-| **Ingesta de Telemetría (TimescaleDB)** | Almacenamiento eficiente de datos de series temporales en una hypertable. | ✅ Completado |
-| **API de Dashboard** | Endpoint `GET /telemetry/readings/{id}` para consultar datos agregados. | ✅ Completado |
-| **Sistema de Auditoría** | Módulo `auditing` que registra operaciones críticas (creación, actualizaciones, consultas). | ✅ Completado |
-| **Logging Estructurado (JSON)** | Los logs de la aplicación se generan en formato JSON para análisis automático. | ✅ Completado |
-| **Sistema de Autodiagnóstico v1** | El `AstruxaLogHandler` detecta errores de conexión y crea órdenes de trabajo correctivas. | ✅ **Listo para Probar** |
-| **Siembra de Datos Completa** | Sistema de siembra modular que puebla la base de datos con un entorno de planta realista. | ✅ Completado |
+### Infraestructura & Core
+- [x] **Arquitectura Multi-Tenant Híbrida:** Soporte para múltiples organizaciones con aislamiento lógico de datos (`tenant_id`).
+- [x] **Modelo de Negocio:** Entidades `Partner`, `Tenant`, `Plan`, `Subscription` implementadas.
+- [x] **Seguridad Zero-Trust:**
+    - Login con "Gatekeeper" (validación de suscripción activa).
+    - Protección contra fuerza bruta y control de concurrencia de sesiones.
+    - Validación estricta de contraseñas y emails.
+- [x] **Auditoría:** Sistema de logs inmutables para todas las operaciones críticas.
+
+### Módulos Operativos (Aislados por Tenant)
+- [x] **Identity:** Gestión de usuarios y roles (RBAC) por tenant.
+- [x] **Assets:** Inventario de activos y jerarquías.
+- [x] **Maintenance:** Órdenes de trabajo, asignaciones y flujo de estados.
+- [x] **Procurement:** Proveedores y repuestos (con validación de feature flag por plan).
+- [x] **Alarming:** Reglas de alerta y monitoreo en tiempo real.
+- [x] **Notifications:** Sistema de notificaciones interno.
+
+### Funcionalidades Avanzadas
+- [x] **Media Manager:** Sistema seguro de subida de archivos (Local/S3) con URLs presignadas.
+- [x] **Módulo de Aprobaciones:** Flujo "Maker-Checker" para acciones destructivas o críticas.
 
 ---
 
-## 📝 Funcionalidades Planificadas
+## 🚀 Fase 2: Frontend & Experiencia de Usuario (PRÓXIMO PASO)
 
-Esta sección lista los próximos grandes objetivos de desarrollo.
+**Objetivo:** Construir las interfaces que consumirán la nueva API SaaS.
 
-| Módulo/Funcionalidad | Descripción | Estado |
-| :--- | :--- | :--- |
-| **Integración de Videovigilancia** | El "Ojo Digital": integrar cámaras IP para grabación por evento y análisis con IA. | 📝 Diseñado |
-| **Módulo de Compras (Procurement) v2** | Expandir el módulo para incluir la gestión de cotizaciones y la sugerencia de proveedores con IA. | ⏳ Pendiente |
-| **Módulo de Mantenimiento v2** | Implementar la generación automática de órdenes de trabajo preventivas basadas en calendarios o contadores de uso. | ⏳ Pendiente |
-| **Motor de Comunicación (Modbus)** | Añadir un nuevo conector al `CoreEngine` para soportar el protocolo Modbus TCP. | ⏳ Pendiente |
-| **Sistema de Alertas v1** | Un nuevo módulo para definir y gestionar umbrales de alerta para los datos de telemetría. | ⏳ Pendiente |
+### Panel de Operaciones (`/ops`)
+- [ ] **Dashboard de Técnico:** Lista de OTs asignadas, escaneo de QR de activos.
+- [ ] **Vista de Activo:** Detalle del activo, historial de mantenimiento, telemetría en vivo.
+- [ ] **Gestor de Archivos:** Subida de evidencias (fotos/PDFs) usando el Media Manager.
+
+### Panel Administrativo (`/back-office`)
+- [ ] **Gestión de Usuarios:** Alta/Baja de técnicos, asignación de roles.
+- [ ] **Configuración de Alertas:** Creación visual de reglas de alarma.
+- [ ] **Auditoría:** Visualizador de logs de operaciones y aprobaciones pendientes.
+
+### Panel de Plataforma (`/sys-mgt`)
+- [ ] **Gestión de Tenants:** Alta de nuevos clientes, asignación de planes.
+- [ ] **Métricas Globales:** Uso de recursos, usuarios activos por tenant.
+
+---
+
+## 💳 Fase 3: Automatización Comercial & Pagos
+
+**Objetivo:** Automatizar el ciclo de vida del cliente (Onboarding/Billing).
+
+- [ ] **Pasarela de Pagos:** Integración con Stripe/PayPal para cobro de suscripciones.
+- [ ] **Portal de Cliente:** Auto-registro y gestión de métodos de pago.
+- [ ] **Webhooks:** Manejo de eventos de pago (pago fallido, renovación exitosa) para actualizar el estado del tenant automáticamente.
+- [ ] **Facturación:** Generación automática de facturas PDF.
+
+---
+
+## 🧠 Fase 4: Inteligencia Industrial (AI & Digital Twin)
+
+**Objetivo:** Aportar valor predictivo sobre los datos recolectados.
+
+- [ ] **Mantenimiento Predictivo:** Modelos de ML entrenados con el histórico de telemetría para predecir fallos.
+- [ ] **Detección de Anomalías:** Alertas inteligentes basadas en patrones inusuales, no solo umbrales fijos.
+- [ ] **Digital Twin 3D:** Visualización interactiva de la planta usando los datos en tiempo real.
+
+---
+
+## 🛠️ Deuda Técnica & Mantenimiento
+
+- [ ] **Tests E2E:** Implementar pruebas automatizadas para los flujos críticos (Login -> Crear OT -> Aprobar).
+- [ ] **CI/CD:** Pipeline de despliegue automático a entornos de Staging/Producción.
+- [ ] **Documentación de API:** Mantener Swagger/ReDoc actualizado con ejemplos de uso.

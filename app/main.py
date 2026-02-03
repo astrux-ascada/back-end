@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.exception_handlers import add_exception_handlers
 from app.core.limiter import limiter
+from app.core.middlewares.tenant_middleware import TenantMiddleware # Importar el nuevo middleware
 
 # --- Importar los componentes para el sistema de acción por logs ---
 from app.core_engine.service import CoreEngineService
@@ -90,6 +91,10 @@ app = FastAPI(
 )
 
 # --- Configuración de Middlewares ---
+# El orden es importante. TenantMiddleware debe ir después del middleware de autenticación
+# (que en FastAPI suele estar integrado o se añade antes) y antes de las rutas.
+app.add_middleware(TenantMiddleware)
+
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,

@@ -1,119 +1,113 @@
-# Astruxa - Industrial Orchestrator 5.0 (Backend)
+# Astruxa - Industrial Orchestrator 5.0 (SaaS Backend)
 
-Este proyecto es el backend principal para **Astruxa**, un sistema de control, monitoreo y automatización industrial de última generación, construido con **FastAPI**.
+Este proyecto es el backend principal para **Astruxa**, una plataforma de orquestación industrial Multi-Tenant (SaaS) construida con **FastAPI**, diseñada para la Industria 5.0.
 
-## Descripción
+## 🚀 Descripción
 
-Astruxa es el cerebro digital de una planta industrial. Su propósito es unificar sistemas dispares (SCADA, MES, ERP), predecir fallos mediante IA y automatizar operaciones. Este backend proporciona una API modular, segura y de alto rendimiento para gestionar todos los aspectos de la planta.
+Astruxa permite a múltiples organizaciones industriales gestionar sus activos, mantenimiento y operaciones de forma segura y aislada en una única plataforma.
 
-## Arquitectura y Principios
-
-- **Arquitectura Limpia y Modular:** La lógica está organizada por dominios de negocio (`identity`, `assets`, `maintenance`, etc.).
-- **Principios SOLID:** Cada componente tiene una única responsabilidad, promoviendo un código mantenible y escalable.
-- **Seguridad Zero Trust:** Ningún componente confía en otro por defecto. Se aplica autenticación y autorización en cada capa.
-- **Enfoque Industrial e IoT:** Diseñado para ser robusto, operar on-premise y comunicarse con hardware industrial.
-
----
-
-## Roles & Permissions Architecture
-
-El sistema utiliza un modelo de Control de Acceso Basado en Roles (RBAC) con una clara separación de responsabilidades:
-
--   **`SuperUser`**: El "Dueño de la Plataforma". Rol técnico para la configuración del sistema (parámetros, enums dinámicos). No participa en las operaciones diarias.
--   **`Administrator`**: El "Jefe de Planta". Gestiona usuarios, roles operativos y catálogos (ej. `AssetTypes`).
--   **`Supervisor`**: El "Jefe de Turno". Gestiona y asigna órdenes de trabajo.
--   **`Technician`**: El "Técnico de Mantenimiento". Ejecuta las órdenes de trabajo que se le asignan.
--   **`Operator`**: El "Operario de Máquina". Solo puede visualizar el estado de los activos.
+### Características Clave
+- **Arquitectura Multi-Tenant Híbrida:** Aislamiento lógico de datos por `tenant_id`.
+- **Modelo de Negocio SaaS:** Gestión de Partners, Planes y Suscripciones.
+- **Seguridad Enterprise:** Login con "Gatekeeper" (validación de suscripción), protección contra fuerza bruta y control de sesiones.
+- **Media Manager:** Sistema seguro de subida de archivos (Local/S3).
+- **Módulo de Aprobaciones:** Flujo "Maker-Checker" para acciones críticas.
 
 ---
 
-## Stack Tecnológico
+## 🏗️ Arquitectura y Roles
 
-- **Backend:** FastAPI
-- **Base de Datos:** PostgreSQL + TimescaleDB
+El sistema se divide en tres niveles de gestión:
+
+### 1. Nivel Plataforma (`/sys-mgt`)
+Gestionado por los dueños del SaaS y Partners Regionales.
+- **`GLOBAL_SUPER_ADMIN`**: Acceso total. Gestiona Partners y Planes.
+- **`PARTNER_ADMIN`**: Gestiona sus propios Tenants (Clientes).
+
+### 2. Nivel Organización (`/back-office`)
+Gestionado por el cliente final.
+- **`TENANT_ADMIN`**: El "Gerente de Planta". Gestiona usuarios, roles y facturación de su organización.
+
+### 3. Nivel Operativo (`/ops`)
+El día a día en la planta.
+- **`MAINTENANCE_MANAGER`**: Planifica paradas y mantenimientos.
+- **`SUPERVISOR`**: Aprueba solicitudes y asigna tareas.
+- **`TECHNICIAN`**: Ejecuta órdenes de trabajo.
+
+---
+
+## 🛠️ Stack Tecnológico
+
+- **Backend:** FastAPI (Python 3.12)
+- **Base de Datos:** PostgreSQL 16 + TimescaleDB (Series de Tiempo)
 - **ORM:** SQLAlchemy 2.0
+- **Cache & Sesiones:** Redis
 - **Migraciones:** Alembic
-- **Contenedores:** Docker y Docker Compose
-- **Protocolos Industriales:** OPC UA
+- **Infraestructura:** Docker Compose
 
 ---
 
-## Development & Testing Workflow
+## ⚡ Guía de Inicio Rápido (Desarrollo)
 
-Esta sección describe la secuencia exacta de comandos para levantar el entorno de desarrollo completo.
+Sigue estos pasos para levantar el entorno completo desde cero.
 
-(Se asume que se usan dos terminales en la raíz del proyecto).
+### Prerrequisitos
+- Docker y Docker Compose instalados.
+- Python 3.12+ (opcional, para herramientas locales).
 
-### Terminal 1: Docker (Aplicación Principal)
+### 1. Configuración de Entorno
+Copia el archivo de ejemplo y ajústalo si es necesario (por defecto funciona para local).
+```sh
+cp .env.example .env
+```
 
-1.  **Limpieza Total (Opcional, pero recomendado):**
-    ```sh
-    docker-compose down -v
-    ```
-2.  **Construir y Levantar:**
-    ```sh
-    docker-compose up --build -d
-    ```
-3.  **Poblar la Base de Datos:**
-    ```sh
-    docker-compose run --rm runner python -m app.db.seeding.seed_all
-    ```
+### 2. Levantar Servicios
+```sh
+docker-compose up --build -d
+```
 
-### Terminal 2: Local (PLC Simulador)
+### 3. Inicializar Base de Datos (Migraciones)
+Aplica el esquema más reciente.
+```sh
+docker-compose exec backend_api alembic upgrade head
+```
 
-1.  **Activar Entorno Virtual y Dependencias:**
-    ```sh
-    source .venv/bin/activate
-    pip install -r requirements-dev.txt
-    ```
-2.  **Iniciar el Simulador:**
-    ```sh
-    python simulators/plc_simulator.py
-    ```
-
----
-
-## Smoke Test: Verifying the End-to-End Data Flow
-
-Después de seguir el workflow anterior, la aplicación estará corriendo y recibiendo datos. Esta guía te ayudará a verificar que puedes consultar esos datos a través de la API.
-
-1.  **Abre la Documentación de la API:**
-    -   Navega a [http://localhost:8071/api/v1/docs](http://localhost:8071/api/v1/docs) en tu navegador.
-
-2.  **Obtén un Token de Autenticación:**
-    -   Busca el endpoint `POST /auth/login`.
-    -   Haz clic en "Try it out" e introduce las credenciales del usuario administrador:
-        ```json
-        {
-          "email": "admin@astruxa.com",
-          "password": "admin_password"
-        }
-        ```
-    -   Ejecuta y copia el `access_token` de la respuesta.
-
-3.  **Autoriza tus Peticiones:**
-    -   En la parte superior derecha, haz clic en el botón "Authorize".
-    -   Pega el `access_token` en el campo "Value" y autoriza.
-
-4.  **Obtén un `asset_id`:**
-    -   Busca el endpoint `GET /assets`.
-    -   Ejecútalo. En la respuesta, busca el activo con el `serial_number`: "SCH-L1-001".
-    -   Copia el valor de su `uuid`.
-
-5.  **Prueba la API del Dashboard:**
-    -   Busca el endpoint `GET /telemetry/readings/{asset_id}`.
-    -   Pega el `uuid` del activo en el campo `asset_id`.
-    -   En el campo `metric_name`, escribe `temperature_celsius`.
-    -   Ejecuta la petición.
-
-6.  **Verifica la Respuesta:**
-    -   Deberías recibir una respuesta `200 OK` con un cuerpo JSON que es una lista de objetos, cada uno representando un punto de datos agregado por minuto. ¡Felicidades, el flujo de datos de extremo a extremo está funcionando!
+### 4. Poblar Datos Maestros (Seeding SaaS)
+Este script crea el Partner Global, los Planes y un Tenant de Demostración.
+```sh
+docker-compose exec backend_api python scripts/seed_saas.py
+```
+*Credenciales generadas:*
+- **Super Admin:** `admin@astruxa.com` / `AstruxaAdmin2024!`
 
 ---
 
-## Documentación de la API
+## 🧪 Testing y Verificación
 
-Con la aplicación corriendo, puedes acceder a la documentación interactiva en:
+### Acceso a la API
+- **Swagger UI:** [http://localhost:8071/api/v1/docs](http://localhost:8071/api/v1/docs)
+- **ReDoc:** [http://localhost:8071/api/v1/redoc](http://localhost:8071/api/v1/redoc)
 
-- **Swagger UI**: [http://localhost:8071/api/v1/docs](http://localhost:8071/api/v1/docs)
-- **ReDoc**: [http://localhost:8071/api/v1/redoc](http://localhost:8071/api/v1/redoc)
+### Generar Archivos de Traducción (I18N)
+Si añades nuevos mensajes de error en el backend, actualiza el JSON para el frontend:
+```sh
+docker-compose exec backend_api python scripts/generate_i18n.py
+```
+
+---
+
+## 📦 Estructura del Proyecto
+
+```
+/app
+  /api          # Routers (v1/ops, v1/sys-mgt, etc.)
+  /core         # Configuración, seguridad, middlewares
+  /identity     # Usuarios, Auth, Modelos SaaS (Tenant, Plan)
+  /assets       # Gestión de Activos
+  /maintenance  # Órdenes de Trabajo
+  /procurement  # Compras y Almacén
+  /media        # Media Manager (Archivos)
+  /auditing     # Logs y Aprobaciones
+/alembic        # Migraciones de BD
+/scripts        # Scripts de utilidad (seeding, i18n)
+```

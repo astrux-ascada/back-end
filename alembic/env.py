@@ -11,20 +11,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # --- 2. Importación de Componentes Clave de la Aplicación ---
 from app.core.config import settings
-from app.db.base_class import Base
 
-# --- Importar todos los modelos para que Alembic los detecte ---
-from app.identity.models import *
-from app.assets.models import *
-from app.telemetry.models import *
-from app.procurement.models import *
-from app.maintenance.models import *
-from app.sectors.models import *
-from app.core_engine.models import *
-from app.auditing.models import *
-from app.configuration.models import *
-from app.notifications.models import *
-from app.alarming.models import * # <-- La importación clave que faltaba
+# --- MEJORA: Importar desde app.db.base que centraliza TODOS los modelos ---
+# Esto evita que Alembic intente borrar tablas de módulos olvidados.
+from app.db.base import Base
 
 config = context.config
 
