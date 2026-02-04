@@ -2,99 +2,72 @@
 """
 Capa de Servicio para el módulo de Mantenimiento.
 """
-
-from typing import List, Optional
 import uuid
+from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.maintenance import models, schemas
 from app.maintenance.repository import MaintenanceRepository
-from app.assets.repository import AssetRepository
-from app.identity.repository import UserRepository
-from app.procurement.repository import ProcurementRepository
-from app.assets.mappers import map_asset_to_dto
+from app.procurement.repository import ProcurementRepository # Para validar el proveedor
+from app.core.exceptions import NotFoundException, ConflictException
 from app.auditing.service import AuditService
 from app.identity.models import User
 
-
 class MaintenanceService:
-    """Servicio de negocio para la gestión del mantenimiento."""
+    """Servicio de negocio para la gestión de órdenes de trabajo."""
 
     def __init__(self, db: Session, audit_service: AuditService):
         self.db = db
         self.audit_service = audit_service
         self.maintenance_repo = MaintenanceRepository(self.db)
-        self.asset_repo = AssetRepository(self.db)
-        self.user_repo = UserRepository(self.db)
-        self.provider_repo = ProcurementRepository(self.db)
+        self.procurement_repo = ProcurementRepository(self.db)
 
-    def create_work_order(self, work_order_in: schemas.WorkOrderCreate, user: User, tenant_id: uuid.UUID) -> schemas.WorkOrderRead:
-        """Crea una nueva orden de trabajo y registra la acción."""
-        # Validar que el activo pertenece al tenant
-        asset = self.asset_repo.get_asset(work_order_in.asset_id, tenant_id)
-        if not asset:
-            raise ValueError(f"Asset with id {work_order_in.asset_id} not found in this tenant.")
+    def create_work_order(self, work_order_in: schemas.WorkOrderCreate, tenant_id: uuid.UUID, user: User) -> models.WorkOrder:
+        work_order = self.maintenance_repo.create_work_order(work_order_in, tenant_id)
+        self.audit_service.log_operation(user, "CREATE_WORK_ORDER", work_order)
+        return work_order
 
-        db_work_order = self.maintenance_repo.create_work_order(work_order_in, tenant_id)
-        
-        self.audit_service.log_operation(
-            user=user,
-            action="CREATE_WORK_ORDER",
-            entity=db_work_order
-        )
-        
-        return self.get_work_order(db_work_order.id, tenant_id)
-
-    def get_work_order(self, work_order_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[schemas.WorkOrderRead]:
+    def get_work_order(self, work_order_id: uuid.UUID, tenant_id: uuid.UUID) -> models.WorkOrder:
         work_order = self.maintenance_repo.get_work_order(work_order_id, tenant_id)
         if not work_order:
-            return None
-        # El asset ya viene filtrado por tenant desde el repo de mantenimiento
-        asset_dto = map_asset_to_dto(work_order.asset, self.asset_repo)
-        return schemas.WorkOrderRead(**work_order.__dict__, asset=asset_dto)
+            raise NotFoundException("Orden de trabajo no encontrada.")
+        return work_order
 
-    def list_work_orders(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[schemas.WorkOrderRead]:
-        work_orders = self.maintenance_repo.list_work_orders(tenant_id, skip, limit)
-        # Optimizacion: Evitar N+1 queries llamando a get_work_order repetidamente
-        return [
-            schemas.WorkOrderRead(**wo.__dict__, asset=map_asset_to_dto(wo.asset, self.asset_repo))
-            for wo in work_orders
-        ]
+    def list_work_orders(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[models.WorkOrder]:
+        return self.maintenance_repo.list_work_orders(tenant_id, skip, limit)
 
-    def update_work_order_status(self, work_order_id: uuid.UUID, status_update: schemas.WorkOrderStatusUpdate, user: User, tenant_id: uuid.UUID) -> Optional[schemas.WorkOrderRead]:
-        """Actualiza el estado de una orden de trabajo y registra la acción."""
-        work_order_before_update = self.maintenance_repo.get_work_order(work_order_id, tenant_id)
-        if not work_order_before_update:
-            return None
-        
-        old_status = work_order_before_update.status
-        new_status = status_update.status
+    def update_work_order(self, work_order_id: uuid.UUID, work_order_in: schemas.WorkOrderUpdate, tenant_id: uuid.UUID, user: User) -> models.WorkOrder:
+        db_work_order = self.get_work_order(work_order_id, tenant_id)
+        updated_work_order = self.maintenance_repo.update_work_order(db_work_order, work_order_in)
+        self.audit_service.log_operation(user, "UPDATE_WORK_ORDER", updated_work_order, details=work_order_in.model_dump(exclude_unset=True))
+        return updated_work_order
 
-        updated_work_order = self.maintenance_repo.update_work_order_status(work_order_id, tenant_id, new_status)
+    def cancel_work_order(self, work_order_id: uuid.UUID, cancel_in: schemas.WorkOrderCancel, tenant_id: uuid.UUID, user: User) -> models.WorkOrder:
+        db_work_order = self.get_work_order(work_order_id, tenant_id)
         
-        if updated_work_order:
-            self.audit_service.log_operation(
-                user=user,
-                action="UPDATE_WORK_ORDER_STATUS",
-                entity=updated_work_order,
-                details={"from": old_status, "to": new_status}
-            )
-            return self.get_work_order(updated_work_order.id, tenant_id)
-        return None
+        if db_work_order.status in ["COMPLETED", "CANCELLED"]:
+            raise ConflictException(f"No se puede cancelar una orden en estado {db_work_order.status}.")
+            
+        cancelled_work_order = self.maintenance_repo.cancel_work_order(db_work_order, cancel_in.cancellation_reason)
+        self.audit_service.log_operation(user, "CANCEL_WORK_ORDER", cancelled_work_order, details={"reason": cancel_in.cancellation_reason})
+        return cancelled_work_order
 
-    def assign_user_to_work_order(self, assignment_in: schemas.WorkOrderUserAssignmentCreate, user: User, tenant_id: uuid.UUID) -> models.WorkOrderUserAssignment:
-        work_order = self.maintenance_repo.get_work_order(assignment_in.work_order_id, tenant_id)
-        # Validar que el usuario a asignar pertenece al mismo tenant
-        user_to_assign = self.user_repo.get_by_id_and_tenant(assignment_in.user_id, tenant_id)
-        if not work_order or not user_to_assign:
-            raise ValueError("Work Order or User not found in this tenant.")
+    def assign_provider(self, work_order_id: uuid.UUID, assignment_in: schemas.WorkOrderProviderAssignment, tenant_id: uuid.UUID, user: User) -> models.WorkOrder:
+        # 1. Validar que la orden existe
+        db_work_order = self.get_work_order(work_order_id, tenant_id)
         
-        assignment = self.maintenance_repo.assign_user_to_work_order(assignment_in)
-        
-        self.audit_service.log_operation(
-            user=user,
-            action="ASSIGN_USER_TO_WORK_ORDER",
-            entity=work_order,
-            details={"assigned_user_id": str(user_to_assign.id), "assigned_user_email": user_to_assign.email}
+        # 2. Validar que el proveedor existe y pertenece al tenant
+        provider = self.procurement_repo.get_provider(assignment_in.provider_id, tenant_id)
+        if not provider:
+            raise NotFoundException(f"El proveedor con ID {assignment_in.provider_id} no existe.")
+
+        # 3. Crear la asignación
+        self.maintenance_repo.assign_provider(
+            work_order_id, 
+            assignment_in.provider_id, 
+            assignment_in.notes, 
+            assignment_in.estimated_cost
         )
-        return assignment
+        
+        self.audit_service.log_operation(user, "ASSIGN_PROVIDER_TO_WORK_ORDER", db_work_order, details={"provider_id": str(assignment_in.provider_id)})
+        return db_work_order

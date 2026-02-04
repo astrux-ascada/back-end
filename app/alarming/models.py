@@ -10,12 +10,18 @@ class AlarmRule(Base):
     __tablename__ = "alarm_rules"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # Añadir tenant_id para aislamiento y consultas rápidas
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
     metric_name = Column(String, nullable=False)
     condition = Column(String, nullable=False)  # e.g., ">", "<", "="
     threshold = Column(Float, nullable=False)
     severity = Column(String, nullable=False, default="warning") # e.g., "warning", "critical"
     is_enabled = Column(Boolean, default=True, nullable=False)
+    
+    # Campo para soft delete
+    is_active = Column(Boolean, default=True, nullable=False)
 
     asset = relationship("Asset", back_populates="alarm_rules")
     alarms = relationship("Alarm", back_populates="rule")
@@ -24,6 +30,9 @@ class Alarm(Base):
     __tablename__ = "alarms"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # Añadir tenant_id para aislamiento
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+
     rule_id = Column(UUID(as_uuid=True), ForeignKey("alarm_rules.id"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     triggering_value = Column(Float, nullable=False)

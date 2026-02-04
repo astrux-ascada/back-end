@@ -6,7 +6,7 @@ Servicio de negocio para la autenticación, sesiones y 2FA de usuarios.
 import logging
 import uuid
 import redis
-from typing import Dict, List
+from typing import Dict, List, Optional # Añadir Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -84,7 +84,6 @@ class AuthService:
 
     def create_user_session(self, user: User) -> str:
         # --- Control de Concurrencia ---
-        # Invalidar sesión anterior si existe
         active_session_key = f"active_session:{user.id}"
         old_jti = self.redis_client.get(active_session_key)
         if old_jti:
@@ -95,14 +94,10 @@ class AuthService:
         session_key = f"session:{jti}"
         session_duration_seconds = settings.JWT_EXPIRE_MINUTES * 60
         
-        # Guardar la nueva sesión
         self.redis_client.set(session_key, str(user.id), ex=session_duration_seconds)
-        # Registrar la nueva sesión como la activa
         self.redis_client.set(active_session_key, jti, ex=session_duration_seconds)
         
         return access_token
-
-    # --- El resto de los métodos se mantienen igual ---
 
     def get_user_by_id(self, user_id: uuid.UUID) -> User:
         user = self.user_repo.get_by_id(user_id)
@@ -139,10 +134,13 @@ class AuthService:
         self.redis_client.delete(f"session:{jti}")
 
     def logout_all_users(self, tenant_id: Optional[uuid.UUID] = None) -> int:
-        # Esta implementación sigue siendo una simplificación
         session_keys = [key for key in self.redis_client.scan_iter("session:*")]
         active_session_keys = [key for key in self.redis_client.scan_iter("active_session:*")]
         if not session_keys and not active_session_keys:
+            return 0
+        
+        if tenant_id:
+            logger.warning("Logout de todas las sesiones por tenant_id no implementado completamente en Redis.")
             return 0
         
         with self.redis_client.pipeline() as pipe:

@@ -27,10 +27,32 @@ class ProcurementRepository:
         return db_provider
 
     def get_provider(self, provider_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[models.Provider]:
-        return self.db.query(models.Provider).filter(models.Provider.id == provider_id, models.Provider.tenant_id == tenant_id).first()
+        return self.db.query(models.Provider).filter(
+            models.Provider.id == provider_id, 
+            models.Provider.tenant_id == tenant_id
+        ).first()
 
-    def list_providers(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[models.Provider]:
-        return self.db.query(models.Provider).filter(models.Provider.tenant_id == tenant_id).offset(skip).limit(limit).all()
+    def list_providers(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100, include_inactive: bool = False) -> List[models.Provider]:
+        query = self.db.query(models.Provider).filter(models.Provider.tenant_id == tenant_id)
+        if not include_inactive:
+            query = query.filter(models.Provider.is_active == True)
+        return query.offset(skip).limit(limit).all()
+
+    def update_provider(self, db_provider: models.Provider, provider_in: schemas.ProviderUpdate) -> models.Provider:
+        update_data = provider_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_provider, field, value)
+        self.db.add(db_provider)
+        self.db.commit()
+        self.db.refresh(db_provider)
+        return db_provider
+
+    def delete_provider(self, db_provider: models.Provider) -> models.Provider:
+        db_provider.is_active = False
+        self.db.add(db_provider)
+        self.db.commit()
+        self.db.refresh(db_provider)
+        return db_provider
 
     # --- Métodos para SparePart ---
 
@@ -42,15 +64,29 @@ class ProcurementRepository:
         return db_spare_part
 
     def get_spare_part(self, spare_part_id: uuid.UUID, tenant_id: uuid.UUID) -> Optional[models.SparePart]:
-        return self.db.query(models.SparePart).filter(models.SparePart.id == spare_part_id, models.SparePart.tenant_id == tenant_id).first()
+        return self.db.query(models.SparePart).filter(
+            models.SparePart.id == spare_part_id, 
+            models.SparePart.tenant_id == tenant_id
+        ).first()
 
-    def list_spare_parts(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[models.SparePart]:
-        return self.db.query(models.SparePart).filter(models.SparePart.tenant_id == tenant_id).offset(skip).limit(limit).all()
+    def list_spare_parts(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100, include_inactive: bool = False) -> List[models.SparePart]:
+        query = self.db.query(models.SparePart).filter(models.SparePart.tenant_id == tenant_id)
+        if not include_inactive:
+            query = query.filter(models.SparePart.is_active == True)
+        return query.offset(skip).limit(limit).all()
 
-    def update_spare_part_stock(self, spare_part_id: uuid.UUID, tenant_id: uuid.UUID, quantity_change: int) -> Optional[models.SparePart]:
-        db_spare_part = self.get_spare_part(spare_part_id, tenant_id)
-        if db_spare_part:
-            db_spare_part.stock_quantity += quantity_change
-            self.db.commit()
-            self.db.refresh(db_spare_part)
+    def update_spare_part(self, db_spare_part: models.SparePart, spare_part_in: schemas.SparePartUpdate) -> models.SparePart:
+        update_data = spare_part_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_spare_part, field, value)
+        self.db.add(db_spare_part)
+        self.db.commit()
+        self.db.refresh(db_spare_part)
+        return db_spare_part
+
+    def delete_spare_part(self, db_spare_part: models.SparePart) -> models.SparePart:
+        db_spare_part.is_active = False
+        self.db.add(db_spare_part)
+        self.db.commit()
+        self.db.refresh(db_spare_part)
         return db_spare_part

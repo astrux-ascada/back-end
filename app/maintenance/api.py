@@ -2,7 +2,6 @@
 """
 API Router para el módulo de Mantenimiento.
 """
-
 import logging
 import uuid
 from typing import List
@@ -12,98 +11,67 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from app.maintenance import schemas
 from app.maintenance.service import MaintenanceService
 from app.dependencies.services import get_maintenance_service
+from app.dependencies.tenant import get_tenant_id
 from app.dependencies.auth import get_current_active_user
-from app.dependencies.tenant import get_tenant_id # Importar dependencia de tenant
+from app.dependencies.permissions import require_permission
 from app.identity.models import User
 
 logger = logging.getLogger("app.maintenance.api")
 
 router = APIRouter(prefix="/maintenance", tags=["Maintenance"])
 
-
-@router.post(
-    "/work-orders",
-    summary="Crear una nueva orden de trabajo",
-    status_code=status.HTTP_201_CREATED,
-    response_model=schemas.WorkOrderRead,
-)
+@router.post("/work-orders", response_model=schemas.WorkOrderRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("work_order:create"))])
 def create_work_order(
     work_order_in: schemas.WorkOrderCreate,
     maintenance_service: MaintenanceService = Depends(get_maintenance_service),
-    current_user: User = Depends(get_current_active_user),
-    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Crea una nueva orden de trabajo para el tenant actual."""
-    try:
-        return maintenance_service.create_work_order(work_order_in, current_user, tenant_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    return maintenance_service.create_work_order(work_order_in, tenant_id, current_user)
 
-
-@router.get(
-    "/work-orders/{work_order_id}",
-    summary="Obtener detalles de una orden de trabajo",
-    response_model=schemas.WorkOrderRead,
-)
-def get_work_order(
-    work_order_id: uuid.UUID,
-    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
-    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
-):
-    """Obtiene la información de una orden de trabajo del tenant actual."""
-    work_order = maintenance_service.get_work_order(work_order_id, tenant_id)
-    if not work_order:
-        raise HTTPException(status_code=404, detail="Work Order not found")
-    return work_order
-
-@router.get(
-    "/work-orders",
-    summary="Listar órdenes de trabajo",
-    response_model=List[schemas.WorkOrderRead],
-)
+@router.get("/work-orders", response_model=List[schemas.WorkOrderRead], dependencies=[Depends(require_permission("work_order:read"))])
 def list_work_orders(
     skip: int = 0,
     limit: int = 100,
     maintenance_service: MaintenanceService = Depends(get_maintenance_service),
-    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
 ):
-    """Lista las órdenes de trabajo del tenant actual."""
     return maintenance_service.list_work_orders(tenant_id, skip, limit)
 
-
-@router.patch(
-    "/work-orders/{work_order_id}/status",
-    summary="Actualizar el estado de una orden de trabajo",
-    response_model=schemas.WorkOrderRead,
-)
-def update_work_order_status(
+@router.get("/work-orders/{work_order_id}", response_model=schemas.WorkOrderRead, dependencies=[Depends(require_permission("work_order:read"))])
+def get_work_order(
     work_order_id: uuid.UUID,
-    status_update: schemas.WorkOrderStatusUpdate,
     maintenance_service: MaintenanceService = Depends(get_maintenance_service),
-    current_user: User = Depends(get_current_active_user),
-    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
 ):
-    """Actualiza el estado de una orden de trabajo del tenant actual."""
-    updated_work_order = maintenance_service.update_work_order_status(work_order_id, status_update, current_user, tenant_id)
-    if not updated_work_order:
-        raise HTTPException(status_code=404, detail="Work Order not found")
-    return updated_work_order
+    return maintenance_service.get_work_order(work_order_id, tenant_id)
 
-
-@router.post(
-    "/work-orders/assign-user",
-    summary="Asignar un técnico a una orden de trabajo",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def assign_user_to_work_order(
-    assignment_in: schemas.WorkOrderUserAssignmentCreate,
+@router.put("/work-orders/{work_order_id}", response_model=schemas.WorkOrderRead, dependencies=[Depends(require_permission("work_order:update"))])
+def update_work_order(
+    work_order_id: uuid.UUID,
+    work_order_in: schemas.WorkOrderUpdate,
     maintenance_service: MaintenanceService = Depends(get_maintenance_service),
-    current_user: User = Depends(get_current_active_user),
-    tenant_id: uuid.UUID = Depends(get_tenant_id), # Inyectar tenant
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Asigna un usuario a una orden de trabajo, validando que ambos pertenezcan al tenant."""
-    try:
-        maintenance_service.assign_user_to_work_order(assignment_in, current_user, tenant_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    return None
+    return maintenance_service.update_work_order(work_order_id, work_order_in, tenant_id, current_user)
+
+@router.patch("/work-orders/{work_order_id}/cancel", response_model=schemas.WorkOrderRead, dependencies=[Depends(require_permission("work_order:cancel"))])
+def cancel_work_order(
+    work_order_id: uuid.UUID,
+    cancel_in: schemas.WorkOrderCancel,
+    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    current_user: User = Depends(get_current_active_user)
+):
+    return maintenance_service.cancel_work_order(work_order_id, cancel_in, tenant_id, current_user)
+
+@router.post("/work-orders/{work_order_id}/assign-provider", response_model=schemas.WorkOrderRead, dependencies=[Depends(require_permission("work_order:assign_provider"))])
+def assign_provider_to_work_order(
+    work_order_id: uuid.UUID,
+    assignment_in: schemas.WorkOrderProviderAssignment,
+    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    current_user: User = Depends(get_current_active_user)
+):
+    return maintenance_service.assign_provider(work_order_id, assignment_in, tenant_id, current_user)

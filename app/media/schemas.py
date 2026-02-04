@@ -4,7 +4,7 @@ Esquemas Pydantic para el Media Manager.
 """
 import uuid
 from pydantic import BaseModel, Field
-from typing import Dict, Optional
+from typing import Dict, Optional, Any # Importar Any
 
 from app.media.models import MediaItemStatus
 
@@ -19,7 +19,7 @@ class UploadRequest(BaseModel):
 
 class UploadRequestResponse(BaseModel):
     media_item_id: uuid.UUID
-    upload_info: Dict[str, any]
+    upload_info: Dict[str, Any] # Usar Any (tipo) en lugar de any (función)
 
 class MediaItemRead(BaseModel):
     id: uuid.UUID
@@ -34,4 +34,4 @@ class MediaItemRead(BaseModel):
     download_url: Optional[str] = None # Se puede poblar en el servicio
 
     class Config:
-        orm_mode = True
+        from_attributes = True

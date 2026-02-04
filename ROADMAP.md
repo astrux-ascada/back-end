@@ -1,80 +1,95 @@
-# 🗺️ Roadmap Técnico - Astruxa SaaS (Industrial Orchestrator 5.0)
+# 🗺️ Roadmap Estratégico - Astruxa SaaS (Industrial Orchestrator 5.0)
 
-> **Estado del Proyecto:** Fase de Cimientos SaaS Completada (Backend Ready).
-> **Objetivo:** Plataforma Multi-Tenant Global para la Industria 5.0.
-
----
-
-## ✅ Hito 1: Cimientos SaaS & Seguridad (COMPLETADO)
-
-Hemos transformado el backend monolítico en una arquitectura SaaS Enterprise robusta.
-
-### Infraestructura & Core
-- [x] **Arquitectura Multi-Tenant Híbrida:** Soporte para múltiples organizaciones con aislamiento lógico de datos (`tenant_id`).
-- [x] **Modelo de Negocio:** Entidades `Partner`, `Tenant`, `Plan`, `Subscription` implementadas.
-- [x] **Seguridad Zero-Trust:**
-    - Login con "Gatekeeper" (validación de suscripción activa).
-    - Protección contra fuerza bruta y control de concurrencia de sesiones.
-    - Validación estricta de contraseñas y emails.
-- [x] **Auditoría:** Sistema de logs inmutables para todas las operaciones críticas.
-
-### Módulos Operativos (Aislados por Tenant)
-- [x] **Identity:** Gestión de usuarios y roles (RBAC) por tenant.
-- [x] **Assets:** Inventario de activos y jerarquías.
-- [x] **Maintenance:** Órdenes de trabajo, asignaciones y flujo de estados.
-- [x] **Procurement:** Proveedores y repuestos (con validación de feature flag por plan).
-- [x] **Alarming:** Reglas de alerta y monitoreo en tiempo real.
-- [x] **Notifications:** Sistema de notificaciones interno.
-
-### Funcionalidades Avanzadas
-- [x] **Media Manager:** Sistema seguro de subida de archivos (Local/S3) con URLs presignadas.
-- [x] **Módulo de Aprobaciones:** Flujo "Maker-Checker" para acciones destructivas o críticas.
+> **Estado del Proyecto:** Hito 1 (Fundación SaaS) Completado.
+> **Visión:** Convertir Astruxa en una plataforma SaaS comercial, escalable y líder en la Industria 5.0.
 
 ---
 
-## 🚀 Fase 2: Frontend & Experiencia de Usuario (PRÓXIMO PASO)
+## ✅ Hito 1: Fundación SaaS & Seguridad (COMPLETADO)
 
-**Objetivo:** Construir las interfaces que consumirán la nueva API SaaS.
-
-### Panel de Operaciones (`/ops`)
-- [ ] **Dashboard de Técnico:** Lista de OTs asignadas, escaneo de QR de activos.
-- [ ] **Vista de Activo:** Detalle del activo, historial de mantenimiento, telemetría en vivo.
-- [ ] **Gestor de Archivos:** Subida de evidencias (fotos/PDFs) usando el Media Manager.
-
-### Panel Administrativo (`/back-office`)
-- [ ] **Gestión de Usuarios:** Alta/Baja de técnicos, asignación de roles.
-- [ ] **Configuración de Alertas:** Creación visual de reglas de alarma.
-- [ ] **Auditoría:** Visualizador de logs de operaciones y aprobaciones pendientes.
-
-### Panel de Plataforma (`/sys-mgt`)
-- [ ] **Gestión de Tenants:** Alta de nuevos clientes, asignación de planes.
-- [ ] **Métricas Globales:** Uso de recursos, usuarios activos por tenant.
+Se ha completado la refactorización del backend a una arquitectura Multi-Tenant segura y robusta. El motor está listo.
 
 ---
 
-## 💳 Fase 3: Automatización Comercial & Pagos
+## 🚀 Fase 2: Producto Mínimo Viable y Seguro (MVP) — (Criticidad: 🔴 ALTA)
 
-**Objetivo:** Automatizar el ciclo de vida del cliente (Onboarding/Billing).
+**Objetivo:** Implementar las funcionalidades mínimas para poder vender, operar y facturar el producto de forma segura.
 
-- [ ] **Pasarela de Pagos:** Integración con Stripe/PayPal para cobro de suscripciones.
-- [ ] **Portal de Cliente:** Auto-registro y gestión de métodos de pago.
-- [ ] **Webhooks:** Manejo de eventos de pago (pago fallido, renovación exitosa) para actualizar el estado del tenant automáticamente.
-- [ ] **Facturación:** Generación automática de facturas PDF.
+### Prioridad 1: Gestión de la Plataforma (SaaS Core)
+- **Descripción:** Endpoints para que el `GLOBAL_SUPER_ADMIN` pueda crear y gestionar los componentes básicos del negocio.
+- **Tareas:**
+  - [x] **CRUD para `Plans`:** Crear, actualizar y desactivar planes de precios.
+  - [x] **Gestión de `Tenants`:** Crear nuevos clientes y asignarles suscripciones.
+  - [x] **Gestión de `Subscriptions`:** Modificar manualmente la suscripción de un cliente.
+
+### Prioridad 2: Funcionalidad Operativa Completa (CRUDs)
+- **Descripción:** Añadir las operaciones de Update y Delete (soft delete) que faltan para que el producto se sienta completo y usable.
+- **Tareas:**
+  - [x] **Procurement:** `PUT`/`DELETE` para Proveedores y Repuestos.
+  - [x] **AlarmRule:** `PUT`/`PATCH`/`DELETE` para Reglas de Alarma.
+  - [x] **Assets:** `DELETE` (soft delete) para Activos, integrado con el Módulo de Aprobaciones.
+  - [x] **WorkOrder:** `PATCH` para cancelar órdenes y `POST` para asignar proveedores externos.
+  - [x] **Sectors:** `PUT`/`DELETE` para Sectores.
+  - [x] **Configuration:** `POST`/`DELETE` (soft delete) para parámetros globales.
+  - [x] **DataSource:** Implementar CRUD completo.
+
+### Prioridad 3: RBAC Avanzado y Seguridad de Acceso
+- **Descripción:** Pasar de roles fijos a un sistema de permisos granulares para que los clientes puedan gestionar sus propios equipos.
+- **Tareas:**
+  - [x] Crear dependencia `require_permission(permission_name: str)`.
+  - [x] Reemplazar `Depends(get_current_admin_user)` con el nuevo sistema en todos los endpoints.
+  - [ ] Actualizar el script de Seeding para crear permisos y asignarlos a roles por defecto.
 
 ---
 
-## 🧠 Fase 4: Inteligencia Industrial (AI & Digital Twin)
+## 💳 Fase 3: Automatización Comercial y Retención — (Criticidad: 🟡 MEDIA)
 
-**Objetivo:** Aportar valor predictivo sobre los datos recolectados.
+**Objetivo:** Convertir el producto en un negocio que escala y retiene clientes con mínima intervención manual.
 
-- [ ] **Mantenimiento Predictivo:** Modelos de ML entrenados con el histórico de telemetría para predecir fallos.
-- [ ] **Detección de Anomalías:** Alertas inteligentes basadas en patrones inusuales, no solo umbrales fijos.
-- [ ] **Digital Twin 3D:** Visualización interactiva de la planta usando los datos en tiempo real.
+### Prioridad 4: Modularización por Monetización (Feature Flags)
+- **Descripción:** Implementar la lógica de negocio de los planes (Bueno, Mejor, Excelente) para justificar diferentes precios.
+- **Tareas:**
+  - [ ] Proteger todos los routers de módulos con la dependencia `require_feature`.
+  - [ ] Implementar lógica `check_limit` en los servicios (ej: límite de usuarios o activos).
+
+### Prioridad 5: Sistema de Pagos y Auto-Suscripción
+- **Descripción:** Permitir que los clientes se registren y paguen por sí mismos.
+- **Tareas:**
+  - [ ] **Sistema de Pagos Flexible:** Implementar pasarelas online (Stripe/PayPal) y flujo de "Voucher" offline.
+  - [ ] **Portal de Auto-Suscripción:** Crear flujo de registro público y "provisioning" automático de tenants.
+
+### Prioridad 6: Portal de Gestión de Cuenta (Customer Portal)
+- **Descripción:** Reducir costos de soporte permitiendo a los clientes autogestionarse.
+- **Tareas:**
+  - [ ] UI para cambiar de plan, ver uso, actualizar método de pago y ver facturas.
+  - [ ] **Acceso Restringido para Pagos:** Implementar el "modo de gracia" para que los `TENANT_ADMIN` puedan acceder a facturación si su pago ha fallado.
+
+### Prioridad 7: Expansión de Canales (Portal de Partners)
+- **Descripción:** Habilitar canales de venta indirectos para escalar el crecimiento.
+- **Tareas:**
+  - [ ] Dashboard para que los partners gestionen a sus clientes y comisiones.
 
 ---
 
-## 🛠️ Deuda Técnica & Mantenimiento
+## 🧠 Fase 4: Madurez, Inteligencia y Escalabilidad — (Criticidad: 🟢 BAJA)
 
-- [ ] **Tests E2E:** Implementar pruebas automatizadas para los flujos críticos (Login -> Crear OT -> Aprobar).
-- [ ] **CI/CD:** Pipeline de despliegue automático a entornos de Staging/Producción.
-- [ ] **Documentación de API:** Mantener Swagger/ReDoc actualizado con ejemplos de uso.
+**Objetivo:** Asegurar la salud a largo plazo del proyecto, añadir valor con IA y prepararse para un crecimiento masivo.
+
+### Prioridad 8: Recopilación de Datos para IA
+- **Descripción:** Implementar los mecanismos de feedback que alimentarán los futuros modelos de IA.
+- **Tareas:**
+  - [ ] **Evaluación de `WorkOrder`:** UI y API para que los supervisores califiquen la ejecución de las tareas.
+  - [ ] **Recepción de Órdenes de Compra:** UI y API para registrar la recepción de pedidos y evaluar a los proveedores.
+
+### Prioridad 9: Calidad y Automatización (DevEx)
+- **Descripción:** Implementar una estrategia de testing y despliegue robusta.
+- **Tareas:**
+  - [ ] **Estrategia de Testing:** Implementar tests unitarios, de integración y E2E.
+  - [ ] **Pipeline de CI/CD:** Automatizar los tests y el despliegue a Staging/Producción.
+
+### Prioridad 10: Arquitectura a Escala
+- **Descripción:** Evolucionar la arquitectura para soportar un crecimiento masivo.
+- **Tareas:**
+  - [ ] **Arquitectura Orientada a Eventos (EDA):** Desacoplar servicios con un Message Broker.
+  - [ ] **Gestión del Ciclo de Vida de Datos (ILM):** Políticas para archivar datos de telemetría antiguos.
+  - [ ] **Migración a Kubernetes (K8s)::** Plan para mover la infraestructura de producción a K8s.

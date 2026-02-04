@@ -1,37 +1,32 @@
 # /app/procurement/models/provider.py
 """
 Modelo de la base de datos para la entidad Provider.
-
-Representa un proveedor externo, contratista o vendedor.
 """
 import uuid
-
-from sqlalchemy import Column, String, Float, func, TIMESTAMP
+from sqlalchemy import Column, String, Float, Boolean, DateTime, func, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
 
-
 class Provider(Base):
-    """Modelo SQLAlchemy para un Proveedor."""
+    """
+    Representa a un proveedor de servicios o repuestos.
+    """
     __tablename__ = "providers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    name = Column(String(100), unique=True, index=True, nullable=False)
-    contact_info = Column(String(255), nullable=True, comment="Email, phone, or address of the provider.")
-    specialty = Column(String(100), index=True, nullable=True, comment="Area of expertise, e.g., Robotics, HVAC, PLC Programming.")
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
     
-    # Campo clave para la IA: Puntuación de rendimiento del proveedor.
-    performance_score = Column(Float, nullable=True, index=True, comment="A score from 0-100 representing provider performance.")
+    name = Column(String(100), nullable=False, index=True)
+    contact_info = Column(String(255), nullable=True)
+    specialty = Column(String(100), nullable=True)
+    performance_score = Column(Float, nullable=True)
+    
+    is_active = Column(Boolean, default=True, nullable=False) # Campo para soft delete
 
-    # --- Campos de Auditoría ---
-    created_at = Column(
-        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
-    )
-    updated_at = Column(
-        TIMESTAMP(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relación inversa
+    tenant = relationship("Tenant")
