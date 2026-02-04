@@ -4,9 +4,43 @@ Esquemas Pydantic para el módulo de Compras (Procurement).
 """
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field
+
+
+# --- Esquemas para SparePart ---
+
+class SparePartBase(BaseModel):
+    name: str = Field(..., example="Rodamiento de bolas 6204-2RS")
+    description: Optional[str] = Field(None, example="Rodamiento rígido de una hilera de bolas, sellado.")
+    part_number: Optional[str] = Field(None, example="SKF-6204-2RS")
+    current_stock: int = Field(0, ge=0)
+    min_stock_level: int = Field(0, ge=0)
+    unit_cost: float = Field(0.0, ge=0)
+    provider_id: Optional[uuid.UUID] = None
+
+class SparePartCreate(SparePartBase):
+    pass
+
+class SparePartUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    part_number: Optional[str] = None
+    current_stock: Optional[int] = Field(None, ge=0)
+    min_stock_level: Optional[int] = Field(None, ge=0)
+    unit_cost: Optional[float] = Field(None, ge=0)
+    provider_id: Optional[uuid.UUID] = None
+    is_active: Optional[bool] = None
+
+class SparePartRead(SparePartBase):
+    id: uuid.UUID
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 # --- Esquemas para Provider ---
@@ -28,8 +62,12 @@ class ProviderUpdate(BaseModel):
 
 class ProviderRead(ProviderBase):
     id: uuid.UUID
+    is_active: bool
     created_at: datetime
     updated_at: datetime
+    
+    # Incluir los repuestos que ofrece este proveedor
+    spare_parts: List[SparePartRead] = []
 
     class Config:
         from_attributes = True

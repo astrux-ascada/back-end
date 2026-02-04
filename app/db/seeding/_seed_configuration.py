@@ -30,6 +30,8 @@ ENUMS_DATA = {
         "description": "Los posibles estados de una orden de trabajo.",
         "values": [
             {"value": "OPEN", "label": "Abierta", "color": "#ef4444"},
+            {"value": "PENDING_APPROVAL", "label": "Esperando Aprobación", "color": "#f59e0b"},
+            {"value": "APPROVED", "label": "Aprobada", "color": "#0ea5e9"},
             {"value": "IN_PROGRESS", "label": "En Progreso", "color": "#3b82f6"},
             {"value": "ON_HOLD", "label": "En Espera", "color": "#f97316"},
             {"value": "COMPLETED", "label": "Completada", "color": "#22c55e"},

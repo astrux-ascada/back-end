@@ -5,8 +5,11 @@ Capa de Servicio para el módulo de Mantenimiento.
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session
+import logging
+from fastapi import HTTPException, status
 
-from app.maintenance import models, schemas
+from app.maintenance import schemas
+from app.maintenance.models import WorkOrder, MaintenanceTask, MaintenancePlan
 from app.maintenance.repository import MaintenanceRepository
 from app.procurement.repository import ProcurementRepository # Para validar el proveedor
 from app.core.exceptions import NotFoundException, ConflictException

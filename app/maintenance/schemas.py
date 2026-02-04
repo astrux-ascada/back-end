@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.maintenance.models.work_order import WorkOrderStatus, WorkOrderPriority
 
-# --- Esquemas para WorkOrder ---
+# --- Esquemas de Órdenes (Work Orders) ---
 
 class WorkOrderBase(BaseModel):
     title: str = Field(..., min_length=5, max_length=200)
@@ -21,7 +21,21 @@ class WorkOrderBase(BaseModel):
     scheduled_end_date: Optional[datetime] = None
 
 class WorkOrderCreate(WorkOrderBase):
-    pass
+    """Datos necesarios para crear una nueva orden."""
+    tasks: Optional[List[MaintenanceTaskCreate]] = None
+    assigned_user_ids: Optional[List[UUID]] = None
+
+
+class WorkOrderUpdate(BaseModel):
+    """Datos para actualizar una orden existente."""
+    summary: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    category: Optional[str] = None
+    due_date: Optional[date] = None
+    completed_at: Optional[datetime] = None
+    source_trigger: Optional[Dict[str, Any]] = None
 
 class WorkOrderUpdate(BaseModel):
     title: Optional[str] = None

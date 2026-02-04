@@ -10,13 +10,14 @@ from fastapi import APIRouter, Depends, status, HTTPException
 
 from app.maintenance import schemas
 from app.maintenance.service import MaintenanceService
+from app.maintenance.scheduler import MaintenanceScheduler
 from app.dependencies.services import get_maintenance_service
 from app.dependencies.tenant import get_tenant_id
 from app.dependencies.auth import get_current_active_user
 from app.dependencies.permissions import require_permission
 from app.identity.models import User
-
-logger = logging.getLogger("app.maintenance.api")
+from app.core.database import get_db
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/maintenance", tags=["Maintenance"])
 

@@ -1,96 +1,85 @@
 # /app/db/seeding/_seed_identity.py
 """
-Script para sembrar la base de datos con datos iniciales de Identidad (Permisos, Roles, Usuario Admin).
+Script para sembrar la base de datos con datos iniciales de Identidad (Roles y Usuarios).
 """
 import logging
 from sqlalchemy.orm import Session
-
 from app.core.config import settings
-from app.identity.models import Permission, Role, User
+from app.identity.models import Role, User
 from app.identity.schemas import UserCreate
 from app.identity.repository import UserRepository
 
 logger = logging.getLogger(__name__)
 
-# --- Definición de Permisos Esenciales ---
-# Estructura: "entidad:acción"
-PERMISSIONS = [
-    # Permisos de Activos
-    "asset:create", "asset:read", "asset:update", "asset:delete",
-    # Permisos de Usuarios
-    "user:create", "user:read", "user:update", "user:delete",
-    # Permisos de Roles
-    "role:create", "role:read", "role:update", "role:delete",
-    # Permisos de Sectores
-    "sector:create", "sector:read", "sector:update", "sector:delete",
-    # Permisos de Mantenimiento
-    "maintenance:create", "maintenance:read", "maintenance:update",
-    # Permisos de Compras
-    "procurement:create", "procurement:read", "procurement:update",
-    # Permisos de Telemetría y Alertas
-    "telemetry:read", "alarming:read", "alarming:update",
-    # Permisos de Auditoría
-    "auditing:read"
-]
-
 def seed_identity(db: Session) -> None:
-    """Crea permisos, roles y un usuario superusuario si no existen."""
+    """Crea roles y usuarios de ejemplo si no existen."""
     logger.info("Iniciando el sembrado de datos de Identidad...")
 
-    # --- 1. Crear Permisos ---
-    all_permissions = []
-    for perm_name in PERMISSIONS:
-        db_perm = db.query(Permission).filter(Permission.name == perm_name).first()
-        if not db_perm:
-            db_perm = Permission(name=perm_name, description=f"Permite la acción '{perm_name.split(':')[1]}' en la entidad '{perm_name.split(':')[0]}'.")
-            db.add(db_perm)
-            logger.info(f"Creando permiso: {perm_name}")
-        all_permissions.append(db_perm)
-    db.commit()
-
-    # --- 2. Crear Roles Estandarizados ---
+    # --- 1. Crear Roles Estandarizados ---
+    roles_to_create = {
+        "SUPERUSER": "Acceso total a todas las funcionalidades.",
+        "ADMINISTRATOR": "Acceso administrativo a la mayoría de funcionalidades.",
+        "MAINTENANCE_MANAGER": "Gestiona órdenes de trabajo, planes y técnicos.",
+        "TECHNICIAN": "Ejecuta órdenes de trabajo de mantenimiento.",
+        "VIEWER": "Acceso de solo lectura a la información operativa."
+    }
     
-    # Rol de Super User
-    super_user_role = db.query(Role).filter(Role.name == "Super User").first()
-    if not super_user_role:
-        super_user_role = Role(name="Super User", description="Acceso total a todas las funcionalidades del sistema.")
-        super_user_role.permissions = all_permissions
-        db.add(super_user_role)
-        logger.info("Creando rol estandarizado: Super User")
-
-    # Rol de Admin
-    admin_role = db.query(Role).filter(Role.name == "Admin").first()
-    if not admin_role:
-        # Los Admins tienen todos los permisos excepto la gestión de roles.
-        admin_permissions = [p for p in all_permissions if not p.name.startswith("role:")]
-        admin_role = Role(name="Admin", description="Acceso administrativo para la gestión de usuarios, activos y otras funcionalidades, pero sin permiso para gestionar roles.")
-        admin_role.permissions = admin_permissions
-        db.add(admin_role)
-        logger.info("Creando rol estandarizado: Admin")
-
-    # Rol de Operador
-    operator_role = db.query(Role).filter(Role.name == "Operator").first()
-    if not operator_role:
-        operator_permissions = [p for p in all_permissions if "read" in p.name]
-        operator_role = Role(name="Operator", description="Acceso de solo lectura a la mayoría de las funcionalidades.")
-        operator_role.permissions = operator_permissions
-        db.add(operator_role)
-        logger.info("Creando rol estandarizado: Operator")
+    created_roles = {}
+    for role_name, role_desc in roles_to_create.items():
+        role = db.query(Role).filter(Role.name == role_name).first()
+        if not role:
+            role = Role(name=role_name, description=role_desc)
+            db.add(role)
+            logger.info(f"Creando rol: {role_name}")
+        created_roles[role_name] = role
     db.commit()
+    
+    # Refrescar para obtener IDs
+    for name, role in created_roles.items():
+        if not role.id:
+            created_roles[name] = db.query(Role).filter(Role.name == name).first()
 
-    # --- 3. Crear Usuario Super User ---
-    superuser_user = db.query(User).filter(User.email == settings.FIRST_SUPERUSER_EMAIL).first()
-    if not superuser_user:
-        user_repo = UserRepository(db)
-        user_in = UserCreate(
-            email=settings.FIRST_SUPERUSER_EMAIL,
-            password=settings.FIRST_SUPERUSER_PASSWORD,
-            name="Super User",
-            role_ids=[super_user_role.id]
-        )
-        superuser_user = user_repo.create(user_in=user_in)
-        logger.info(f"Creando usuario Super User: {settings.FIRST_SUPERUSER_EMAIL}")
-    else:
-        logger.info("El usuario Super User ya existe, no se realizaron cambios.")
+    # --- 2. Crear Usuarios de Ejemplo ---
+    user_repo = UserRepository(db)
+    users_to_create = [
+        {
+            "email": settings.FIRST_SUPERUSER_EMAIL,
+            "password": settings.FIRST_SUPERUSER_PASSWORD,
+            "name": "Super User",
+            "role_name": "SUPERUSER"
+        },
+        {
+            "email": "manager@astruxa.com",
+            "password": "manager123",
+            "name": "Manager de Mantenimiento",
+            "role_name": "MAINTENANCE_MANAGER"
+        },
+        {
+            "email": "technician@astruxa.com",
+            "password": "tech1234", # CORREGIDO: Contraseña con 8 caracteres
+            "name": "Técnico de Campo",
+            "role_name": "TECHNICIAN"
+        },
+        {
+            "email": "viewer@astruxa.com",
+            "password": "viewer123",
+            "name": "Gerente de Planta",
+            "role_name": "VIEWER"
+        }
+    ]
+
+    for user_data in users_to_create:
+        if not db.query(User).filter(User.email == user_data["email"]).first():
+            role_name = user_data.pop("role_name")
+            role = created_roles.get(role_name)
+            if role:
+                user_in = UserCreate(
+                    email=user_data["email"],
+                    password=user_data["password"],
+                    name=user_data["name"],
+                    role_ids=[role.id]
+                )
+                user_repo.create(user_in=user_in)
+                logger.info(f"Creando usuario: {user_data['email']} con rol {role_name}")
 
     logger.info("Sembrado de datos de Identidad completado.")

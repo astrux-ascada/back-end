@@ -4,10 +4,12 @@ Capa de Repositorio para el módulo de Alertas (Alarming).
 """
 from typing import List, Optional
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session, joinedload
 
 from app.alarming import models, schemas
+from app.telemetry.schemas import SensorReadingCreate
 
 class AlarmingRepository:
     """Realiza operaciones CRUD para las reglas de alarma y las alarmas."""
@@ -83,7 +85,8 @@ class AlarmingRepository:
             models.Alarm.tenant_id == tenant_id
         ).first()
         if db_alarm:
-            db_alarm.is_acknowledged = True
+            db_alarm.acknowledged = True
+            db_alarm.acknowledged_at = datetime.now(timezone.utc)
             self.db.commit()
             self.db.refresh(db_alarm)
         return db_alarm

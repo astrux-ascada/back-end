@@ -4,7 +4,7 @@ Dependency Injection for the services of Astruxa's modules.
 """
 
 import redis
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 # --- Import core dependency getters ---
@@ -49,13 +49,22 @@ def get_media_service(db: Session = Depends(get_db)) -> MediaService:
 def get_notification_service(db: Session = Depends(get_db)) -> NotificationService:
     return NotificationService(db)
 
+def get_maintenance_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> MaintenanceService:
+    return MaintenanceService(db=db, audit_service=audit_service)
+
 def get_alarming_service(
     db: Session = Depends(get_db), 
     notification_service: NotificationService = Depends(get_notification_service), 
     audit_service: AuditService = Depends(get_audit_service)
 ) -> AlarmingService:
     asset_repo = AssetRepository(db)
-    return AlarmingService(db=db, notification_service=notification_service, asset_repo=asset_repo, audit_service=audit_service)
+    return AlarmingService(
+        db=db, 
+        notification_service=notification_service, 
+        asset_repo=asset_repo, 
+        audit_service=audit_service,
+        maintenance_service=maintenance_service
+    )
 
 def get_role_service(db: Session = Depends(get_db)) -> RoleService:
     return RoleService(db)
@@ -75,12 +84,26 @@ def get_approval_service(
     asset_service.approval_service = approval_service
     return approval_service
 
+def get_state_detector(request: Request) -> StateDetector:
+    """
+    Retrieves the singleton instance of StateDetector from the app state.
+    """
+    return request.app.state.state_detector
+
 def get_telemetry_service(
+    request: Request,
     db: Session = Depends(get_db), 
     audit_service: AuditService = Depends(get_audit_service),
     alarming_service: AlarmingService = Depends(get_alarming_service)
 ) -> TelemetryService:
-    return TelemetryService(db=db, audit_service=audit_service, alarming_service=alarming_service)
+    # Inject the singleton StateDetector into the TelemetryService
+    state_detector = request.app.state.state_detector
+    return TelemetryService(
+        db=db, 
+        audit_service=audit_service, 
+        alarming_service=alarming_service,
+        state_detector=state_detector
+    )
 
 def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
     return ProcurementService(db)
@@ -100,3 +123,11 @@ def get_sector_service(db: Session = Depends(get_db)) -> SectorService:
 
 def get_configuration_service(db: Session = Depends(get_db)) -> ConfigurationService:
     return ConfigurationService(db)
+
+def get_reporting_service(
+    state_detector: StateDetector = Depends(get_state_detector)
+) -> ReportingService:
+    return ReportingService(state_detector=state_detector)
+
+def get_stoppage_service(db: Session = Depends(get_db)) -> StoppageService:
+    return StoppageService(db)

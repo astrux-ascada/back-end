@@ -17,7 +17,14 @@ from app.identity.models import User
 class AlarmingService:
     """Servicio de negocio para la gestión de alarmas y sus reglas."""
 
-    def __init__(self, db: Session, notification_service: NotificationService, asset_repo: AssetRepository, audit_service: AuditService):
+    def __init__(
+        self, 
+        db: Session, 
+        notification_service: NotificationService, 
+        asset_repo: AssetRepository, 
+        audit_service: AuditService,
+        maintenance_service: Optional[MaintenanceService] = None
+    ):
         self.db = db
         self.alarming_repo = AlarmingRepository(db)
         self.asset_repo = asset_repo

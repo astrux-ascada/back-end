@@ -8,7 +8,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, status, HTTPException
 
-from app.alarming import schemas
+from app.alarming.schemas import AlarmRead
 from app.alarming.service import AlarmingService
 from app.dependencies.services import get_alarming_service
 from app.dependencies.tenant import get_tenant_id
