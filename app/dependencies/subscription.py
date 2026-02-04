@@ -6,7 +6,7 @@ import uuid
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.dependencies.database import get_db
+from app.core.database import get_db # CORREGIR RUTA DE IMPORTACIÓN
 from app.dependencies.tenant import get_tenant_id
 from app.identity.models.saas.subscription import Subscription, SubscriptionStatus
 from app.identity.models.saas.plan import Plan

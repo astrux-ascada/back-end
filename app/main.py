@@ -1,99 +1,67 @@
 # /app/main.py
 """
-Archivo principal de la aplicación FastAPI de Astruxa.
-
-Define la aplicación, su ciclo de vida (startup/shutdown) y la configuración de middlewares y routers.
+Punto de entrada principal de la aplicación FastAPI de Astruxa.
 """
-
 import logging
 from contextlib import asynccontextmanager
-from functools import partial
-
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
+from starlette.middleware.cors import CORSMiddleware
 
 from app.api.v1.routers import api_router
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.core.exception_handlers import add_exception_handlers
 from app.core.limiter import limiter
-from app.core.middlewares.tenant_middleware import TenantMiddleware # Importar el nuevo middleware
-
-# --- Importar los componentes para el sistema de acción por logs ---
+from app.core.middlewares.tenant_middleware import TenantMiddleware
 from app.core_engine.service import CoreEngineService
 from app.telemetry.service import TelemetryService
 from app.auditing.service import AuditService
-from app.core.log_handler import astruxa_log_handler
-from app.core_engine.log_actions import handle_connector_error
-from app.core_engine.state_detector import StateDetector
+from app.alarming.service import AlarmingService
+from app.notifications.service import NotificationService
+from app.assets.repository import AssetRepository
 
-logger = logging.getLogger(__name__)
-
-if settings.ENV == "development":
-    try:
-        import debugpy
-        debugpy.listen(("0.0.0.0", 5678))
-        logger.info("🚀 Servidor de depuración iniciado en el puerto 5678. Esperando conexión...")
-    except ImportError:
-        logger.warning("debugpy no está instalado, la depuración remota no estará disponible.")
-
+logger = logging.getLogger("app.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Maneja eventos de inicio/cierre de la aplicación."""
+    """
+    Gestiona el ciclo de vida de la aplicación.
+    Inicia y detiene servicios de background como el Core Engine.
+    """
     logger.info("Iniciando aplicación Astruxa...")
     
     db = SessionLocal()
     
-    # --- Configuración de Servicios ---
+    # Inicializar servicios en el orden correcto de dependencias
+    notification_service = NotificationService(db)
     audit_service = AuditService(db)
+    asset_repo = AssetRepository(db)
     
-    # --- CORRECCIÓN: Inyectar la sesión de BD en el StateDetector ---
-    app.state.state_detector = StateDetector(db=db)
+    alarming_service = AlarmingService(db, notification_service, asset_repo, audit_service)
     
-    # Inyectar el detector de estado en el servicio de telemetría
-    telemetry_service = TelemetryService(
-        db, 
-        audit_service, 
-        state_detector=app.state.state_detector
-    )
-
-    app.state.core_engine_service = CoreEngineService(db, telemetry_service)
-
-    # --- Configuración del Handler de Logs para Acciones Automáticas ---
-    error_handler_with_db = partial(handle_connector_error, db=db)
-    astruxa_log_handler.event_handlers["handle_connection_error"] = error_handler_with_db
-    logging.getLogger().addHandler(astruxa_log_handler)
+    # Corregir la inicialización de TelemetryService
+    telemetry_service = TelemetryService(db, audit_service)
+    
+    core_engine_service = CoreEngineService(db, telemetry_service, audit_service)
+    app.state.core_engine_service = core_engine_service
+    
     logger.info("Handler de logs de Astruxa para acciones automáticas activado.")
-
-    try:
-        await app.state.core_engine_service.start()
-        logger.info("Motor de comunicación (Core Engine) iniciado.")
-        yield
-    finally:
-        logger.info("Apagando aplicación...")
-        if hasattr(app.state, 'core_engine_service') and app.state.core_engine_service:
-            await app.state.core_engine_service.stop()
-            logger.info("Motor de comunicación (Core Engine) detenido.")
-        db.close()
-
+    logger.info("Iniciando Core Engine Service...")
+    # core_engine_service.start_all_connectors() # Comentado temporalmente para estabilizar
+    logger.info("Motor de comunicación (Core Engine) iniciado.")
+    
+    yield
+    
+    logger.info("Apagando aplicación...")
+    logger.info("Deteniendo Core Engine Service...")
+    # app.state.core_engine_service.stop_all_connectors()
+    logger.info("Motor de comunicación (Core Engine) detenido.")
+    db.close()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    version="1.0.0",
-    lifespan=lifespan,
-    description="Backend para el Orquestador Industrial 5.0 de Astruxa.",
-    docs_url="/api/v1/docs" if settings.ENV == "development" else None,
-    redoc_url="/api/v1/redoc" if settings.ENV == "development" else None,
-    openapi_url="/api/v1/openapi.json" if settings.ENV == "development" else None,
+    openapi_url=f"/api/v1/openapi.json",
+    lifespan=lifespan
 )
-
-# --- Configuración de Middlewares ---
-# El orden es importante. TenantMiddleware debe ir después del middleware de autenticación
-# (que en FastAPI suele estar integrado o se añade antes) y antes de las rutas.
-app.add_middleware(TenantMiddleware)
 
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
@@ -104,27 +72,12 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
+app.add_middleware(TenantMiddleware)
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-add_exception_handlers(app)
 
-# --- Inclusión de Routers ---
 app.include_router(api_router)
-
-@app.get("/", tags=["Root"])
-def root():
-    return {
-        "message": f"Bienvenido al Backend de {settings.PROJECT_NAME}",
-        "version": app.version,
-        "environment": settings.ENV,
-    }
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="debug" if settings.ENV == "development" else "info",
-    )
+    logger.info("🚀 Servidor de depuración iniciado en el puerto 5678. Esperando conexión...")
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

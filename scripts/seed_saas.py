@@ -1,122 +1,159 @@
-import sys
-import os
+# /scripts/seed_saas.py
+"""
+Script para poblar la base de datos con datos maestros para el modelo SaaS.
+"""
+import asyncio
 import logging
-import uuid
-from datetime import datetime, timedelta, timezone
-
-# Agregar el directorio raíz al path para poder importar 'app'
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal
-from app.identity.models.saas.partner import Partner
-from app.identity.models.saas.plan import Plan
-from app.identity.models.saas.tenant import Tenant, TenantStatus
-from app.identity.models.saas.subscription import Subscription, SubscriptionStatus
 
-# Configuración de Logging
+from app.core.database import SessionLocal
+from app.core.config import settings
+from app.core import permissions as p
+from app.identity.models.saas import Plan, Partner, Tenant, Subscription
+from app.identity.models import User, Role, Permission
+from app.identity.auth_service import AuthService
+from app.identity.tfa_service import TfaService
+from app.core.security import get_password_hash
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def seed_saas_data(db: Session):
-    logger.info("🌱 Iniciando Seeding de Datos SaaS...")
+# --- DATOS MAESTROS ---
 
-    # 1. Crear Partner Global (Astruxa HQ)
-    partner = db.query(Partner).filter(Partner.code == "ASTRUXA_HQ").first()
-    if not partner:
-        partner = Partner(
-            code="ASTRUXA_HQ",
-            name="Astruxa Global HQ",
-            region="GLOBAL",
-            currency="USD",
-            commission_rate=0.0,
-            config={"support_email": "support@astruxa.com"}
+ALL_PERMISSIONS = [
+    p.PLAN_READ, p.PLAN_CREATE, p.PLAN_UPDATE,
+    p.TENANT_READ, p.TENANT_CREATE, p.TENANT_UPDATE,
+    p.SUBSCRIPTION_READ, p.SUBSCRIPTION_UPDATE,
+    p.ASSET_READ, p.ASSET_CREATE, p.ASSET_UPDATE, p.ASSET_UPDATE_STATUS, p.ASSET_DELETE,
+    p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER,
+    p.PROVIDER_READ, p.PROVIDER_CREATE, p.PROVIDER_UPDATE, p.PROVIDER_DELETE,
+    p.SPARE_PART_READ, p.SPARE_PART_CREATE, p.SPARE_PART_UPDATE, p.SPARE_PART_DELETE,
+    p.ALARM_RULE_READ, p.ALARM_RULE_CREATE, p.ALARM_RULE_UPDATE, p.ALARM_RULE_DELETE,
+    p.ALARM_READ, p.ALARM_ACKNOWLEDGE,
+    p.SECTOR_READ, p.SECTOR_CREATE, p.SECTOR_UPDATE, p.SECTOR_DELETE,
+    p.CONFIG_PARAM_READ, p.CONFIG_PARAM_CREATE, p.CONFIG_PARAM_UPDATE, p.CONFIG_PARAM_DELETE,
+    p.DATA_SOURCE_READ, p.DATA_SOURCE_CREATE, p.DATA_SOURCE_UPDATE, p.DATA_SOURCE_DELETE,
+    p.AUDIT_LOG_READ, p.APPROVAL_READ, p.APPROVAL_DECIDE,
+    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE,
+    p.ROLE_READ, p.ROLE_CREATE, p.ROLE_UPDATE, p.ROLE_DELETE,
+    p.PERMISSION_READ, p.SESSION_DELETE
+]
+
+TENANT_ADMIN_PERMISSIONS = [
+    p.ASSET_READ, p.ASSET_CREATE, p.ASSET_UPDATE, p.ASSET_DELETE,
+    p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER,
+    p.PROVIDER_READ, p.PROVIDER_CREATE, p.PROVIDER_UPDATE, p.PROVIDER_DELETE,
+    p.SPARE_PART_READ, p.SPARE_PART_CREATE, p.SPARE_PART_UPDATE, p.SPARE_PART_DELETE,
+    p.ALARM_RULE_READ, p.ALARM_RULE_CREATE, p.ALARM_RULE_UPDATE, p.ALARM_RULE_DELETE,
+    p.ALARM_READ, p.ALARM_ACKNOWLEDGE,
+    p.SECTOR_READ, p.SECTOR_CREATE, p.SECTOR_UPDATE, p.SECTOR_DELETE,
+    p.AUDIT_LOG_READ, p.APPROVAL_READ, p.APPROVAL_DECIDE,
+    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE,
+    p.ROLE_READ, p.ROLE_CREATE, p.ROLE_UPDATE, p.ROLE_DELETE,
+]
+
+async def seed_data(db: Session):
+    logger.info("Iniciando el proceso de seeding para el entorno SaaS...")
+
+    # 1. Crear todos los permisos
+    permissions_map = {}
+    for perm_name in ALL_PERMISSIONS:
+        db_perm = db.query(Permission).filter(Permission.name == perm_name).first()
+        if not db_perm:
+            db_perm = Permission(name=perm_name, description=f"Permite la acción: {perm_name}")
+            db.add(db_perm)
+        permissions_map[perm_name] = db_perm
+    db.commit()
+    logger.info(f"Se han creado/verificado {len(permissions_map)} permisos.")
+
+    # 2. Crear Rol de Super Admin Global
+    super_admin_role = db.query(Role).filter(Role.name == "GLOBAL_SUPER_ADMIN").first()
+    if not super_admin_role:
+        super_admin_role = Role(name="GLOBAL_SUPER_ADMIN", description="Acceso total a la plataforma.", tenant_id=None)
+        super_admin_role.permissions = list(permissions_map.values())
+        db.add(super_admin_role)
+    db.commit()
+    logger.info("Rol GLOBAL_SUPER_ADMIN creado y asignado todos los permisos.")
+
+    # 3. Crear el usuario Super Admin Global
+    super_admin_user = db.query(User).filter(User.email == settings.FIRST_SUPERUSER_EMAIL).first()
+    if not super_admin_user:
+        super_admin_user = User(
+            email=settings.FIRST_SUPERUSER_EMAIL,
+            hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
+            name="Global Super Admin",
+            is_active=True,
+            tenant_id=None
         )
-        db.add(partner)
+        super_admin_user.roles.append(super_admin_role)
+        db.add(super_admin_user)
+    db.commit()
+    logger.info("Usuario Super Admin Global creado.")
+
+    # 4. Crear el Partner Global por defecto
+    global_partner = db.query(Partner).filter(Partner.name == "Astruxa Global").first()
+    if not global_partner:
+        global_partner = Partner(name="Astruxa Global", contact_email="partners@astruxa.com")
+        db.add(global_partner)
+    db.commit()
+    logger.info("Partner Global creado.")
+
+    # 5. Crear Planes de ejemplo
+    if not db.query(Plan).first():
+        plans_data = [
+            {"code": "FREE", "name": "Free Tier", "price_monthly": 0, "price_yearly": 0, "limits": {"max_users": 1, "max_assets": 5}},
+            {"code": "PRO", "name": "Professional", "price_monthly": 99, "price_yearly": 999, "limits": {"max_users": 10, "max_assets": 100}, "features": {"module_procurement": True}},
+            {"code": "ENTERPRISE", "name": "Enterprise", "price_monthly": 499, "price_yearly": 4999, "limits": {"max_users": -1, "max_assets": -1}, "features": {"module_procurement": True, "api_access": True}},
+        ]
+        for plan_data in plans_data:
+            db.add(Plan(**plan_data))
         db.commit()
-        db.refresh(partner)
-        logger.info(f"✅ Partner Global creado: {partner.name}")
-    else:
-        logger.info(f"ℹ️ Partner Global ya existe: {partner.name}")
+        logger.info("Planes de ejemplo creados.")
 
-    # 2. Crear Planes
-    plans_data = [
-        {
-            "code": "STARTER_V1",
-            "name": "Starter Plan",
-            "price_monthly": 0.0,
-            "limits": {"max_users": 5, "max_assets": 20, "storage_gb": 5},
-            "features": {"module_procurement": False, "isolation": "SHARED", "support": "COMMUNITY"}
-        },
-        {
-            "code": "PRO_V1",
-            "name": "Professional Plan",
-            "price_monthly": 299.0,
-            "limits": {"max_users": 50, "max_assets": 500, "storage_gb": 100},
-            "features": {"module_procurement": True, "isolation": "SHARED", "support": "EMAIL"}
-        },
-        {
-            "code": "ENTERPRISE_V1",
-            "name": "Enterprise Plan",
-            "price_monthly": 999.0,
-            "limits": {"max_users": 9999, "max_assets": 9999, "storage_gb": 1000},
-            "features": {"module_procurement": True, "isolation": "DEDICATED", "support": "24/7"}
-        }
-    ]
-
-    created_plans = {}
-    for p_data in plans_data:
-        plan = db.query(Plan).filter(Plan.code == p_data["code"]).first()
-        if not plan:
-            plan = Plan(**p_data)
-            db.add(plan)
-            db.commit()
-            db.refresh(plan)
-            logger.info(f"✅ Plan creado: {plan.name}")
-        else:
-            logger.info(f"ℹ️ Plan ya existe: {plan.name}")
-        created_plans[p_data["code"]] = plan
-
-    # 3. Crear Tenant Demo
-    tenant_slug = "demo-plant-01"
-    tenant = db.query(Tenant).filter(Tenant.slug == tenant_slug).first()
-    
-    if not tenant:
-        tenant = Tenant(
-            partner_id=partner.id,
-            name="Planta de Demostración Astruxa",
-            slug=tenant_slug,
-            status=TenantStatus.ACTIVE,
-            db_connection_string=None, # Shared DB
-            timezone="America/Mexico_City",
-            locale="es-MX",
-            config={"theme": "dark"}
+    # 6. Crear un Tenant de Demostración
+    demo_tenant = db.query(Tenant).filter(Tenant.slug == "demo-tenant").first()
+    if not demo_tenant:
+        demo_tenant = Tenant(name="Demo Tenant", slug="demo-tenant", partner_id=global_partner.id)
+        db.add(demo_tenant)
+        db.commit()
+        
+        # Crear rol de Admin para este tenant
+        tenant_admin_role = Role(name="TENANT_ADMIN", description="Administrador del Tenant", tenant_id=demo_tenant.id)
+        tenant_admin_role.permissions = [permissions_map[p_name] for p_name in TENANT_ADMIN_PERMISSIONS]
+        db.add(tenant_admin_role)
+        
+        # Crear usuario admin para el tenant
+        demo_admin_user = User(
+            email="admin@demo.com",
+            hashed_password=get_password_hash("demo_password"),
+            name="Demo Admin",
+            is_active=True,
+            tenant_id=demo_tenant.id
         )
-        db.add(tenant)
-        db.commit()
-        db.refresh(tenant)
-        logger.info(f"✅ Tenant Demo creado: {tenant.name}")
-
-        # 4. Crear Suscripción para el Tenant Demo
+        demo_admin_user.roles.append(tenant_admin_role)
+        db.add(demo_admin_user)
+        
+        # Crear suscripción para el tenant
+        pro_plan = db.query(Plan).filter(Plan.code == "PRO").first()
         subscription = Subscription(
-            tenant_id=tenant.id,
-            plan_id=created_plans["PRO_V1"].id,
-            status=SubscriptionStatus.ACTIVE,
-            current_period_start=datetime.now(timezone.utc),
-            current_period_end=datetime.now(timezone.utc) + timedelta(days=365),
-            payment_method_id="manual_entry"
+            tenant_id=demo_tenant.id,
+            plan_id=pro_plan.id,
+            current_period_start=datetime.utcnow(),
+            current_period_end=datetime.utcnow() + timedelta(days=365)
         )
         db.add(subscription)
+        
         db.commit()
-        logger.info(f"✅ Suscripción PRO activada para: {tenant.name}")
-    else:
-        logger.info(f"ℹ️ Tenant Demo ya existe: {tenant.name}")
+        logger.info("Tenant de Demostración, con su admin y suscripción, creado.")
 
-    logger.info("🏁 Seeding SaaS completado exitosamente.")
+    logger.info("Proceso de seeding finalizado con éxito.")
 
-if __name__ == "__main__":
+async def main():
     db = SessionLocal()
     try:
-        seed_saas_data(db)
+        await seed_data(db)
     finally:
         db.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())

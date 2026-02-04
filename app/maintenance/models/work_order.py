@@ -1,43 +1,53 @@
 # /app/maintenance/models/work_order.py
 """
 Modelo de la base de datos para la entidad WorkOrder.
-
-Representa una orden de trabajo para realizar mantenimiento o una mejora
-en un activo específico.
 """
 import uuid
-
+import enum
 from sqlalchemy import Column, String, func, TIMESTAMP, ForeignKey, Text, Date
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
 
+# --- Enums para Estado y Prioridad ---
+
+class WorkOrderStatus(str, enum.Enum):
+    OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    ON_HOLD = "ON_HOLD"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+class WorkOrderPriority(str, enum.Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    URGENT = "URGENT"
 
 class WorkOrder(Base):
     """Modelo SQLAlchemy para una Orden de Trabajo."""
     __tablename__ = "work_orders"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
 
-    # --- Relación con el Activo ---
     asset_id = Column(UUID(as_uuid=True), ForeignKey("assets.id"), nullable=False, index=True)
     asset = relationship("Asset")
 
-    # --- Campos de Inteligencia (Industria 5.0) ---
     category = Column(String(50), nullable=False, index=True, comment="CORRECTIVE, PREVENTIVE, PREDICTIVE, IMPROVEMENT")
-    source_trigger = Column(JSONB, nullable=True, comment="JSON data explaining the origin of the work order.")
+    source_trigger = Column(JSONB, nullable=True)
 
-    # --- Campos de Estado y Prioridad ---
-    status = Column(String(50), default="OPEN", nullable=False, index=True, comment="OPEN, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELED")
-    priority = Column(String(50), default="MEDIUM", nullable=False, index=True, comment="LOW, MEDIUM, HIGH, URGENT")
+    # Usamos String en la BD pero validamos con Enum en la aplicación
+    status = Column(String(50), default=WorkOrderStatus.OPEN, nullable=False, index=True)
+    priority = Column(String(50), default=WorkOrderPriority.MEDIUM, nullable=False, index=True)
 
-    # --- Campos Descriptivos ---
-    summary = Column(String(255), nullable=False, comment="A brief, one-line summary of the work to be done.")
-    description = Column(Text, nullable=True, comment="A detailed description of the issue and required work.")
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
     due_date = Column(Date, nullable=True)
+    
+    cancellation_reason = Column(Text, nullable=True)
 
-    # --- Campos de Auditoría ---
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     completed_at = Column(TIMESTAMP(timezone=True), nullable=True)

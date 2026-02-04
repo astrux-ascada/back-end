@@ -2,126 +2,23 @@
 """
 Esquemas Pydantic para el módulo de Mantenimiento.
 """
-from typing import Optional, Dict, Any, List
-from uuid import UUID
-from datetime import datetime, date
+import uuid
+from datetime import datetime
+from typing import Optional, List
+
 from pydantic import BaseModel, Field
 
-# --- Enums / Constantes ---
-PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH", "URGENT"]
-STATUS_OPTIONS = ["OPEN", "IN_PROGRESS", "ON_HOLD", "COMPLETED", "CANCELED"]
-CATEGORY_OPTIONS = ["CORRECTIVE", "PREVENTIVE", "PREDICTIVE", "IMPROVEMENT"]
-
-# --- Esquemas para Planes de Mantenimiento ---
-
-class MaintenancePlanTaskBase(BaseModel):
-    description: str = Field(..., min_length=3, max_length=255)
-    order: int = Field(1, ge=1)
-
-class MaintenancePlanTaskCreate(MaintenancePlanTaskBase):
-    pass
-
-class MaintenancePlanTaskRead(MaintenancePlanTaskBase):
-    id: UUID
-    class Config:
-        from_attributes = True
-
-class MaintenancePlanBase(BaseModel):
-    name: str = Field(..., min_length=5, max_length=100)
-    description: Optional[str] = None
-    asset_id: UUID
-    summary_template: str = Field(..., min_length=5, max_length=255)
-    category: str = "PREVENTIVE"
-    priority: str = "MEDIUM"
-    trigger_type: str = "TIME_BASED"
-    interval_days: int = Field(..., gt=0)
-    is_active: bool = True
-
-class MaintenancePlanCreate(MaintenancePlanBase):
-    tasks: List[MaintenancePlanTaskCreate] = []
-
-class MaintenancePlanUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    summary_template: Optional[str] = None
-    priority: Optional[str] = None
-    interval_days: Optional[int] = Field(None, gt=0)
-    is_active: Optional[bool] = None
-
-class MaintenancePlanRead(MaintenancePlanBase):
-    id: UUID
-    last_execution_at: Optional[datetime] = None
-    tasks: List[MaintenancePlanTaskRead] = []
-    class Config:
-        from_attributes = True
-
-
-# --- Esquema de Repuestos (simplificado para la vista de mantenimiento) ---
-class SparePartRequiredRead(BaseModel):
-    id: UUID
-    name: str
-    part_number: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
-
-class WorkOrderSparePartRead(BaseModel):
-    spare_part: SparePartRequiredRead
-    quantity_required: int
-
-    class Config:
-        from_attributes = True
-
-class AddSparePartRequest(BaseModel):
-    spare_part_id: UUID
-    quantity_required: int = Field(1, gt=0)
-
-
-# --- Esquemas de Tareas (Tasks) ---
-
-class MaintenanceTaskBase(BaseModel):
-    description: str = Field(..., min_length=3, max_length=255, description="Descripción de la tarea.")
-    order: int = Field(1, description="Orden de ejecución.")
-
-class MaintenanceTaskCreate(MaintenanceTaskBase):
-    pass
-
-class MaintenanceTaskUpdate(BaseModel):
-    description: Optional[str] = None
-    order: Optional[int] = None
-    is_completed: Optional[bool] = None
-
-class MaintenanceTaskRead(MaintenanceTaskBase):
-    id: UUID
-    work_order_id: UUID
-    is_completed: bool
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-# --- Esquemas de Usuarios Asignados (Simplificado) ---
-class AssignedUserRead(BaseModel):
-    id: UUID
-    email: str
-    full_name: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
+from app.maintenance.models.work_order import WorkOrderStatus, WorkOrderPriority
 
 # --- Esquemas de Órdenes (Work Orders) ---
 
 class WorkOrderBase(BaseModel):
-    """Datos base compartidos para crear y leer órdenes."""
-    summary: str = Field(..., min_length=5, max_length=255, description="Resumen breve del trabajo.")
-    description: Optional[str] = Field(None, description="Descripción detallada.")
-    priority: str = Field("MEDIUM", description="Prioridad: LOW, MEDIUM, HIGH, URGENT.")
-    category: str = Field("CORRECTIVE", description="Categoría: CORRECTIVE, PREVENTIVE, etc.")
-    due_date: Optional[date] = Field(None, description="Fecha límite.")
-    asset_id: UUID = Field(..., description="ID del activo asociado.")
-    source_trigger: Optional[Dict[str, Any]] = Field(None, description="Datos del origen (ej: alarma).")
-
+    title: str = Field(..., min_length=5, max_length=200)
+    description: Optional[str] = None
+    priority: WorkOrderPriority = WorkOrderPriority.MEDIUM
+    asset_id: uuid.UUID
+    scheduled_start_date: Optional[datetime] = None
+    scheduled_end_date: Optional[datetime] = None
 
 class WorkOrderCreate(WorkOrderBase):
     """Datos necesarios para crear una nueva orden."""
@@ -140,18 +37,32 @@ class WorkOrderUpdate(BaseModel):
     completed_at: Optional[datetime] = None
     source_trigger: Optional[Dict[str, Any]] = None
 
+class WorkOrderUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[WorkOrderPriority] = None
+    status: Optional[WorkOrderStatus] = None
+    scheduled_start_date: Optional[datetime] = None
+    scheduled_end_date: Optional[datetime] = None
+
+class WorkOrderCancel(BaseModel):
+    cancellation_reason: str = Field(..., min_length=10, description="Motivo de la cancelación.")
+
+class WorkOrderProviderAssignment(BaseModel):
+    provider_id: uuid.UUID = Field(..., description="ID del proveedor externo a asignar.")
+    notes: Optional[str] = Field(None, description="Notas adicionales para el proveedor.")
+    estimated_cost: Optional[float] = Field(None, ge=0, description="Costo estimado del servicio externo.")
 
 class WorkOrderRead(WorkOrderBase):
-    """Esquema de respuesta con datos del sistema."""
-    id: UUID
-    status: str
+    id: uuid.UUID
+    status: WorkOrderStatus
     created_at: datetime
     updated_at: datetime
-    completed_at: Optional[datetime] = None
+    closed_at: Optional[datetime]
     
-    tasks: List[MaintenanceTaskRead] = []
-    assigned_users: List[AssignedUserRead] = []
-    required_spare_parts: List[WorkOrderSparePartRead] = []
+    # Campos calculados o relaciones (simplificado)
+    assigned_user_ids: List[uuid.UUID] = []
+    assigned_provider_ids: List[uuid.UUID] = []
 
     class Config:
         from_attributes = True

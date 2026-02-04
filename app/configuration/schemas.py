@@ -4,53 +4,48 @@ Esquemas Pydantic para el módulo de Configuración.
 """
 import uuid
 from typing import Optional, List
-
 from pydantic import BaseModel, Field
 
-
-# --- Esquemas para ConfigurationParameter ---
+# --- ConfigurationParameter ---
 
 class ConfigurationParameterBase(BaseModel):
-    value: str
+    key: str = Field(..., min_length=3, max_length=100, example="SMTP_HOST")
+    value: str = Field(..., example="smtp.gmail.com")
+    description: Optional[str] = None
+    is_editable: bool = True
 
-class ConfigurationParameterUpdate(ConfigurationParameterBase):
+class ConfigurationParameterCreate(ConfigurationParameterBase):
     pass
 
-class ConfigurationParameterRead(ConfigurationParameterBase):
-    key: str
-    description: Optional[str] = None
-    is_editable: bool = Field(..., alias="isEditable")
+class ConfigurationParameterUpdate(BaseModel):
+    value: str
 
+class ConfigurationParameterRead(ConfigurationParameterBase):
+    id: uuid.UUID
+    
     class Config:
         from_attributes = True
-        populate_by_name = True
 
-
-# --- Esquemas para EnumValue ---
+# --- EnumType y EnumValue ---
 
 class EnumValueBase(BaseModel):
-    value: str = Field(..., example="IN_PROGRESS")
-    label: str = Field(..., example="En Progreso")
-    color: Optional[str] = Field(None, example="#3b82f6")
+    value: str = Field(..., example="HIGH")
+    label: str = Field(..., example="Alta Prioridad")
+    is_active: bool = True
+    order: int = 0
 
 class EnumValueCreate(EnumValueBase):
     pass
 
 class EnumValueRead(EnumValueBase):
     id: uuid.UUID
-
+    
     class Config:
         from_attributes = True
 
-
-# --- Esquemas para EnumType ---
-
 class EnumTypeBase(BaseModel):
-    name: str = Field(..., example="WorkOrderStatus")
+    name: str = Field(..., example="WorkOrderPriority")
     description: Optional[str] = None
-
-class EnumTypeCreate(EnumTypeBase):
-    pass
 
 class EnumTypeRead(EnumTypeBase):
     id: uuid.UUID
