@@ -2,60 +2,77 @@
 """
 Capa de Servicio para el módulo de Notificaciones.
 """
-
 import logging
-from typing import List, Optional
+from typing import List
 import uuid
-
 from sqlalchemy.orm import Session
 
 from app.notifications import models, schemas
-from app.notifications.repository import NotificationRepository
-from app.identity.models import User
-from app.identity.repository import UserRepository # Importar para validar tenant
+from app.core.event_broker import EventBroker
 
-logger = logging.getLogger(__name__)
-
+logger = logging.getLogger("app.notifications.service")
 
 class NotificationService:
-    """Servicio de negocio para la gestión de notificaciones de usuario."""
+    """Servicio de negocio para la gestión de notificaciones."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, event_broker: EventBroker):
         self.db = db
-        self.notification_repo = NotificationRepository(self.db)
-        self.user_repo = UserRepository(self.db) # Instanciar repo de usuario
+        self.event_broker = event_broker
+        # Suscribirse a los eventos relevantes al iniciar el servicio
+        self._subscribe_to_events()
 
-    def create_notification_for_user(
-        self, 
-        user_id: uuid.UUID, 
-        message: str, 
-        type: str, 
-        reference_id: str
-    ) -> Optional[models.Notification]:
-        """Crea y guarda una notificación para un usuario específico, validando su tenant."""
-        # Obtener el usuario para conseguir su tenant_id
-        user = self.user_repo.get_by_id(user_id)
-        if not user or not user.tenant_id:
-            logger.error(f"Intento de crear notificación para usuario {user_id} sin tenant válido.")
-            return None
+    def _subscribe_to_events(self):
+        """Define las suscripciones a eventos del sistema."""
+        self.event_broker.subscribe("alarm:triggered", self._handle_alarm_triggered)
+        # Aquí se podrían añadir más suscripciones, ej:
+        # self.event_broker.subscribe("maintenance:completed", self._handle_maintenance_completed)
 
-        logger.info(f"Creando notificación para el usuario {user_id} en el tenant {user.tenant_id}: {message}")
-        return self.notification_repo.create_notification(user_id, message, type, reference_id, user.tenant_id)
+    def _handle_alarm_triggered(self, event_data: dict):
+        """
+        Manejador para el evento 'alarm:triggered'.
+        Crea una notificación en la base de datos.
+        """
+        logger.info(f"Evento 'alarm:triggered' recibido: {event_data}")
+        
+        notification_in = schemas.NotificationCreate(
+            user_id=event_data["user_id"], # Asumiendo que el evento contiene el user_id
+            type="ALARM",
+            content=event_data["content"],
+            reference_id=event_data["alarm_id"]
+        )
+        self.create_notification(notification_in)
 
-    def get_notifications(self, user: User, include_read: bool) -> List[models.Notification]:
-        """Obtiene las notificaciones para el usuario actual, validando su tenant."""
-        if not user.tenant_id:
-            return []
-        return self.notification_repo.get_notifications_for_user(user.id, user.tenant_id, include_read)
+    def create_notification(self, notification_in: schemas.NotificationCreate) -> models.Notification:
+        """Crea una nueva notificación en la base de datos."""
+        db_notification = models.Notification(
+            user_id=notification_in.user_id,
+            type=notification_in.type,
+            content=notification_in.content,
+            reference_id=notification_in.reference_id
+        )
+        self.db.add(db_notification)
+        self.db.commit()
+        self.db.refresh(db_notification)
+        logger.info(f"Notificación creada para el usuario {db_notification.user_id}")
+        return db_notification
 
-    def mark_notification_as_read(self, notification_id: uuid.UUID, user: User) -> Optional[models.Notification]:
-        """Marca una notificación como leída para el usuario actual, validando su tenant."""
-        if not user.tenant_id:
-            return None
-        return self.notification_repo.mark_as_read(notification_id, user.id, user.tenant_id)
+    def get_notifications_for_user(self, user_id: uuid.UUID) -> List[models.Notification]:
+        """Obtiene todas las notificaciones no leídas para un usuario."""
+        return self.db.query(models.Notification).filter(
+            models.Notification.user_id == user_id,
+            models.Notification.is_read == False
+        ).order_by(models.Notification.created_at.desc()).all()
 
-    def mark_all_notifications_as_read(self, user: User) -> int:
-        """Marca todas las notificaciones de un usuario como leídas, validando su tenant."""
-        if not user.tenant_id:
-            return 0
-        return self.notification_repo.mark_all_as_read(user.id, user.tenant_id)
+    def mark_as_read(self, notification_id: uuid.UUID, user_id: uuid.UUID) -> models.Notification:
+        """Marca una notificación como leída."""
+        db_notification = self.db.query(models.Notification).filter(
+            models.Notification.id == notification_id,
+            models.Notification.user_id == user_id
+        ).first()
+        
+        if db_notification:
+            db_notification.is_read = True
+            self.db.commit()
+            self.db.refresh(db_notification)
+        
+        return db_notification

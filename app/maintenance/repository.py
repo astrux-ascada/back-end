@@ -63,3 +63,11 @@ class MaintenanceRepository:
         self.db.commit()
         self.db.refresh(assignment)
         return assignment
+
+    def update_evaluation(self, db_work_order: models.WorkOrder, rating: int, feedback: Optional[str]) -> models.WorkOrder:
+        db_work_order.rating = rating
+        db_work_order.feedback = feedback
+        self.db.add(db_work_order)
+        self.db.commit()
+        self.db.refresh(db_work_order)
+        return db_work_order

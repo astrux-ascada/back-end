@@ -1,8 +1,8 @@
-"""create_payment_models
+"""add_missing_tables
 
-Revision ID: e15fb6906e3d
+Revision ID: 4274e1f44757
 Revises: 
-Create Date: 2026-02-05 10:15:47.759130
+Create Date: 2026-02-05 18:22:02.581208
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'e15fb6906e3d'
+revision: str = '4274e1f44757'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -52,14 +52,9 @@ def upgrade() -> None:
     op.create_index(op.f('ix_enum_types_name'), 'enum_types', ['name'], unique=True)
     op.create_table('partners',
     sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('code', sa.String(length=50), nullable=False, comment='Código único del partner (ej: ASTRUXA_MX)'),
-    sa.Column('name', sa.String(length=100), nullable=False, comment='Nombre legal del partner'),
-    sa.Column('region', sa.String(length=50), nullable=False, comment='Región operativa (ej: LATAM, EMEA)'),
-    sa.Column('currency', sa.String(length=3), nullable=False, comment='Moneda base para facturación (ISO 4217)'),
-    sa.Column('tax_id', sa.String(length=50), nullable=True, comment='Identificación fiscal del partner'),
-    sa.Column('commission_rate', sa.Float(), nullable=False, comment='Porcentaje de comisión sobre ventas'),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('config', sa.JSON(), nullable=False, comment='Configuración específica del partner (logos, soporte, etc)'),
+    sa.Column('code', sa.String(length=20), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('commission_rate', sa.Float(), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -74,18 +69,14 @@ def upgrade() -> None:
     op.create_index(op.f('ix_permissions_name'), 'permissions', ['name'], unique=True)
     op.create_table('plans',
     sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('code', sa.String(length=50), nullable=False, comment='Código inmutable del plan (ej: ENTERPRISE_2024)'),
-    sa.Column('name', sa.String(length=100), nullable=False, comment='Nombre comercial del plan'),
-    sa.Column('description', sa.String(), nullable=True),
+    sa.Column('code', sa.String(length=50), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('price_monthly', sa.Float(), nullable=False),
     sa.Column('price_yearly', sa.Float(), nullable=False),
     sa.Column('currency', sa.String(length=3), nullable=False),
-    sa.Column('limits', sa.JSON(), nullable=False, comment='Cuotas técnicas: {max_users: 10, max_assets: 100}'),
-    sa.Column('features', sa.JSON(), nullable=False, comment="Flags de módulos: {module_procurement: true, isolation: 'SHARED'}"),
+    sa.Column('limits', sa.JSON(), nullable=True),
+    sa.Column('features', sa.JSON(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('is_public', sa.Boolean(), nullable=False, comment='Si es visible en la página de precios pública'),
-    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_plans_code'), 'plans', ['code'], unique=True)
@@ -109,17 +100,9 @@ def upgrade() -> None:
     op.create_index(op.f('ix_enum_values_enum_type_id'), 'enum_values', ['enum_type_id'], unique=False)
     op.create_table('tenants',
     sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('partner_id', sa.UUID(), nullable=True, comment='Partner que gestiona este tenant. NULL = Directo Global'),
+    sa.Column('partner_id', sa.UUID(), nullable=True),
     sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('slug', sa.String(length=50), nullable=False, comment='Identificador URL-friendly (ej: coca-cola-mx)'),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('db_connection_string', sa.String(), nullable=True, comment='Si NULL, usa DB compartida. Si tiene valor, usa DB dedicada.'),
-    sa.Column('logo_url', sa.String(), nullable=True),
-    sa.Column('timezone', sa.String(length=50), nullable=False),
-    sa.Column('locale', sa.String(length=10), nullable=False),
-    sa.Column('config', sa.JSON(), nullable=False, comment='Configuración específica del tenant (colores, preferencias)'),
-    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('slug', sa.String(length=100), nullable=False),
     sa.ForeignKeyConstraint(['partner_id'], ['partners.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -196,13 +179,9 @@ def upgrade() -> None:
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('tenant_id', sa.UUID(), nullable=False),
     sa.Column('plan_id', sa.UUID(), nullable=False),
-    sa.Column('status', sa.String(), nullable=False),
-    sa.Column('current_period_start', sa.TIMESTAMP(timezone=True), nullable=False),
-    sa.Column('current_period_end', sa.TIMESTAMP(timezone=True), nullable=False, comment='Fecha de vencimiento/renovación'),
-    sa.Column('trial_end', sa.TIMESTAMP(timezone=True), nullable=True),
-    sa.Column('canceled_at', sa.TIMESTAMP(timezone=True), nullable=True),
-    sa.Column('payment_method_id', sa.String(), nullable=True, comment='ID del método de pago en Stripe/PayPal'),
-    sa.Column('billing_email', sa.String(), nullable=True),
+    sa.Column('status', sa.Enum('ACTIVE', 'PAST_DUE', 'CANCELED', 'EXPIRED', name='subscriptionstatus'), nullable=False),
+    sa.Column('current_period_start', sa.TIMESTAMP(timezone=True), nullable=True),
+    sa.Column('current_period_end', sa.TIMESTAMP(timezone=True), nullable=True),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['plan_id'], ['plans.id'], ),
@@ -212,32 +191,17 @@ def upgrade() -> None:
     )
     op.create_table('users',
     sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('tenant_id', sa.UUID(), nullable=True, comment='Organización a la que pertenece. NULL = Super Admin Global'),
-    sa.Column('email', sa.String(), nullable=False),
-    sa.Column('name', sa.String(length=60), nullable=True),
-    sa.Column('username', sa.String(length=25), nullable=True),
-    sa.Column('phone', sa.String(length=25), nullable=True),
-    sa.Column('hashed_password', sa.String(), nullable=False),
+    sa.Column('tenant_id', sa.UUID(), nullable=True),
+    sa.Column('email', sa.String(length=100), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=True),
+    sa.Column('hashed_password', sa.String(length=255), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('position', sa.String(length=100), nullable=True),
-    sa.Column('occupation', sa.String(length=100), nullable=True),
-    sa.Column('avatar_url', sa.String(length=255), nullable=True),
-    sa.Column('preferred_language', sa.String(length=10), nullable=False),
-    sa.Column('employee_id', sa.String(length=50), nullable=True),
-    sa.Column('tfa_secret', sa.String(length=255), nullable=True, comment='Secreto para la autenticación de dos factores (2FA).'),
-    sa.Column('is_tfa_enabled', sa.Boolean(), nullable=False, comment='Indica si el 2FA está habilitado para el usuario.'),
-    sa.Column('failed_login_attempts', sa.Integer(), nullable=False, comment='Contador de intentos fallidos consecutivos'),
-    sa.Column('locked_until', sa.TIMESTAMP(timezone=True), nullable=True, comment='Fecha hasta la cual el usuario está bloqueado temporalmente'),
-    sa.Column('last_login_at', sa.TIMESTAMP(timezone=True), nullable=True),
-    sa.Column('last_login_ip', sa.String(length=45), nullable=True),
-    sa.Column('terms_accepted_at', sa.TIMESTAMP(timezone=True), nullable=True, comment='Fecha de aceptación de los términos'),
-    sa.Column('terms_version', sa.String(length=20), nullable=True, comment='Versión de los términos aceptada (ej: v1.2)'),
+    sa.Column('tfa_secret', sa.String(length=255), nullable=True),
+    sa.Column('is_tfa_enabled', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['tenant_id'], ['tenants.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('employee_id'),
-    sa.UniqueConstraint('username')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_table('approval_requests',
@@ -418,6 +382,8 @@ def upgrade() -> None:
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('due_date', sa.Date(), nullable=True),
     sa.Column('cancellation_reason', sa.Text(), nullable=True),
+    sa.Column('rating', sa.Integer(), nullable=True, comment='Calificación de la ejecución (1-5).'),
+    sa.Column('feedback', sa.Text(), nullable=True, comment='Comentarios cualitativos sobre la ejecución.'),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('completed_at', sa.TIMESTAMP(timezone=True), nullable=True),

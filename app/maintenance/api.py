@@ -10,14 +10,13 @@ from fastapi import APIRouter, Depends, status, HTTPException
 
 from app.maintenance import schemas
 from app.maintenance.service import MaintenanceService
-from app.maintenance.scheduler import MaintenanceScheduler
 from app.dependencies.services import get_maintenance_service
 from app.dependencies.tenant import get_tenant_id
 from app.dependencies.auth import get_current_active_user
 from app.dependencies.permissions import require_permission
 from app.identity.models import User
-from app.core.database import get_db
-from sqlalchemy.orm import Session
+
+logger = logging.getLogger("app.maintenance.api")
 
 router = APIRouter(prefix="/maintenance", tags=["Maintenance"])
 
@@ -76,3 +75,16 @@ def assign_provider_to_work_order(
     current_user: User = Depends(get_current_active_user)
 ):
     return maintenance_service.assign_provider(work_order_id, assignment_in, tenant_id, current_user)
+
+@router.post("/work-orders/{work_order_id}/evaluate", response_model=schemas.WorkOrderRead, dependencies=[Depends(require_permission("work_order:evaluate"))])
+def evaluate_work_order(
+    work_order_id: uuid.UUID,
+    evaluation_in: schemas.WorkOrderEvaluation,
+    maintenance_service: MaintenanceService = Depends(get_maintenance_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Permite a un supervisor calificar la ejecución de una orden de trabajo completada.
+    """
+    return maintenance_service.evaluate_work_order(work_order_id, evaluation_in, tenant_id, current_user)

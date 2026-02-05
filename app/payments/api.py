@@ -9,16 +9,28 @@ from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, status, HTTPException, Body
 
 from app.payments import schemas
+from app.payments.service import PaymentService
 from app.payments.service_manual import ManualPaymentService
 from app.payments.service_online import OnlinePaymentService
-from app.dependencies.services import get_manual_payment_service, get_online_payment_service
+from app.dependencies.services import get_payment_service, get_manual_payment_service, get_online_payment_service
 from app.dependencies.tenant import get_tenant_id
 from app.dependencies.auth import get_current_active_user
+from app.dependencies.permissions import require_permission
 from app.identity.models import User
 
 logger = logging.getLogger("app.payments.api")
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
+
+@router.get("/history", response_model=List[schemas.PaymentTransactionRead], dependencies=[Depends(require_permission("payment:read"))])
+def get_payment_history(
+    skip: int = 0,
+    limit: int = 100,
+    payment_service: PaymentService = Depends(get_payment_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id)
+):
+    """Devuelve el historial de transacciones de pago del tenant."""
+    return payment_service.list_transactions(tenant_id, skip, limit)
 
 @router.post("/manual", response_model=schemas.PaymentTransactionRead, status_code=status.HTTP_201_CREATED)
 def request_manual_payment(

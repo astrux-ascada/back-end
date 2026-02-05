@@ -10,8 +10,10 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.v1.routers import api_router
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.core.redis import get_redis_client
 from app.core.limiter import limiter
 from app.core.middlewares.tenant_middleware import TenantMiddleware
+from app.core.event_broker import EventBroker
 from app.core_engine.service import CoreEngineService
 from app.telemetry.service import TelemetryService
 from app.auditing.service import AuditService
@@ -25,41 +27,44 @@ logger = logging.getLogger("app.main")
 async def lifespan(app: FastAPI):
     """
     Gestiona el ciclo de vida de la aplicación.
-    Inicia y detiene servicios de background como el Core Engine.
     """
     logger.info("Iniciando aplicación Astruxa...")
     
     db = SessionLocal()
+    redis_client = get_redis_client()
     
-    # Inicializar servicios en el orden correcto de dependencias
-    notification_service = NotificationService(db)
+    # --- Inicialización del Event Broker (EDA) ---
+    event_broker = EventBroker(redis_client)
+    app.state.event_broker = event_broker
+    
+    # --- Inicialización de Servicios ---
+    notification_service = NotificationService(db, event_broker)
     audit_service = AuditService(db)
     asset_repo = AssetRepository(db)
-    
-    alarming_service = AlarmingService(db, notification_service, asset_repo, audit_service)
-    
-    # Corregir la inicialización de TelemetryService
+    alarming_service = AlarmingService(db, event_broker, asset_repo, audit_service)
     telemetry_service = TelemetryService(db, audit_service)
-    
     core_engine_service = CoreEngineService(db, telemetry_service, audit_service)
     app.state.core_engine_service = core_engine_service
     
+    # --- Iniciar procesos de background ---
+    event_broker.start_listening()
+    core_engine_service.start_all_connectors()
+    
     logger.info("Handler de logs de Astruxa para acciones automáticas activado.")
-    logger.info("Iniciando Core Engine Service...")
-    # core_engine_service.start_all_connectors() # Comentado temporalmente para estabilizar
-    logger.info("Motor de comunicación (Core Engine) iniciado.")
+    logger.info("Motor de comunicación (Core Engine) y Event Broker iniciados.")
     
     yield
     
     logger.info("Apagando aplicación...")
-    logger.info("Deteniendo Core Engine Service...")
-    # app.state.core_engine_service.stop_all_connectors()
+    app.state.core_engine_service.stop_all_connectors()
     logger.info("Motor de comunicación (Core Engine) detenido.")
     db.close()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    openapi_url=f"/api/v1/openapi.json",
+    openapi_url="/api/v1/openapi.json", # URL correcta para el JSON
+    docs_url="/api/v1/docs", # URL para Swagger UI
+    redoc_url="/api/v1/redoc", # URL para ReDoc
     lifespan=lifespan
 )
 
@@ -75,7 +80,8 @@ if settings.BACKEND_CORS_ORIGINS:
 app.add_middleware(TenantMiddleware)
 app.state.limiter = limiter
 
-app.include_router(api_router)
+# Montar el router principal bajo el prefijo /api/v1
+app.include_router(api_router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
