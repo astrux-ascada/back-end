@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship
 import enum
 
 from app.db.base_class import Base
+from app.identity.models.user import User # Importar User para la relación
 
 class TenantStatus(str, enum.Enum):
     PROVISIONING = "PROVISIONING" # Creando recursos (DB, Schemas)
@@ -47,7 +48,7 @@ class Tenant(Base):
 
     # Relaciones
     subscription = relationship("Subscription", uselist=False, back_populates="tenant")
-    users = relationship("User", back_populates="tenant")
+    users = relationship("User", back_populates="tenant", primaryjoin=id == User.tenant_id) # CORRECCIÓN AQUÍ
 
     # Auditoría
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)

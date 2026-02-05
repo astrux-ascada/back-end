@@ -1,32 +1,31 @@
 # /app/core_engine/schemas.py
 """
-Esquemas Pydantic para el módulo Core Engine.
-
-Define los contratos de datos para la API, empezando por la entidad DataSource.
+Esquemas Pydantic para el Core Engine.
 """
 import uuid
-from datetime import datetime
-from typing import Optional, Any
-
-from pydantic import BaseModel, Field, Json
-
+from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
 
 # --- Esquemas para DataSource ---
 
 class DataSourceBase(BaseModel):
-    name: str = Field(..., example="PLC Línea de Ensamblaje 3")
-    protocol: str = Field(..., example="OPCUA")
-    connection_params: Json[Any] = Field(..., example='{"host": "192.168.1.10", "port": 4840}')
-    is_active: bool = Field(False, description="Habilita o deshabilita la recolección de datos.")
-    description: Optional[str] = Field(None, example="Controlador principal del brazo robótico de soldadura.")
+    name: str = Field(..., example="PLC Línea 1")
+    protocol: str = Field(..., example="modbus_tcp")
+    connection_params: Dict[str, Any] = Field(..., example={"host": "192.168.1.10", "port": 502})
+    is_active: bool = True
 
 class DataSourceCreate(DataSourceBase):
     pass
 
+class DataSourceUpdate(BaseModel):
+    name: Optional[str] = None
+    protocol: Optional[str] = None
+    connection_params: Optional[Dict[str, Any]] = None
+    is_active: Optional[bool] = None
+
 class DataSourceRead(DataSourceBase):
     id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
+    tenant_id: uuid.UUID
 
     class Config:
         from_attributes = True

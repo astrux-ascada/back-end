@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field
 
-# --- Alarm Rules ---
+# --- Esquemas para AlarmRule ---
 
 class AlarmRuleBase(BaseModel):
     asset_id: uuid.UUID
@@ -17,25 +17,33 @@ class AlarmRuleBase(BaseModel):
 class AlarmRuleCreate(AlarmRuleBase):
     pass
 
+class AlarmRuleUpdate(BaseModel):
+    metric_name: Optional[str] = None
+    condition: Optional[str] = None
+    threshold: Optional[float] = None
+    severity: Optional[str] = None
+    is_enabled: Optional[bool] = None
+
 class AlarmRule(AlarmRuleBase):
     id: uuid.UUID
 
     class Config:
         from_attributes = True
 
-# --- Alarms ---
+# --- Esquemas para Alarm ---
 
 class AlarmBase(BaseModel):
-    alarm_rule_id: uuid.UUID
-    asset_id: uuid.UUID
-    triggered_value: float
-    severity: str
+    rule_id: uuid.UUID
+    triggering_value: float
+    is_acknowledged: bool
 
-class AlarmRead(AlarmBase):
+class AlarmCreate(AlarmBase):
+    pass
+
+class AlarmRead(AlarmBase): # Renombrado de Alarm a AlarmRead
     id: uuid.UUID
-    triggered_at: datetime
-    acknowledged: bool
-    acknowledged_at: Optional[datetime] = None
+    created_at: datetime
+    rule: AlarmRule # Anidar la regla para tener contexto
 
     class Config:
         from_attributes = True

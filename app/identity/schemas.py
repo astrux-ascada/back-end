@@ -7,7 +7,8 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, ValidationInfo
+from app.core.validation import validate_email, validate_password
 
 # Importar esquemas de otros módulos para anidarlos
 from app.sectors.schemas import SectorRead
@@ -53,17 +54,51 @@ class UserBase(BaseModel):
     name: Optional[str] = Field(None, example="Juan Pérez")
     avatar_url: Optional[str] = Field(None, alias="avatarUrl", example="https://example.com/avatar.png")
 
+    @field_validator('email', mode='before')
+    @classmethod
+    def validate_user_email(cls, v: str) -> str:
+        if v:
+            return validate_email(v)
+        return v
+
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     role_ids: List[uuid.UUID] = Field([], description="Lista de IDs de roles para asignar al usuario.")
     sector_ids: List[uuid.UUID] = Field([], description="Lista de IDs de sectores a los que el usuario está asignado.")
 
+    @field_validator('password', mode='before')
+    @classmethod
+    def validate_create_password(cls, v: str, info: ValidationInfo) -> str:
+        # Intentamos obtener el email del contexto de validación para evitar que la contraseña lo contenga
+        user_context = {}
+        if info.data.get('email'):
+            user_context['email'] = info.data['email']
+        return validate_password(v, user_context)
+
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     name: Optional[str] = None
     is_active: Optional[bool] = None
+    password: Optional[str] = None
     role_ids: Optional[List[uuid.UUID]] = None
     sector_ids: Optional[List[uuid.UUID]] = None
+
+    @field_validator('email', mode='before')
+    @classmethod
+    def validate_update_email(cls, v: str) -> str:
+        if v:
+            return validate_email(v)
+        return v
+    
+    @field_validator('password', mode='before')
+    @classmethod
+    def validate_update_password(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
+        if v:
+            user_context = {}
+            if info.data.get('email'):
+                user_context['email'] = info.data['email']
+            return validate_password(v, user_context)
+        return v
 
 class UserLogin(BaseModel):
     email: EmailStr

@@ -1,29 +1,24 @@
 # /app/alarming/service.py
 """
-Capa de Servicio para el módulo de Alertas.
+Capa de Servicio para el módulo de Alertas (Alarming).
 """
-
-import logging
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 import uuid
-
 from sqlalchemy.orm import Session
 
 from app.alarming import models, schemas
 from app.alarming.repository import AlarmingRepository
-from app.telemetry.schemas import SensorReadingCreate
-from app.notifications.service import NotificationService
+from app.core.exceptions import NotFoundException
 from app.assets.repository import AssetRepository
+from app.notifications.service import NotificationService
 from app.auditing.service import AuditService
 from app.identity.models import User
-from app.maintenance.service import MaintenanceService
-from app.maintenance.schemas import WorkOrderCreate
 
-logger = logging.getLogger(__name__)
-
+if TYPE_CHECKING:
+    from app.maintenance.service import MaintenanceService
 
 class AlarmingService:
-    """Servicio de negocio para la gestión de reglas y alarmas."""
+    """Servicio de negocio para la gestión de alarmas y sus reglas."""
 
     def __init__(
         self, 
@@ -31,114 +26,65 @@ class AlarmingService:
         notification_service: NotificationService, 
         asset_repo: AssetRepository, 
         audit_service: AuditService,
-        maintenance_service: Optional[MaintenanceService] = None
+        maintenance_service: Optional['MaintenanceService'] = None
     ):
         self.db = db
-        self.notification_service = notification_service
+        self.alarming_repo = AlarmingRepository(db)
         self.asset_repo = asset_repo
+        self.notification_service = notification_service
         self.audit_service = audit_service
         self.maintenance_service = maintenance_service
-        self.alarming_repo = AlarmingRepository(self.db)
-        self.active_rules: List[models.AlarmRule] = []
-        self.load_rules()
 
-    def load_rules(self):
-        self.active_rules = self.alarming_repo.list_all_enabled_rules()
-        logger.info(f"{len(self.active_rules)} reglas de alerta activas cargadas en memoria.")
+    # --- Métodos para AlarmRule ---
 
-    def create_alarm_rule(self, rule_in: schemas.AlarmRuleCreate) -> models.AlarmRule:
-        new_rule = self.alarming_repo.create_alarm_rule(rule_in)
-        self.load_rules()
+    def create_alarm_rule(self, rule_in: schemas.AlarmRuleCreate, tenant_id: uuid.UUID, user: User) -> models.AlarmRule:
+        asset = self.asset_repo.get_asset(rule_in.asset_id, tenant_id)
+        if not asset:
+            raise NotFoundException(f"El activo con ID {rule_in.asset_id} no fue encontrado en este tenant.")
+        
+        new_rule = self.alarming_repo.create_alarm_rule(rule_in, tenant_id)
+        
+        self.audit_service.log_operation(user, "CREATE_ALARM_RULE", new_rule)
         return new_rule
 
-    def evaluate_readings(self, readings: List[SensorReadingCreate]):
-        """
-        Evalúa una lista de lecturas de sensores contra las reglas de alarma activas.
-        """
-        for reading in readings:
-            for rule in self.active_rules:
-                if rule.asset_id == reading.asset_id and rule.metric_name == reading.metric_name:
-                    condition_met = False
-                    if rule.condition == ">" and reading.value > rule.threshold:
-                        condition_met = True
-                    elif rule.condition == "<" and reading.value < rule.threshold:
-                        condition_met = True
-                    
-                    if condition_met:
-                        # Evitar crear alarmas duplicadas si ya hay una activa para la misma regla
-                        if not self.alarming_repo.has_active_alarm(rule.id):
-                            logger.warning(f"¡ALERTA! Regla {rule.id} disparada para el activo {reading.asset_id} con valor {reading.value}")
-                            alarm = self.alarming_repo.create_alarm(rule, reading)
-                            
-                            self.audit_alarm_creation(alarm, rule)
-                            self.notify_relevant_users(alarm, rule)
-                            
-                            # Integración con Mantenimiento: Crear Orden de Trabajo si es CRÍTICA
-                            if rule.severity.lower() == "critical":
-                                self.trigger_maintenance_order(alarm, rule)
+    def get_rule(self, rule_id: uuid.UUID, tenant_id: uuid.UUID) -> models.AlarmRule:
+        rule = self.alarming_repo.get_rule(rule_id, tenant_id)
+        if not rule:
+            raise NotFoundException("Regla de alarma no encontrada.")
+        return rule
 
-    def trigger_maintenance_order(self, alarm: models.Alarm, rule: models.AlarmRule):
-        """Crea automáticamente una orden de trabajo correctiva."""
-        if not self.maintenance_service:
-            logger.warning("MaintenanceService no disponible, no se puede crear orden automática.")
-            return
+    def list_rules(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[models.AlarmRule]:
+        return self.alarming_repo.list_rules(tenant_id, skip, limit)
 
-        try:
-            asset = self.asset_repo.get_asset(rule.asset_id)
-            asset_name = asset.name if asset else "Unknown Asset"
-            
-            order_in = WorkOrderCreate(
-                summary=f"Alarma Crítica: {rule.metric_name} en {asset_name}",
-                description=f"Orden generada automáticamente por alarma {alarm.id}. Valor disparador: {alarm.triggered_value}. Regla: {rule.condition} {rule.threshold}",
-                priority="URGENT",
-                category="CORRECTIVE",
-                asset_id=rule.asset_id,
-                source_trigger={"type": "ALARM", "alarm_id": str(alarm.id), "rule_id": str(rule.id)}
-            )
-            
-            # Crear la orden sin usuario (sistema)
-            order = self.maintenance_service.create_order(order_in, current_user=None)
-            logger.info(f"Orden de trabajo {order.id} creada automáticamente para alarma {alarm.id}")
-            
-        except Exception as e:
-            logger.error(f"Error al crear orden de trabajo automática: {e}")
-
-    def audit_alarm_creation(self, alarm: models.Alarm, rule: models.AlarmRule):
-        """Registra la creación de una alarma en el log de auditoría."""
-        self.audit_service.log_operation(
-            user=None, # Acción del sistema
-            action="ALARM_TRIGGERED",
-            entity_type="Alarm",
-            entity_id=alarm.id,
-            details={"triggering_value": alarm.triggered_value, "severity": rule.severity}
-        )
-
-    def notify_relevant_users(self, alarm: models.Alarm, rule: models.AlarmRule):
-        asset = self.asset_repo.get_asset(rule.asset_id)
-        if not asset or not asset.sector or not asset.sector.users:
-            logger.warning(f"No se encontraron usuarios para notificar para la alarma {alarm.id}")
-            return
-
-        message = f"Alarma {rule.severity}: {asset.asset_type.name} ({asset.serial_number}) ha superado el umbral. Valor: {alarm.triggered_value:.2f}"
+    def update_rule(self, rule_id: uuid.UUID, rule_in: schemas.AlarmRuleUpdate, tenant_id: uuid.UUID, user: User) -> models.AlarmRule:
+        db_rule = self.get_rule(rule_id, tenant_id)
         
-        for user in asset.sector.users:
-            self.notification_service.create_notification_for_user(
-                user_id=user.id,
-                message=message,
-                type="ALARM",
-                reference_id=str(alarm.id)
-            )
+        if rule_in.asset_id and rule_in.asset_id != db_rule.asset_id:
+            asset = self.asset_repo.get_asset(rule_in.asset_id, tenant_id)
+            if not asset:
+                raise NotFoundException(f"El nuevo activo con ID {rule_in.asset_id} no fue encontrado en este tenant.")
 
-    def list_active_alarms(self) -> List[models.Alarm]:
-        return self.alarming_repo.get_active_alarms()
+        updated_rule = self.alarming_repo.update_rule(db_rule, rule_in)
+        
+        self.audit_service.log_operation(user, "UPDATE_ALARM_RULE", updated_rule, details=rule_in.model_dump(exclude_unset=True))
+        return updated_rule
 
-    def acknowledge_alarm(self, alarm_id: uuid.UUID, user: User) -> Optional[models.Alarm]:
-        alarm = self.alarming_repo.acknowledge_alarm(alarm_id)
-        if alarm:
-            self.audit_service.log_operation(
-                user=user,
-                action="ALARM_ACKNOWLEDGED",
-                entity_type="Alarm",
-                entity_id=alarm.id
-            )
+    def delete_rule(self, rule_id: uuid.UUID, tenant_id: uuid.UUID, user: User) -> models.AlarmRule:
+        db_rule = self.get_rule(rule_id, tenant_id)
+        deleted_rule = self.alarming_repo.delete_rule(db_rule)
+        
+        self.audit_service.log_operation(user, "DELETE_ALARM_RULE", deleted_rule)
+        return deleted_rule
+
+    # --- Métodos para Alarm ---
+
+    def get_active_alarms(self, tenant_id: uuid.UUID) -> List[models.Alarm]:
+        return self.alarming_repo.get_active_alarms(tenant_id)
+
+    def acknowledge_alarm(self, alarm_id: uuid.UUID, tenant_id: uuid.UUID, user: User) -> models.Alarm:
+        alarm = self.alarming_repo.acknowledge_alarm(alarm_id, tenant_id)
+        if not alarm:
+            raise NotFoundException("Alarma no encontrada o ya reconocida.")
+        
+        self.audit_service.log_operation(user, "ACKNOWLEDGE_ALARM", alarm)
         return alarm

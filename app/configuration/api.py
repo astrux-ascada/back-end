@@ -1,75 +1,58 @@
 # /app/configuration/api.py
 """
-API Router para el módulo de Configuración del Sistema.
-
-Define los endpoints para que un SuperUser gestione los parámetros y enums dinámicos.
+API Router para el módulo de Configuración.
 """
-
-import logging
 from typing import List
+import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException
 
 from app.configuration import schemas
 from app.configuration.service import ConfigurationService
-# --- MEJORA: Importar las dependencias correctas ---
 from app.dependencies.services import get_configuration_service
-from app.dependencies.auth import get_current_superuser
+from app.dependencies.permissions import require_permission
+from app.identity.models import User
+from app.dependencies.auth import get_current_active_user # Para obtener el usuario actual
 
-logger = logging.getLogger("app.configuration.api")
+router = APIRouter(prefix="/configuration", tags=["Configuration"])
 
-# Todos los endpoints en este módulo requieren privilegios de SuperUser.
-router = APIRouter(
-    prefix="/configuration", 
-    tags=["Configuration"], 
-    dependencies=[Depends(get_current_superuser)]
-)
+# --- Endpoints para ConfigurationParameter ---
 
+@router.post("/parameters", response_model=schemas.ConfigurationParameterRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("config_param:create"))])
+def create_parameter(
+    param_in: schemas.ConfigurationParameterCreate,
+    config_service: ConfigurationService = Depends(get_configuration_service),
+    current_user: User = Depends(get_current_active_user)
+):
+    return config_service.create_parameter(param_in, current_user)
 
-@router.get(
-    "/parameters",
-    summary="[SuperUser] Obtener todos los Parámetros de Configuración",
-    response_model=List[schemas.ConfigurationParameterRead],
-)
-def list_parameters(config_service: ConfigurationService = Depends(get_configuration_service)):
-    """Devuelve una lista de todos los parámetros de configuración del sistema."""
+@router.get("/parameters", response_model=List[schemas.ConfigurationParameterRead], dependencies=[Depends(require_permission("config_param:read"))])
+def list_parameters(
+    config_service: ConfigurationService = Depends(get_configuration_service)
+):
     return config_service.list_parameters()
 
+@router.get("/parameters/{key}", response_model=schemas.ConfigurationParameterRead, dependencies=[Depends(require_permission("config_param:read"))])
+def get_parameter(
+    key: str,
+    config_service: ConfigurationService = Depends(get_configuration_service)
+):
+    return config_service.get_parameter(key)
 
-@router.patch(
-    "/parameters/{key}",
-    summary="[SuperUser] Actualizar un Parámetro de Configuración",
-    response_model=schemas.ConfigurationParameterRead,
-)
+@router.put("/parameters/{key}", response_model=schemas.ConfigurationParameterRead, dependencies=[Depends(require_permission("config_param:update"))])
 def update_parameter(
     key: str,
     param_in: schemas.ConfigurationParameterUpdate,
     config_service: ConfigurationService = Depends(get_configuration_service),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Actualiza el valor de un parámetro de configuración específico."""
-    return config_service.update_parameter(key, param_in)
+    return config_service.update_parameter(key, param_in, current_user)
 
-
-@router.get(
-    "/enums",
-    summary="[SuperUser] Obtener todos los Enums Dinámicos",
-    response_model=List[schemas.EnumTypeRead],
-)
-def list_enum_types(config_service: ConfigurationService = Depends(get_configuration_service)):
-    """Devuelve una lista de todos los tipos de enums gestionables y sus valores."""
-    return config_service.list_enum_types()
-
-
-@router.post(
-    "/enums/{enum_name}/values",
-    summary="[SuperUser] Añadir un Valor a un Enum",
-    status_code=status.HTTP_201_CREATED,
-    response_model=schemas.EnumTypeRead,
-)
-def add_value_to_enum(
-    enum_name: str,
-    value_in: schemas.EnumValueCreate,
+@router.delete("/parameters/{key}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_permission("config_param:delete"))])
+def delete_parameter(
+    key: str,
     config_service: ConfigurationService = Depends(get_configuration_service),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Añade un nuevo valor a un enum existente (ej: un nuevo estado para las órdenes de trabajo)."""
-    return config_service.add_value_to_enum(enum_name, value_in)
+    config_service.delete_parameter(key, current_user)
+    return None

@@ -7,7 +7,7 @@ import logging
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, status, Response
+from fastapi import APIRouter, Depends, status, Response, HTTPException
 
 from app.notifications import schemas
 from app.notifications.service import NotificationService
@@ -31,6 +31,7 @@ def get_notifications(
     current_user: User = Depends(get_current_active_user),
 ):
     """Devuelve una lista de las notificaciones del usuario autenticado."""
+    # El servicio ya usa el tenant_id del current_user para filtrar
     return notification_service.get_notifications(current_user, include_read)
 
 
@@ -45,7 +46,11 @@ def mark_notification_as_read(
     current_user: User = Depends(get_current_active_user),
 ):
     """Marca una notificación específica del usuario actual como leída."""
-    return notification_service.mark_notification_as_read(notification_id, current_user)
+    # El servicio ya usa el tenant_id del current_user para validar
+    notification = notification_service.mark_notification_as_read(notification_id, current_user)
+    if not notification:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found or you don't have permission to read it.")
+    return notification
 
 
 @router.post(
@@ -58,5 +63,6 @@ def mark_all_notifications_as_read(
     current_user: User = Depends(get_current_active_user),
 ):
     """Marca todas las notificaciones no leídas del usuario actual como leídas."""
+    # El servicio ya usa el tenant_id del current_user para validar
     notification_service.mark_all_notifications_as_read(current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
