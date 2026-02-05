@@ -14,7 +14,8 @@ from app.assets.service import AssetService
 from app.dependencies.services import get_asset_service
 from app.dependencies.auth import get_current_active_user
 from app.dependencies.tenant import get_tenant_id
-from app.dependencies.permissions import require_permission # Importar el nuevo sistema
+from app.dependencies.permissions import require_permission
+from app.dependencies.limits import check_limit # Importar check_limit
 from app.identity.models import User
 from app.auditing.schemas import ApprovalRequestRead
 
@@ -45,7 +46,15 @@ def get_asset(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
     return asset
 
-@router.post("/", response_model=schemas.AssetReadDTO, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("asset:create"))])
+@router.post(
+    "/", 
+    response_model=schemas.AssetReadDTO, 
+    status_code=status.HTTP_201_CREATED, 
+    dependencies=[
+        Depends(require_permission("asset:create")),
+        Depends(check_limit("assets")) # Aplicar el límite de activos
+    ]
+)
 def create_asset(
     asset_in: schemas.AssetCreate,
     asset_service: AssetService = Depends(get_asset_service),

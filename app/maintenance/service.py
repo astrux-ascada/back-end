@@ -5,13 +5,10 @@ Capa de Servicio para el módulo de Mantenimiento.
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session
-import logging
-from fastapi import HTTPException, status
 
-from app.maintenance import schemas
-from app.maintenance.models import WorkOrder, MaintenanceTask, MaintenancePlan
+from app.maintenance import models, schemas
 from app.maintenance.repository import MaintenanceRepository
-from app.procurement.repository import ProcurementRepository # Para validar el proveedor
+from app.procurement.repository import ProcurementRepository
 from app.core.exceptions import NotFoundException, ConflictException
 from app.auditing.service import AuditService
 from app.identity.models import User
@@ -56,15 +53,12 @@ class MaintenanceService:
         return cancelled_work_order
 
     def assign_provider(self, work_order_id: uuid.UUID, assignment_in: schemas.WorkOrderProviderAssignment, tenant_id: uuid.UUID, user: User) -> models.WorkOrder:
-        # 1. Validar que la orden existe
         db_work_order = self.get_work_order(work_order_id, tenant_id)
         
-        # 2. Validar que el proveedor existe y pertenece al tenant
         provider = self.procurement_repo.get_provider(assignment_in.provider_id, tenant_id)
         if not provider:
             raise NotFoundException(f"El proveedor con ID {assignment_in.provider_id} no existe.")
 
-        # 3. Crear la asignación
         self.maintenance_repo.assign_provider(
             work_order_id, 
             assignment_in.provider_id, 

@@ -40,7 +40,7 @@ class AlarmBase(BaseModel):
 class AlarmCreate(AlarmBase):
     pass
 
-class Alarm(AlarmBase):
+class AlarmRead(AlarmBase): # Renombrado de Alarm a AlarmRead
     id: uuid.UUID
     created_at: datetime
     rule: AlarmRule # Anidar la regla para tener contexto

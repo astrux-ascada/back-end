@@ -1,8 +1,9 @@
 # /app/core/limiter.py
+"""
+Configuración del Rate Limiter para la aplicación.
+"""
 from slowapi import Limiter
-from slowapi.util import get_remote_address
+from app.dependencies.services import get_limiter_key # Usar la nueva función de clave
 
-# Crea una instancia del limitador.
-# get_remote_address es una función de utilidad que obtiene la IP del solicitante.
-# Esta IP se usará como clave para rastrear las solicitudes.
-limiter = Limiter(key_func=get_remote_address)
+# Crear una instancia del limiter usando la función de clave personalizada
+limiter = Limiter(key_func=get_limiter_key)
