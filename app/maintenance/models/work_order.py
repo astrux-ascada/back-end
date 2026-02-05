@@ -4,7 +4,7 @@ Modelo de la base de datos para la entidad WorkOrder.
 """
 import uuid
 import enum
-from sqlalchemy import Column, String, func, TIMESTAMP, ForeignKey, Text, Date
+from sqlalchemy import Column, String, func, TIMESTAMP, ForeignKey, Text, Date, Integer
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -47,6 +47,10 @@ class WorkOrder(Base):
     due_date = Column(Date, nullable=True)
     
     cancellation_reason = Column(Text, nullable=True)
+
+    # --- Campos de Evaluación (IA Feedback Loop) ---
+    rating = Column(Integer, nullable=True, comment="Calificación de la ejecución (1-5).")
+    feedback = Column(Text, nullable=True, comment="Comentarios cualitativos sobre la ejecución.")
 
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

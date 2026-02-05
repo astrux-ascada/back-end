@@ -4,18 +4,25 @@ Esquemas Pydantic para el módulo de Notificaciones.
 """
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
+# --- Esquemas para Notificaciones ---
 
-class Notification(BaseModel):
-    id: uuid.UUID = Field(..., alias="uuid")
-    created_at: datetime = Field(..., alias="createdAt")
-    is_read: bool = Field(..., alias="isRead")
-    message: str
+class NotificationBase(BaseModel):
+    user_id: uuid.UUID
     type: str
-    reference_id: str = Field(..., alias="referenceId")
+    content: str
+    reference_id: str
+
+class NotificationCreate(NotificationBase):
+    pass
+
+class NotificationRead(NotificationBase):
+    id: uuid.UUID
+    is_read: bool
+    created_at: datetime
 
     class Config:
         from_attributes = True
-        populate_by_name = True

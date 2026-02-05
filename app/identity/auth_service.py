@@ -6,20 +6,20 @@ Servicio de negocio para la autenticación, sesiones y 2FA de usuarios.
 import logging
 import uuid
 import redis
-from typing import Dict, List, Optional # Añadir Optional
+from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.exceptions import AuthenticationException, DuplicateRegistrationError, ConflictException, NotFoundException, PermissionDeniedException
 from app.core.security import create_access_token, verify_password
-from app.identity.models import User
+from app.identity.models import User, Role, Permission
 from app.identity.models.saas.tenant import Tenant
 from app.identity.models.saas.subscription import Subscription, SubscriptionStatus
-from app.identity.models.saas.plan import Plan
 from app.identity.repository import UserRepository
 from app.identity.schemas import UserCreate, UserUpdate
 from app.identity.tfa_service import TfaService
 from app.core.error_messages import ErrorMessages
+from app.core import permissions as p
 
 logger = logging.getLogger("app.identity.service")
 
@@ -27,6 +27,19 @@ logger = logging.getLogger("app.identity.service")
 MAX_LOGIN_ATTEMPTS = 5
 LOCKOUT_DURATION_SECONDS = 900  # 15 minutos
 
+# Permisos por defecto para un Tenant Admin
+DEFAULT_TENANT_ADMIN_PERMISSIONS = [
+    p.ASSET_READ, p.ASSET_CREATE, p.ASSET_UPDATE, p.ASSET_DELETE,
+    p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER,
+    p.PROVIDER_READ, p.PROVIDER_CREATE, p.PROVIDER_UPDATE, p.PROVIDER_DELETE,
+    p.SPARE_PART_READ, p.SPARE_PART_CREATE, p.SPARE_PART_UPDATE, p.SPARE_PART_DELETE,
+    p.ALARM_RULE_READ, p.ALARM_RULE_CREATE, p.ALARM_RULE_UPDATE, p.ALARM_RULE_DELETE,
+    p.ALARM_READ, p.ALARM_ACKNOWLEDGE,
+    p.SECTOR_READ, p.SECTOR_CREATE, p.SECTOR_UPDATE, p.SECTOR_DELETE,
+    p.AUDIT_LOG_READ, p.APPROVAL_READ, p.APPROVAL_DECIDE,
+    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE,
+    p.ROLE_READ, p.ROLE_CREATE, p.ROLE_UPDATE, p.ROLE_DELETE,
+]
 
 class AuthService:
     """Servicio de autenticación, sesión y 2FA para usuarios de Astruxa."""
@@ -41,15 +54,12 @@ class AuthService:
         lockout_key = f"lockout:{email}"
         login_attempts_key = f"login_attempts:{email}"
 
-        # 1. Verificar si el usuario está bloqueado
         if self.redis_client.exists(lockout_key):
             raise PermissionDeniedException(ErrorMessages.AUTH_USER_LOCKED)
 
         user = self.user_repo.get_by_email(email)
         
-        # 2. Verificar credenciales básicas
         if not user or not user.is_active or not verify_password(password, user.hashed_password):
-            # Incrementar contador de intentos fallidos
             current_attempts = self.redis_client.incr(login_attempts_key)
             self.redis_client.expire(login_attempts_key, LOCKOUT_DURATION_SECONDS)
 
@@ -60,10 +70,8 @@ class AuthService:
             
             raise AuthenticationException(ErrorMessages.AUTH_INVALID_CREDENTIALS)
         
-        # 3. Si el login es exitoso, resetear el contador de intentos
         self.redis_client.delete(login_attempts_key)
         
-        # 4. Verificar estado del Tenant y Suscripción (Gatekeeper)
         if user.tenant_id:
             subscription = (
                 self.db.query(Subscription)
@@ -83,7 +91,6 @@ class AuthService:
         return user
 
     def create_user_session(self, user: User) -> str:
-        # --- Control de Concurrencia ---
         active_session_key = f"active_session:{user.id}"
         old_jti = self.redis_client.get(active_session_key)
         if old_jti:
@@ -104,6 +111,9 @@ class AuthService:
         if not user:
             raise NotFoundException(ErrorMessages.AUTH_USER_NOT_FOUND)
         return user
+
+    def get_user_by_email(self, email: str) -> Optional[User]:
+        return self.user_repo.get_by_email(email)
 
     def list_users(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[User]:
         return self.user_repo.list_users(tenant_id=tenant_id, skip=skip, limit=limit)
@@ -126,6 +136,27 @@ class AuthService:
             raise DuplicateRegistrationError(email=user_data.email)
         new_user = self.user_repo.create(user_in=user_data, tenant_id=tenant_id)
         return new_user
+
+    # Alias para compatibilidad con SaasService
+    def create_user(self, email: str, name: str, password: str, tenant_id: uuid.UUID, roles: List[Role]) -> User:
+        user_data = UserCreate(email=email, name=name, password=password)
+        user = self.register_user(user_data, tenant_id)
+        user.roles = roles
+        self.db.commit()
+        return user
+
+    def create_tenant_admin_role(self, tenant_id: uuid.UUID) -> Role:
+        """Crea el rol de administrador para un nuevo tenant."""
+        role = Role(name="TENANT_ADMIN", description="Administrador del Tenant", tenant_id=tenant_id)
+
+        # Asignar permisos por defecto
+        permissions = self.db.query(Permission).filter(Permission.name.in_(DEFAULT_TENANT_ADMIN_PERMISSIONS)).all()
+        role.permissions = permissions
+
+        self.db.add(role)
+        self.db.commit()
+        self.db.refresh(role)
+        return role
 
     def logout_user(self, jti: str) -> None:
         user_id = self.redis_client.get(f"session:{jti}")

@@ -17,9 +17,12 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.core.config import settings
 from app.core import permissions as p
-from app.identity.models.saas import Plan, Partner, Tenant, Subscription
+from app.identity.models.saas.plan import Plan
+from app.identity.models.saas.partner import Partner
+from app.identity.models.saas.tenant import Tenant
+from app.identity.models.saas.subscription import Subscription, SubscriptionStatus # Corregir importación
 from app.identity.models import User, Role, Permission
-from app.core.security import hash_password # Corregir el nombre de la importación
+from app.core.security import hash_password
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,9 +34,10 @@ ALL_PERMISSIONS = [
     p.TENANT_READ, p.TENANT_CREATE, p.TENANT_UPDATE,
     p.SUBSCRIPTION_READ, p.SUBSCRIPTION_UPDATE,
     p.ASSET_READ, p.ASSET_CREATE, p.ASSET_UPDATE, p.ASSET_UPDATE_STATUS, p.ASSET_DELETE,
-    p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER,
+    p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER, p.WORK_ORDER_EVALUATE,
     p.PROVIDER_READ, p.PROVIDER_CREATE, p.PROVIDER_UPDATE, p.PROVIDER_DELETE,
     p.SPARE_PART_READ, p.SPARE_PART_CREATE, p.SPARE_PART_UPDATE, p.SPARE_PART_DELETE,
+    p.RFQ_CREATE, p.RFQ_READ, p.QUOTE_SUBMIT, p.QUOTE_EVALUATE, p.PO_CREATE, p.PO_READ, p.PO_RECEIVE,
     p.ALARM_RULE_READ, p.ALARM_RULE_CREATE, p.ALARM_RULE_UPDATE, p.ALARM_RULE_DELETE,
     p.ALARM_READ, p.ALARM_ACKNOWLEDGE,
     p.SECTOR_READ, p.SECTOR_CREATE, p.SECTOR_UPDATE, p.SECTOR_DELETE,
@@ -47,9 +51,10 @@ ALL_PERMISSIONS = [
 
 TENANT_ADMIN_PERMISSIONS = [
     p.ASSET_READ, p.ASSET_CREATE, p.ASSET_UPDATE, p.ASSET_DELETE,
-    p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER,
+    p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER, p.WORK_ORDER_EVALUATE,
     p.PROVIDER_READ, p.PROVIDER_CREATE, p.PROVIDER_UPDATE, p.PROVIDER_DELETE,
     p.SPARE_PART_READ, p.SPARE_PART_CREATE, p.SPARE_PART_UPDATE, p.SPARE_PART_DELETE,
+    p.RFQ_CREATE, p.RFQ_READ, p.QUOTE_EVALUATE, p.PO_CREATE, p.PO_READ, p.PO_RECEIVE,
     p.ALARM_RULE_READ, p.ALARM_RULE_CREATE, p.ALARM_RULE_UPDATE, p.ALARM_RULE_DELETE,
     p.ALARM_READ, p.ALARM_ACKNOWLEDGE,
     p.SECTOR_READ, p.SECTOR_CREATE, p.SECTOR_UPDATE, p.SECTOR_DELETE,
@@ -86,7 +91,7 @@ async def seed_data(db: Session):
     if not super_admin_user:
         super_admin_user = User(
             email=settings.FIRST_SUPERUSER_EMAIL,
-            hashed_password=hash_password(settings.FIRST_SUPERUSER_PASSWORD), # Usar la función correcta
+            hashed_password=hash_password(settings.FIRST_SUPERUSER_PASSWORD),
             name="Global Super Admin",
             is_active=True,
             tenant_id=None
@@ -99,7 +104,7 @@ async def seed_data(db: Session):
     # 4. Crear el Partner Global por defecto
     global_partner = db.query(Partner).filter(Partner.name == "Astruxa Global").first()
     if not global_partner:
-        global_partner = Partner(name="Astruxa Global", contact_email="partners@astruxa.com")
+        global_partner = Partner(name="Astruxa Global", code="ASTRUXA_GLOBAL")
         db.add(global_partner)
     db.commit()
     logger.info("Partner Global creado.")
@@ -131,7 +136,7 @@ async def seed_data(db: Session):
         # Crear usuario admin para el tenant
         demo_admin_user = User(
             email="admin@demo.com",
-            hashed_password=hash_password("demo_password"), # Usar la función correcta
+            hashed_password=hash_password("demo_password"),
             name="Demo Admin",
             is_active=True,
             tenant_id=demo_tenant.id
@@ -144,6 +149,7 @@ async def seed_data(db: Session):
         subscription = Subscription(
             tenant_id=demo_tenant.id,
             plan_id=pro_plan.id,
+            status=SubscriptionStatus.ACTIVE,
             current_period_start=datetime.utcnow(),
             current_period_end=datetime.utcnow() + timedelta(days=365)
         )

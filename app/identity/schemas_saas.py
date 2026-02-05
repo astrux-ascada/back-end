@@ -1,100 +1,104 @@
 # /app/identity/schemas_saas.py
 """
-Esquemas Pydantic para la gestión del modelo de negocio SaaS (Planes, Tenants, Suscripciones).
+Esquemas Pydantic para la gestión del modelo de negocio SaaS.
 """
 import uuid
-from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from datetime import datetime
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field, EmailStr
 
-from pydantic import BaseModel, Field, field_validator, EmailStr
-
-from app.identity.models.saas.tenant import TenantStatus
-from app.identity.models.saas.subscription import SubscriptionStatus
-
-# --- PLANES (PLANS) ---
+# --- Esquemas para Plan ---
 
 class PlanBase(BaseModel):
-    code: str = Field(..., min_length=3, max_length=50, example="ENTERPRISE_2024")
-    name: str = Field(..., min_length=3, max_length=100, example="Enterprise Plan")
-    description: Optional[str] = Field(None)
+    code: str = Field(..., max_length=50)
+    name: str = Field(..., max_length=100)
     price_monthly: float = Field(..., ge=0)
     price_yearly: float = Field(..., ge=0)
-    currency: str = Field("USD", min_length=3, max_length=3)
-    limits: Dict[str, Any] = Field(default_factory=dict)
-    features: Dict[str, bool] = Field(default_factory=dict)
-    is_public: bool = Field(True)
-    is_active: bool = Field(True)
-
-    @field_validator('code')
-    @classmethod
-    def validate_code(cls, v: str) -> str:
-        if not v.isupper() or " " in v:
-            raise ValueError("El código debe estar en mayúsculas y sin espacios.")
-        return v
+    currency: str = Field("USD", max_length=3)
+    limits: Optional[Dict[str, Any]] = {}
+    features: Optional[Dict[str, Any]] = {}
+    is_active: bool = True
 
 class PlanCreate(PlanBase):
     pass
 
 class PlanUpdate(BaseModel):
     name: Optional[str] = None
-    description: Optional[str] = None
-    price_monthly: Optional[float] = Field(None, ge=0)
-    price_yearly: Optional[float] = Field(None, ge=0)
+    price_monthly: Optional[float] = None
+    price_yearly: Optional[float] = None
+    currency: Optional[str] = None
     limits: Optional[Dict[str, Any]] = None
-    features: Optional[Dict[str, bool]] = None
-    is_public: Optional[bool] = None
+    features: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
 
 class PlanRead(PlanBase):
     id: uuid.UUID
-    created_at: datetime
-    updated_at: datetime
-    class Config: from_attributes = True
+    class Config:
+        from_attributes = True
 
-# --- TENANTS ---
+# --- Esquemas para Tenant ---
 
 class TenantBase(BaseModel):
-    name: str = Field(..., min_length=3, max_length=100)
-    slug: str = Field(..., min_length=3, max_length=50)
-    
-    @field_validator('slug')
-    @classmethod
-    def validate_slug(cls, v: str) -> str:
-        if not v.islower() or " " in v:
-            raise ValueError("El slug debe estar en minúsculas y sin espacios.")
-        return v
+    name: str = Field(..., max_length=100)
 
-class TenantCreate(BaseModel):
-    name: str
-    plan_id: uuid.UUID
+class TenantCreate(TenantBase):
+    slug: str
     partner_id: Optional[uuid.UUID] = None
-    admin_email: EmailStr
-    admin_password: str
-
-class TenantUpdate(BaseModel):
-    name: Optional[str] = None
-    logo_url: Optional[str] = None
-    config: Optional[Dict[str, Any]] = None
-
-# --- SUBSCRIPTIONS ---
-
-class SubscriptionUpdate(BaseModel):
-    plan_id: Optional[uuid.UUID] = None
-    status: Optional[SubscriptionStatus] = None
-    current_period_end: Optional[datetime] = None
-
-class SubscriptionRead(BaseModel):
-    id: uuid.UUID
-    plan: PlanRead # Anidar el plan completo
-    status: SubscriptionStatus
-    current_period_start: datetime
-    current_period_end: datetime
-    trial_end: Optional[datetime]
-    class Config: from_attributes = True
 
 class TenantRead(TenantBase):
     id: uuid.UUID
-    partner_id: Optional[uuid.UUID]
-    status: TenantStatus
-    subscription: Optional[SubscriptionRead]
-    class Config: from_attributes = True
+    slug: str
+    class Config:
+        from_attributes = True
+
+# --- Esquemas para Suscripción ---
+
+class SubscriptionBase(BaseModel):
+    plan_id: uuid.UUID
+
+class SubscriptionUpdate(SubscriptionBase):
+    pass
+
+class SubscriptionRead(SubscriptionBase):
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    status: str
+    current_period_start: Optional[datetime]
+    current_period_end: Optional[datetime]
+    class Config:
+        from_attributes = True
+
+# --- Esquema para Registro Público ---
+
+class PublicRegistrationRequest(BaseModel):
+    company_name: str = Field(..., min_length=2)
+    admin_name: str = Field(..., min_length=2)
+    admin_email: EmailStr
+    admin_password: str = Field(..., min_length=8)
+    plan_id: uuid.UUID
+
+# --- Esquema para Reporte de Uso ---
+
+class UsageDetail(BaseModel):
+    used: int
+    limit: int
+
+class UsageReport(BaseModel):
+    users: UsageDetail
+    assets: UsageDetail
+
+# --- Esquemas para Partners ---
+
+class PartnerTenantRead(BaseModel):
+    id: uuid.UUID
+    name: str
+    slug: str
+    subscription_status: str
+    plan_name: str
+
+class CommissionRead(BaseModel):
+    tenant_name: str
+    amount: float
+    currency: str
+    date: datetime
+    status: str
