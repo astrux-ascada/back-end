@@ -14,13 +14,20 @@ from app.identity.models import User
 
 if TYPE_CHECKING:
     from app.assets.service import AssetService
+    from app.payments.service_manual import ManualPaymentService
 
 class ApprovalService:
     """Servicio de negocio para la gestión de aprobaciones (Maker-Checker)."""
 
-    def __init__(self, db: Session, asset_service: Optional['AssetService'] = None):
+    def __init__(
+        self, 
+        db: Session, 
+        asset_service: Optional['AssetService'] = None,
+        manual_payment_service: Optional['ManualPaymentService'] = None
+    ):
         self.db = db
         self.asset_service = asset_service
+        self.manual_payment_service = manual_payment_service
         self.approval_repo = ApprovalRepository(self.db)
 
     def create_request(self, request_in: schemas.ApprovalRequestCreate, requester: User, tenant_id: uuid.UUID) -> schemas.ApprovalRequestRead:
@@ -56,18 +63,27 @@ class ApprovalService:
         """
         (Método interno) Llama al servicio correspondiente para ejecutar la acción aprobada.
         """
-        # Importación diferida para romper el ciclo
+        # Importaciones diferidas para romper ciclos
         from app.assets.service import AssetService
+        from app.payments.service_manual import ManualPaymentService
 
         if request.action == "DELETE_ASSET":
             if not self.asset_service:
                 raise RuntimeError("AssetService no está disponible para ejecutar la acción.")
             
-            # Aquí ya podemos usar AssetService porque lo importamos localmente
             if isinstance(self.asset_service, AssetService):
                 self.asset_service._execute_delete_asset(request.entity_id, request.tenant_id)
             else:
-                # Fallback por si la inyección falló de alguna manera extraña
-                raise RuntimeError("El servicio inyectado no es una instancia válida.")
+                raise RuntimeError("El servicio inyectado no es una instancia válida de AssetService.")
+        
+        elif request.action == "APPROVE_MANUAL_PAYMENT":
+            if not self.manual_payment_service:
+                raise RuntimeError("ManualPaymentService no está disponible para ejecutar la acción.")
+            
+            if isinstance(self.manual_payment_service, ManualPaymentService):
+                self.manual_payment_service._execute_approve_payment(request.entity_id)
+            else:
+                raise RuntimeError("El servicio inyectado no es una instancia válida de ManualPaymentService.")
+
         else:
             pass

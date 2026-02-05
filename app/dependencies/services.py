@@ -29,7 +29,8 @@ from app.configuration.service import ConfigurationService
 from app.alarming.service import AlarmingService
 from app.notifications.service import NotificationService
 from app.media.service import MediaService
-
+from app.payments.service_manual import ManualPaymentService
+from app.payments.service_online import OnlinePaymentService # Importar servicio online
 
 # --- Service Injectors for Astruxa Modules ---
 
@@ -49,61 +50,48 @@ def get_media_service(db: Session = Depends(get_db)) -> MediaService:
 def get_notification_service(db: Session = Depends(get_db)) -> NotificationService:
     return NotificationService(db)
 
-def get_maintenance_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> MaintenanceService:
-    return MaintenanceService(db=db, audit_service=audit_service)
-
 def get_alarming_service(
     db: Session = Depends(get_db), 
     notification_service: NotificationService = Depends(get_notification_service), 
     audit_service: AuditService = Depends(get_audit_service)
 ) -> AlarmingService:
     asset_repo = AssetRepository(db)
-    return AlarmingService(
-        db=db, 
-        notification_service=notification_service, 
-        asset_repo=asset_repo, 
-        audit_service=audit_service,
-        maintenance_service=maintenance_service
-    )
+    return AlarmingService(db=db, notification_service=notification_service, asset_repo=asset_repo, audit_service=audit_service)
 
 def get_role_service(db: Session = Depends(get_db)) -> RoleService:
     return RoleService(db)
+
+# --- Inyectores con Dependencias Circulares ---
+
+def get_manual_payment_service(db: Session = Depends(get_db)) -> ManualPaymentService:
+    return ManualPaymentService(db, approval_service=None)
+
+def get_online_payment_service(db: Session = Depends(get_db)) -> OnlinePaymentService:
+    return OnlinePaymentService(db)
 
 def get_asset_service(
     db: Session = Depends(get_db), 
     audit_service: AuditService = Depends(get_audit_service)
 ) -> AssetService:
-    approval_service = ApprovalService(db, asset_service=None)
-    return AssetService(db=db, audit_service=audit_service, approval_service=approval_service)
+    return AssetService(db=db, audit_service=audit_service, approval_service=None)
 
 def get_approval_service(
     db: Session = Depends(get_db),
-    asset_service: AssetService = Depends(get_asset_service)
+    asset_service: AssetService = Depends(get_asset_service),
+    manual_payment_service: ManualPaymentService = Depends(get_manual_payment_service)
 ) -> ApprovalService:
-    approval_service = ApprovalService(db, asset_service=asset_service)
+    approval_service = ApprovalService(db, asset_service=asset_service, manual_payment_service=manual_payment_service)
     asset_service.approval_service = approval_service
+    manual_payment_service.approval_service = approval_service
     return approval_service
 
-def get_state_detector(request: Request) -> StateDetector:
-    """
-    Retrieves the singleton instance of StateDetector from the app state.
-    """
-    return request.app.state.state_detector
+# ---------------------------------------------
 
 def get_telemetry_service(
-    request: Request,
     db: Session = Depends(get_db), 
-    audit_service: AuditService = Depends(get_audit_service),
-    alarming_service: AlarmingService = Depends(get_alarming_service)
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> TelemetryService:
-    # Inject the singleton StateDetector into the TelemetryService
-    state_detector = request.app.state.state_detector
-    return TelemetryService(
-        db=db, 
-        audit_service=audit_service, 
-        alarming_service=alarming_service,
-        state_detector=state_detector
-    )
+    return TelemetryService(db=db, audit_service=audit_service)
 
 def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
     return ProcurementService(db)
@@ -113,21 +101,18 @@ def get_maintenance_service(db: Session = Depends(get_db), audit_service: AuditS
 
 def get_core_engine_service(
     db: Session = Depends(get_db), 
-    telemetry_service: TelemetryService = Depends(get_telemetry_service), # Inyectar TelemetryService
-    audit_service: AuditService = Depends(get_audit_service) # Inyectar AuditService
+    telemetry_service: TelemetryService = Depends(get_telemetry_service),
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> CoreEngineService:
     return CoreEngineService(db=db, telemetry_service=telemetry_service, audit_service=audit_service)
 
-def get_sector_service(db: Session = Depends(get_db)) -> SectorService:
-    return SectorService(db)
+def get_sector_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> SectorService:
+    return SectorService(db=db, audit_service=audit_service)
 
-def get_configuration_service(db: Session = Depends(get_db)) -> ConfigurationService:
-    return ConfigurationService(db)
+def get_configuration_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> ConfigurationService:
+    return ConfigurationService(db=db, audit_service=audit_service)
 
-def get_reporting_service(
-    state_detector: StateDetector = Depends(get_state_detector)
-) -> ReportingService:
-    return ReportingService(state_detector=state_detector)
-
-def get_stoppage_service(db: Session = Depends(get_db)) -> StoppageService:
-    return StoppageService(db)
+def get_limiter_key(request: Request) -> str:
+    if 'tenant_id' in request.scope:
+        return str(request.scope['tenant_id'])
+    return request.client.host

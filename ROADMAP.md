@@ -38,7 +38,7 @@ Se ha completado la refactorización del backend a una arquitectura Multi-Tenant
 - **Tareas:**
   - [x] Crear dependencia `require_permission(permission_name: str)`.
   - [x] Reemplazar `Depends(get_current_admin_user)` con el nuevo sistema en todos los endpoints.
-  - [ ] Actualizar el script de Seeding para crear permisos y asignarlos a roles por defecto.
+  - [x] Actualizar el script de Seeding para crear permisos y asignarlos a roles por defecto.
 
 ---
 
@@ -49,13 +49,17 @@ Se ha completado la refactorización del backend a una arquitectura Multi-Tenant
 ### Prioridad 4: Modularización por Monetización (Feature Flags)
 - **Descripción:** Implementar la lógica de negocio de los planes (Bueno, Mejor, Excelente) para justificar diferentes precios.
 - **Tareas:**
-  - [ ] Proteger todos los routers de módulos con la dependencia `require_feature`.
-  - [ ] Implementar lógica `check_limit` en los servicios (ej: límite de usuarios o activos).
+  - [x] Proteger todos los routers de módulos con la dependencia `require_feature`.
+  - [x] Implementar lógica `check_limit` en los servicios (ej: límite de usuarios o activos).
 
 ### Prioridad 5: Sistema de Pagos y Auto-Suscripción
 - **Descripción:** Permitir que los clientes se registren y paguen por sí mismos.
 - **Tareas:**
-  - [ ] **Sistema de Pagos Flexible:** Implementar pasarelas online (Stripe/PayPal) y flujo de "Voucher" offline.
+  - [ ] **Sistema de Pagos Flexible:**
+    - [ ] **Interfaz de Pasarela:** Definir un contrato común para todas las pasarelas.
+    - [ ] **Implementación de PayPal:** Integrar con la pasarela de PayPal.
+    - [ ] **Implementación de Pasarela Configurable:** Crear una pasarela genérica.
+    - [ ] **Flujo de Pago Manual (Transferencia):** Implementar un sistema para que los clientes suban comprobantes de pago y los administradores los aprueben.
   - [ ] **Portal de Auto-Suscripción:** Crear flujo de registro público y "provisioning" automático de tenants.
 
 ### Prioridad 6: Portal de Gestión de Cuenta (Customer Portal)
@@ -92,4 +96,4 @@ Se ha completado la refactorización del backend a una arquitectura Multi-Tenant
 - **Tareas:**
   - [ ] **Arquitectura Orientada a Eventos (EDA):** Desacoplar servicios con un Message Broker.
   - [ ] **Gestión del Ciclo de Vida de Datos (ILM):** Políticas para archivar datos de telemetría antiguos.
-  - [ ] **Migración a Kubernetes (K8s)::** Plan para mover la infraestructura de producción a K8s.
+  - [ ] **Migración a Kubernetes (K8s):** Plan para mover la infraestructura de producción a K8s.

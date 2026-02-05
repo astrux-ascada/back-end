@@ -8,7 +8,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, status, HTTPException
 
-from app.alarming.schemas import AlarmRead
+from app.alarming import schemas # Importar schemas
 from app.alarming.service import AlarmingService
 from app.dependencies.services import get_alarming_service
 from app.dependencies.tenant import get_tenant_id
@@ -62,14 +62,14 @@ def delete_alarm_rule(
 
 # --- Endpoints para Alarmas Activas ---
 
-@router.get("/alarms/active", response_model=List[schemas.Alarm], dependencies=[Depends(require_permission("alarm:read"))])
+@router.get("/alarms/active", response_model=List[schemas.AlarmRead], dependencies=[Depends(require_permission("alarm:read"))])
 def get_active_alarms(
     alarming_service: AlarmingService = Depends(get_alarming_service),
     tenant_id: uuid.UUID = Depends(get_tenant_id),
 ):
     return alarming_service.get_active_alarms(tenant_id)
 
-@router.post("/alarms/{alarm_id}/acknowledge", response_model=schemas.Alarm, dependencies=[Depends(require_permission("alarm:acknowledge"))])
+@router.post("/alarms/{alarm_id}/acknowledge", response_model=schemas.AlarmRead, dependencies=[Depends(require_permission("alarm:acknowledge"))])
 def acknowledge_alarm(
     alarm_id: uuid.UUID,
     alarming_service: AlarmingService = Depends(get_alarming_service),

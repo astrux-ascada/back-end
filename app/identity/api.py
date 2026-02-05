@@ -13,6 +13,7 @@ from app.dependencies.auth import get_current_token_payload, get_current_active_
 from app.dependencies.services import get_auth_service, get_audit_service
 from app.dependencies.tenant import get_tenant_id
 from app.dependencies.permissions import require_permission
+from app.dependencies.limits import check_limit # Importar check_limit
 from app.identity.auth_service import AuthService
 from app.auditing.service import AuditService
 from app.identity.models import User
@@ -99,7 +100,15 @@ def verify_tfa_token(token_data: TfaToken, current_user: User = Depends(get_curr
 
 # --- Endpoints de Administración ---
 
-@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=TokenWithUser, dependencies=[Depends(require_permission("user:create"))])
+@router.post(
+    "/register", 
+    status_code=status.HTTP_201_CREATED, 
+    response_model=TokenWithUser, 
+    dependencies=[
+        Depends(require_permission("user:create")),
+        Depends(check_limit("users")) # Aplicar el límite de usuarios
+    ]
+)
 @limiter.limit("5/minute")
 def register_user(
     request: Request, 

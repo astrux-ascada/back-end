@@ -2,8 +2,16 @@
 """
 Script para poblar la base de datos con datos maestros para el modelo SaaS.
 """
+import sys
+import os
 import asyncio
 import logging
+from datetime import datetime, timedelta
+
+# --- Añadir el directorio raíz del proyecto al PYTHONPATH ---
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# ---------------------------------------------------------
+
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
@@ -11,9 +19,7 @@ from app.core.config import settings
 from app.core import permissions as p
 from app.identity.models.saas import Plan, Partner, Tenant, Subscription
 from app.identity.models import User, Role, Permission
-from app.identity.auth_service import AuthService
-from app.identity.tfa_service import TfaService
-from app.core.security import get_password_hash
+from app.core.security import hash_password # Corregir el nombre de la importación
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -80,7 +86,7 @@ async def seed_data(db: Session):
     if not super_admin_user:
         super_admin_user = User(
             email=settings.FIRST_SUPERUSER_EMAIL,
-            hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
+            hashed_password=hash_password(settings.FIRST_SUPERUSER_PASSWORD), # Usar la función correcta
             name="Global Super Admin",
             is_active=True,
             tenant_id=None
@@ -125,7 +131,7 @@ async def seed_data(db: Session):
         # Crear usuario admin para el tenant
         demo_admin_user = User(
             email="admin@demo.com",
-            hashed_password=get_password_hash("demo_password"),
+            hashed_password=hash_password("demo_password"), # Usar la función correcta
             name="Demo Admin",
             is_active=True,
             tenant_id=demo_tenant.id
