@@ -45,8 +45,8 @@ def create_access_token(user: User) -> Tuple[str, str]:
     )
     jti = str(uuid.uuid4())
     
-    # Comprobar si el usuario tiene el rol de 'admin'
-    is_admin = any(role.name.lower() == 'admin' for role in user.roles)
+    # Comprobar si el usuario tiene el rol de Super Admin
+    is_admin = any(role.name == settings.SUPER_ADMIN_ROLE_NAME for role in user.roles)
     
     token_payload = {
         "sub": str(user.id),

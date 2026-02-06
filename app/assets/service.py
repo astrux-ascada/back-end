@@ -75,7 +75,6 @@ class AssetService:
         self.db.commit()
 
         # Crear la solicitud de aprobación
-        # Importar ApprovalRequestCreate localmente o usar el módulo completo si es necesario
         from app.auditing.schemas import ApprovalRequestCreate
         
         approval_request_in = ApprovalRequestCreate(
@@ -90,7 +89,7 @@ class AssetService:
         self.audit_service.log_operation(user, "REQUEST_DELETE_ASSET", db_asset)
         return approval_request
 
-    def _execute_delete_asset(self, asset_id: uuid.UUID, tenant_id: uuid.UUID) -> models.Asset:
+    def _execute_delete_asset(self, asset_id: uuid.UUID, tenant_id: uuid.UUID, approver: User) -> models.Asset:
         """
         (Método interno) Ejecuta el borrado lógico del activo.
         Este método es llamado por el ApprovalService.
@@ -102,4 +101,8 @@ class AssetService:
         db_asset.status = "decommissioned"
         self.db.commit()
         self.db.refresh(db_asset)
+        
+        # Log de auditoría para la ejecución del borrado
+        self.audit_service.log_operation(user=approver, action="EXECUTE_DELETE_ASSET", entity=db_asset)
+
         return db_asset

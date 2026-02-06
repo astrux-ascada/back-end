@@ -54,12 +54,12 @@ class ApprovalService:
             raise ValueError("Rejection reason is required when rejecting a request.")
 
         if new_status == ApprovalStatus.APPROVED:
-            self._execute_approved_action(request)
+            self._execute_approved_action(request, approver)
 
         updated_request = self.approval_repo.update_status(request, new_status, approver.id, decision.rejection_reason)
         return updated_request
 
-    def _execute_approved_action(self, request: models.ApprovalRequest):
+    def _execute_approved_action(self, request: models.ApprovalRequest, approver: User):
         """
         (Método interno) Llama al servicio correspondiente para ejecutar la acción aprobada.
         """
@@ -72,7 +72,7 @@ class ApprovalService:
                 raise RuntimeError("AssetService no está disponible para ejecutar la acción.")
             
             if isinstance(self.asset_service, AssetService):
-                self.asset_service._execute_delete_asset(request.entity_id, request.tenant_id)
+                self.asset_service._execute_delete_asset(request.entity_id, request.tenant_id, approver)
             else:
                 raise RuntimeError("El servicio inyectado no es una instancia válida de AssetService.")
         
@@ -81,7 +81,8 @@ class ApprovalService:
                 raise RuntimeError("ManualPaymentService no está disponible para ejecutar la acción.")
             
             if isinstance(self.manual_payment_service, ManualPaymentService):
-                self.manual_payment_service._execute_approve_payment(request.entity_id)
+                # Asumiendo que este método también necesita el approver para auditoría
+                self.manual_payment_service._execute_approve_payment(request.entity_id, approver)
             else:
                 raise RuntimeError("El servicio inyectado no es una instancia válida de ManualPaymentService.")
 
