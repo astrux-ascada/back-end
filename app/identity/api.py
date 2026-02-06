@@ -7,17 +7,18 @@ import uuid
 from typing import Dict, Any, List
 
 from fastapi import APIRouter, Depends, Request, status, Response, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.limiter import limiter
 from app.dependencies.auth import get_current_token_payload, get_current_active_user
 from app.dependencies.services import get_auth_service, get_audit_service
 from app.dependencies.tenant import get_tenant_id
 from app.dependencies.permissions import require_permission
-from app.dependencies.limits import check_limit # Importar check_limit
+from app.dependencies.limits import check_limit
 from app.identity.auth_service import AuthService
 from app.auditing.service import AuditService
 from app.identity.models import User
-from app.identity.schemas import UserCreate, UserLogin, TokenWithUser, UserRead, TfaToken, UserUpdate
+from app.identity.schemas import UserCreate, TokenWithUser, UserRead, TfaToken, UserUpdate
 
 logger = logging.getLogger("app.identity.api")
 
@@ -28,8 +29,13 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/login", response_model=TokenWithUser)
 @limiter.limit("10/minute")
-def login_for_access_token(request: Request, form_data: UserLogin, auth_service: AuthService = Depends(get_auth_service)):
-    user = auth_service.login_user(email=form_data.email, password=form_data.password)
+def login_for_access_token(
+    request: Request, 
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    # El formulario OAuth2 usa 'username', lo mapeamos a nuestro campo 'email'
+    user = auth_service.login_user(email=form_data.username, password=form_data.password)
     access_token = auth_service.create_user_session(user)
     return TokenWithUser(access_token=access_token, user=user)
 

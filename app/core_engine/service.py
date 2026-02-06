@@ -4,7 +4,7 @@ Capa de Servicio para el Core Engine.
 """
 import logging
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from sqlalchemy.orm import Session
 
@@ -59,34 +59,35 @@ class CoreEngineService:
         self.audit_service.log_operation(user, "DELETE_DATA_SOURCE", deleted_ds)
         return deleted_ds
 
-    def start_connector(self, data_source: models.DataSource):
+    async def start_connector(self, data_source: models.DataSource):
         """Inicia un conector para una fuente de datos específica."""
         if data_source.protocol == "modbus_tcp":
-            connector = ModbusConnector(data_source.connection_params, self.telemetry_service)
+            # CORREGIDO: Pasamos el objeto data_source y el método de callback correcto
+            connector = ModbusConnector(data_source, self.telemetry_service.ingest_bulk_readings)
             self.active_connectors[data_source.id] = connector
-            connector.start()
+            await connector.start()
             logger.info(f"Conector Modbus TCP iniciado para {data_source.name}")
         else:
             logger.warning(f"Protocolo {data_source.protocol} no soportado para iniciar conector.")
 
-    def stop_connector(self, data_source_id: uuid.UUID):
+    async def stop_connector(self, data_source_id: uuid.UUID):
         """Detiene un conector activo."""
         connector = self.active_connectors.pop(data_source_id, None)
         if connector:
-            connector.stop()
+            await connector.stop()
             logger.info(f"Conector detenido para {data_source_id}")
 
-    def start_all_connectors(self):
+    async def start_all_connectors(self):
         """Inicia conectores para todas las fuentes de datos activas en la BD."""
         logger.info("Iniciando todos los conectores de datos activos...")
         active_data_sources = self.db.query(models.DataSource).filter(models.DataSource.is_active == True).all()
         for ds in active_data_sources:
-            self.start_connector(ds)
+            await self.start_connector(ds)
         logger.info(f"{len(self.active_connectors)} conectores iniciados.")
 
-    def stop_all_connectors(self):
+    async def stop_all_connectors(self):
         """Detiene todos los conectores activos."""
         logger.info("Deteniendo todos los conectores de datos activos...")
         for ds_id in list(self.active_connectors.keys()):
-            self.stop_connector(ds_id)
+            await self.stop_connector(ds_id)
         logger.info("Todos los conectores han sido detenidos.")

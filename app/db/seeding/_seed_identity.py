@@ -1,85 +1,48 @@
 # /app/db/seeding/_seed_identity.py
 """
-Script para sembrar la base de datos con datos iniciales de Identidad (Roles y Usuarios).
+Seeder para usuarios y roles adicionales del tenant de demostración.
 """
 import logging
 from sqlalchemy.orm import Session
-from app.core.config import settings
-from app.identity.models import Role, User
-from app.identity.schemas import UserCreate
-from app.identity.repository import UserRepository
+
+from app.identity.models import User, Role
+from app.core.security import hash_password
+from app.core import permissions as p
 
 logger = logging.getLogger(__name__)
 
-def seed_identity(db: Session) -> None:
-    """Crea roles y usuarios de ejemplo si no existen."""
-    logger.info("Iniciando el sembrado de datos de Identidad...")
-
-    # --- 1. Crear Roles Estandarizados ---
-    roles_to_create = {
-        "SUPERUSER": "Acceso total a todas las funcionalidades.",
-        "ADMINISTRATOR": "Acceso administrativo a la mayoría de funcionalidades.",
-        "MAINTENANCE_MANAGER": "Gestiona órdenes de trabajo, planes y técnicos.",
-        "TECHNICIAN": "Ejecuta órdenes de trabajo de mantenimiento.",
-        "VIEWER": "Acceso de solo lectura a la información operativa."
-    }
+async def seed_identity(db: Session, context: dict):
+    logger.info("--- [2/9] Poblando Identidad (Usuarios y Roles) ---")
     
-    created_roles = {}
-    for role_name, role_desc in roles_to_create.items():
-        role = db.query(Role).filter(Role.name == role_name).first()
-        if not role:
-            role = Role(name=role_name, description=role_desc)
-            db.add(role)
-            logger.info(f"Creando rol: {role_name}")
-        created_roles[role_name] = role
-    db.commit()
-    
-    # Refrescar para obtener IDs
-    for name, role in created_roles.items():
-        if not role.id:
-            created_roles[name] = db.query(Role).filter(Role.name == name).first()
+    demo_tenant = context["demo_tenant"]
+    permissions_map = context["permissions_map"]
 
-    # --- 2. Crear Usuarios de Ejemplo ---
-    user_repo = UserRepository(db)
-    users_to_create = [
-        {
-            "email": settings.FIRST_SUPERUSER_EMAIL,
-            "password": settings.FIRST_SUPERUSER_PASSWORD,
-            "name": "Super User",
-            "role_name": "SUPERUSER"
-        },
-        {
-            "email": "manager@astruxa.com",
-            "password": "manager123",
-            "name": "Manager de Mantenimiento",
-            "role_name": "MAINTENANCE_MANAGER"
-        },
-        {
-            "email": "technician@astruxa.com",
-            "password": "tech1234", # CORREGIDO: Contraseña con 8 caracteres
-            "name": "Técnico de Campo",
-            "role_name": "TECHNICIAN"
-        },
-        {
-            "email": "viewer@astruxa.com",
-            "password": "viewer123",
-            "name": "Gerente de Planta",
-            "role_name": "VIEWER"
-        }
-    ]
+    # 1. Rol de Operador
+    operator_role = db.query(Role).filter(Role.name == "OPERATOR", Role.tenant_id == demo_tenant.id).first()
+    if not operator_role:
+        operator_role = Role(name="OPERATOR", description="Operador de planta", tenant_id=demo_tenant.id)
+        # Asignar permisos básicos
+        operator_perms = [
+            p.ASSET_READ, p.WORK_ORDER_READ, p.WORK_ORDER_UPDATE, 
+            p.ALARM_READ, p.ALARM_ACKNOWLEDGE
+        ]
+        operator_role.permissions = [permissions_map[perm] for perm in operator_perms if perm in permissions_map]
+        db.add(operator_role)
+        db.commit()
 
-    for user_data in users_to_create:
-        if not db.query(User).filter(User.email == user_data["email"]).first():
-            role_name = user_data.pop("role_name")
-            role = created_roles.get(role_name)
-            if role:
-                user_in = UserCreate(
-                    email=user_data["email"],
-                    password=user_data["password"],
-                    name=user_data["name"],
-                    role_ids=[role.id]
-                )
-                user_repo.create(user_in=user_in)
-                logger.info(f"Creando usuario: {user_data['email']} con rol {role_name}")
+    # 2. Usuario Operador
+    operator_user = db.query(User).filter(User.email == "operator@demo.com").first()
+    if not operator_user:
+        operator_user = User(
+            email="operator@demo.com",
+            hashed_password=hash_password("demo_password"),
+            name="Juan Operador",
+            is_active=True,
+            tenant_id=demo_tenant.id
+        )
+        operator_user.roles.append(operator_role)
+        db.add(operator_user)
+        db.commit()
 
-    logger.info("Sembrado de datos de Identidad completado.")
+    # Guardar en el contexto para los siguientes seeders
+    context["operator_user"] = operator_user
