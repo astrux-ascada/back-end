@@ -16,10 +16,13 @@ from app.identity.auth_service import AuthService
 from app.identity.role_service import RoleService
 from app.identity.tfa_service import TfaService
 from app.identity.service_saas import SaasService
+from app.identity.service_usage import UsageService
+from app.identity.service_partner import PartnerService
 from app.assets.service import AssetService
 from app.assets.repository import AssetRepository
 from app.telemetry.service import TelemetryService
 from app.procurement.service import ProcurementService
+from app.procurement.service_evaluation import EvaluationService # Importar EvaluationService
 from app.maintenance.service import MaintenanceService
 from app.core_engine.service import CoreEngineService
 from app.sectors.service import SectorService
@@ -29,8 +32,9 @@ from app.configuration.service import ConfigurationService
 from app.alarming.service import AlarmingService
 from app.notifications.service import NotificationService
 from app.media.service import MediaService
+from app.payments.service import PaymentService
 from app.payments.service_manual import ManualPaymentService
-from app.payments.service_online import OnlinePaymentService # Importar servicio online
+from app.payments.service_online import OnlinePaymentService
 
 # --- Service Injectors for Astruxa Modules ---
 
@@ -40,6 +44,12 @@ def get_auth_service(db: Session = Depends(get_db), redis_client: redis.Redis = 
 
 def get_saas_service(db: Session = Depends(get_db), auth_service: AuthService = Depends(get_auth_service)) -> SaasService:
     return SaasService(db=db, auth_service=auth_service)
+
+def get_usage_service(db: Session = Depends(get_db)) -> UsageService:
+    return UsageService(db=db)
+
+def get_partner_service(db: Session = Depends(get_db)) -> PartnerService:
+    return PartnerService(db=db)
 
 def get_audit_service(db: Session = Depends(get_db)) -> AuditService:
     return AuditService(db)
@@ -61,7 +71,9 @@ def get_alarming_service(
 def get_role_service(db: Session = Depends(get_db)) -> RoleService:
     return RoleService(db)
 
-# --- Inyectores con Dependencias Circulares ---
+# --- Payment Services ---
+def get_payment_service(db: Session = Depends(get_db)) -> PaymentService:
+    return PaymentService(db)
 
 def get_manual_payment_service(db: Session = Depends(get_db)) -> ManualPaymentService:
     return ManualPaymentService(db, approval_service=None)
@@ -69,6 +81,14 @@ def get_manual_payment_service(db: Session = Depends(get_db)) -> ManualPaymentSe
 def get_online_payment_service(db: Session = Depends(get_db)) -> OnlinePaymentService:
     return OnlinePaymentService(db)
 
+# --- Procurement Services ---
+def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
+    return ProcurementService(db)
+
+def get_evaluation_service(db: Session = Depends(get_db)) -> EvaluationService:
+    return EvaluationService(db)
+
+# --- Inyectores con Dependencias Circulares ---
 def get_asset_service(
     db: Session = Depends(get_db), 
     audit_service: AuditService = Depends(get_audit_service)
@@ -92,9 +112,6 @@ def get_telemetry_service(
     audit_service: AuditService = Depends(get_audit_service)
 ) -> TelemetryService:
     return TelemetryService(db=db, audit_service=audit_service)
-
-def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService:
-    return ProcurementService(db)
 
 def get_maintenance_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> MaintenanceService:
     return MaintenanceService(db=db, audit_service=audit_service)

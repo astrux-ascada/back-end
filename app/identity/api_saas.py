@@ -6,13 +6,17 @@ import uuid
 from typing import List
 from fastapi import APIRouter, Depends, status, HTTPException
 
-from app.dependencies.permissions import require_permission # Importar el nuevo sistema
-from app.dependencies.services import get_saas_service
+from app.dependencies.permissions import require_permission
+from app.dependencies.services import get_saas_service, get_usage_service
+from app.dependencies.tenant import get_tenant_id
 from app.identity.service_saas import SaasService
+from app.identity.service_usage import UsageService
 from app.identity.schemas_saas import (
     PlanCreate, PlanUpdate, PlanRead, 
     TenantCreate, TenantRead, 
-    SubscriptionUpdate, SubscriptionRead
+    SubscriptionUpdate, SubscriptionRead,
+    PublicRegistrationRequest,
+    UsageReport # Importar el nuevo esquema
 )
 
 router = APIRouter(
@@ -20,7 +24,29 @@ router = APIRouter(
     tags=["SaaS Management"]
 )
 
-# --- Endpoints para Planes ---
+# --- Endpoints Públicos (Auto-Suscripción) ---
+
+@router.post("/public/register", response_model=TenantRead, status_code=status.HTTP_201_CREATED)
+def public_registration(
+    registration_in: PublicRegistrationRequest,
+    saas_service: SaasService = Depends(get_saas_service)
+):
+    try:
+        return saas_service.public_registration(registration_in)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+# --- Endpoints para el Portal de Cliente ---
+
+@router.get("/usage", response_model=UsageReport, dependencies=[Depends(require_permission("tenant:read"))])
+def get_tenant_usage(
+    usage_service: UsageService = Depends(get_usage_service),
+    tenant_id: uuid.UUID = Depends(get_tenant_id)
+):
+    """Devuelve un reporte del uso de recursos actual del tenant."""
+    return usage_service.get_usage_report(tenant_id)
+
+# --- Endpoints para Planes (Gestión de Super Admin) ---
 
 @router.post("/plans", response_model=PlanRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("plan:create"))])
 def create_plan(plan_in: PlanCreate, saas_service: SaasService = Depends(get_saas_service)):
@@ -39,7 +65,7 @@ def update_plan(plan_id: uuid.UUID, plan_in: PlanUpdate, saas_service: SaasServi
     return saas_service.update_plan(plan_id, plan_in)
 
 
-# --- Endpoints para Tenants ---
+# --- Endpoints para Tenants (Gestión de Super Admin) ---
 
 @router.post("/tenants", response_model=TenantRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("tenant:create"))])
 def create_tenant(tenant_in: TenantCreate, saas_service: SaasService = Depends(get_saas_service)):
@@ -53,7 +79,7 @@ def get_tenant(tenant_id: uuid.UUID, saas_service: SaasService = Depends(get_saa
     return saas_service.get_tenant(tenant_id)
 
 
-# --- Endpoints para Suscripciones ---
+# --- Endpoints para Suscripciones (Gestión de Super Admin) ---
 
 @router.put("/tenants/{tenant_id}/subscription", response_model=SubscriptionRead, dependencies=[Depends(require_permission("subscription:update"))])
 def update_subscription(

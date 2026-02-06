@@ -68,3 +68,21 @@ class MaintenanceService:
         
         self.audit_service.log_operation(user, "ASSIGN_PROVIDER_TO_WORK_ORDER", db_work_order, details={"provider_id": str(assignment_in.provider_id)})
         return db_work_order
+
+    def evaluate_work_order(self, work_order_id: uuid.UUID, evaluation_in: schemas.WorkOrderEvaluation, tenant_id: uuid.UUID, user: User) -> models.WorkOrder:
+        """
+        Añade una calificación y feedback a una orden de trabajo completada.
+        """
+        db_work_order = self.get_work_order(work_order_id, tenant_id)
+
+        if db_work_order.status != models.WorkOrderStatus.COMPLETED:
+            raise ConflictException("Solo se pueden evaluar órdenes de trabajo completadas.")
+
+        if db_work_order.rating is not None:
+            raise ConflictException("Esta orden de trabajo ya ha sido evaluada.")
+
+        # Actualizar el repositorio para guardar la evaluación
+        evaluated_work_order = self.maintenance_repo.update_evaluation(db_work_order, evaluation_in.rating, evaluation_in.feedback)
+        
+        self.audit_service.log_operation(user, "EVALUATE_WORK_ORDER", evaluated_work_order, details=evaluation_in.model_dump())
+        return evaluated_work_order

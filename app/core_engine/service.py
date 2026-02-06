@@ -26,10 +26,11 @@ class CoreEngineService:
         self.telemetry_service = telemetry_service
         self.audit_service = audit_service
         self.core_engine_repo = CoreEngineRepository(self.db)
-        self.active_connectors = {} # Diccionario para mantener conectores activos
+        self.active_connectors: Dict[uuid.UUID, ModbusConnector] = {}
 
     def create_data_source(self, ds_in: schemas.DataSourceCreate, tenant_id: uuid.UUID, user: User) -> models.DataSource:
-        existing_ds = self.core_engine_repo.get_data_source_by_name(ds_in.name, tenant_id) # Asumiendo que el repo tiene este método
+        # Asumiendo que el repo tiene este método
+        existing_ds = self.core_engine_repo.db.query(models.DataSource).filter_by(name=ds_in.name, tenant_id=tenant_id).first()
         if existing_ds:
             raise ConflictException(f"Ya existe una fuente de datos con el nombre '{ds_in.name}'.")
         
@@ -74,3 +75,18 @@ class CoreEngineService:
         if connector:
             connector.stop()
             logger.info(f"Conector detenido para {data_source_id}")
+
+    def start_all_connectors(self):
+        """Inicia conectores para todas las fuentes de datos activas en la BD."""
+        logger.info("Iniciando todos los conectores de datos activos...")
+        active_data_sources = self.db.query(models.DataSource).filter(models.DataSource.is_active == True).all()
+        for ds in active_data_sources:
+            self.start_connector(ds)
+        logger.info(f"{len(self.active_connectors)} conectores iniciados.")
+
+    def stop_all_connectors(self):
+        """Detiene todos los conectores activos."""
+        logger.info("Deteniendo todos los conectores de datos activos...")
+        for ds_id in list(self.active_connectors.keys()):
+            self.stop_connector(ds_id)
+        logger.info("Todos los conectores han sido detenidos.")

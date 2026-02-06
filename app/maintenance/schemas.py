@@ -21,7 +21,7 @@ class WorkOrderBase(BaseModel):
     scheduled_end_date: Optional[datetime] = None
 
 class WorkOrderCreate(WorkOrderBase):
-    pass # Eliminado el campo 'tasks' que no estaba implementado
+    pass
 
 class WorkOrderUpdate(BaseModel):
     title: Optional[str] = None
@@ -39,12 +39,21 @@ class WorkOrderProviderAssignment(BaseModel):
     notes: Optional[str] = Field(None, description="Notas adicionales para el proveedor.")
     estimated_cost: Optional[float] = Field(None, ge=0, description="Costo estimado del servicio externo.")
 
+class WorkOrderEvaluation(BaseModel):
+    """Esquema para la evaluación de una orden de trabajo completada."""
+    rating: int = Field(..., ge=1, le=5, description="Calificación de la ejecución (1-5).")
+    feedback: Optional[str] = Field(None, description="Comentarios cualitativos sobre la ejecución.")
+
 class WorkOrderRead(WorkOrderBase):
     id: uuid.UUID
     status: WorkOrderStatus
     created_at: datetime
     updated_at: datetime
     closed_at: Optional[datetime]
+    
+    # Campos de evaluación
+    rating: Optional[int] = None
+    feedback: Optional[str] = None
     
     assigned_user_ids: List[uuid.UUID] = []
     assigned_provider_ids: List[uuid.UUID] = []
