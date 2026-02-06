@@ -5,41 +5,26 @@ Servicio de negocio para la autenticación, sesiones y 2FA de usuarios.
 
 import logging
 import uuid
-import redis
 from typing import Dict, List, Optional
+
+import redis
 from sqlalchemy.orm import Session
 
+from app.core import permissions as p
 from app.core.config import settings
-from app.core.exceptions import AuthenticationException, DuplicateRegistrationError, ConflictException, NotFoundException, PermissionDeniedException
+from app.core.error_messages import ErrorMessages
+from app.core.exceptions import AuthenticationException, DuplicateRegistrationError, ConflictException, \
+    NotFoundException, PermissionDeniedException
 from app.core.security import create_access_token, verify_password
 from app.identity.models import User, Role, Permission
-from app.identity.models.saas.tenant import Tenant
 from app.identity.models.saas.subscription import Subscription, SubscriptionStatus
+from app.identity.models.saas.tenant import Tenant
 from app.identity.repository import UserRepository
 from app.identity.schemas import UserCreate, UserUpdate
 from app.identity.tfa_service import TfaService
-from app.core.error_messages import ErrorMessages
-from app.core import permissions as p
 
 logger = logging.getLogger("app.identity.service")
 
-# --- Constantes para Seguridad de Sesión ---
-MAX_LOGIN_ATTEMPTS = 5
-LOCKOUT_DURATION_SECONDS = 900  # 15 minutos
-
-# Permisos por defecto para un Tenant Admin
-DEFAULT_TENANT_ADMIN_PERMISSIONS = [
-    p.ASSET_READ, p.ASSET_CREATE, p.ASSET_UPDATE, p.ASSET_DELETE,
-    p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER,
-    p.PROVIDER_READ, p.PROVIDER_CREATE, p.PROVIDER_UPDATE, p.PROVIDER_DELETE,
-    p.SPARE_PART_READ, p.SPARE_PART_CREATE, p.SPARE_PART_UPDATE, p.SPARE_PART_DELETE,
-    p.ALARM_RULE_READ, p.ALARM_RULE_CREATE, p.ALARM_RULE_UPDATE, p.ALARM_RULE_DELETE,
-    p.ALARM_READ, p.ALARM_ACKNOWLEDGE,
-    p.SECTOR_READ, p.SECTOR_CREATE, p.SECTOR_UPDATE, p.SECTOR_DELETE,
-    p.AUDIT_LOG_READ, p.APPROVAL_READ, p.APPROVAL_DECIDE,
-    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE,
-    p.ROLE_READ, p.ROLE_CREATE, p.ROLE_UPDATE, p.ROLE_DELETE,
-]
 
 class AuthService:
     """Servicio de autenticación, sesión y 2FA para usuarios de Astruxa."""
@@ -58,20 +43,21 @@ class AuthService:
             raise PermissionDeniedException(ErrorMessages.AUTH_USER_LOCKED)
 
         user = self.user_repo.get_by_email(email)
-        
+
         if not user or not user.is_active or not verify_password(password, user.hashed_password):
             current_attempts = self.redis_client.incr(login_attempts_key)
-            self.redis_client.expire(login_attempts_key, LOCKOUT_DURATION_SECONDS)
+            self.redis_client.expire(login_attempts_key, settings.AUTH_LOCKOUT_DURATION_SECONDS)
 
-            if current_attempts >= MAX_LOGIN_ATTEMPTS:
-                self.redis_client.set(lockout_key, "locked", ex=LOCKOUT_DURATION_SECONDS)
-                logger.warning(f"Usuario {email} bloqueado por {LOCKOUT_DURATION_SECONDS}s por demasiados intentos de login.")
+            if current_attempts >= settings.AUTH_MAX_LOGIN_ATTEMPTS:
+                self.redis_client.set(lockout_key, "locked", ex=settings.AUTH_LOCKOUT_DURATION_SECONDS)
+                logger.warning(
+                    f"Usuario {email} bloqueado por {settings.AUTH_LOCKOUT_DURATION_SECONDS}s por demasiados intentos de login.")
                 raise PermissionDeniedException(ErrorMessages.AUTH_USER_LOCKED)
-            
+
             raise AuthenticationException(ErrorMessages.AUTH_INVALID_CREDENTIALS)
-        
+
         self.redis_client.delete(login_attempts_key)
-        
+
         if user.tenant_id:
             subscription = (
                 self.db.query(Subscription)
@@ -81,9 +67,10 @@ class AuthService:
             )
 
             if not subscription or subscription.status in [SubscriptionStatus.CANCELED, SubscriptionStatus.EXPIRED]:
-                logger.warning(f"Login denegado para {user.email}: Suscripción {subscription.status if subscription else 'inexistente'}.")
+                logger.warning(
+                    f"Login denegado para {user.email}: Suscripción {subscription.status if subscription else 'inexistente'}.")
                 raise PermissionDeniedException(ErrorMessages.SUB_TENANT_SUSPENDED)
-            
+
             if subscription.status == SubscriptionStatus.PAST_DUE:
                 logger.warning(f"Login denegado para {user.email}: Suscripción PAST_DUE.")
                 raise PermissionDeniedException(ErrorMessages.SUB_PAYMENT_REQUIRED)
@@ -94,16 +81,16 @@ class AuthService:
         active_session_key = f"active_session:{user.id}"
         old_jti = self.redis_client.get(active_session_key)
         if old_jti:
-            self.redis_client.delete(f"session:{old_jti.decode()}")
-            logger.info(f"Sesión anterior {old_jti.decode()} para el usuario {user.id} invalidada.")
+            self.redis_client.delete(f"session:{str(old_jti)}")
+            logger.info(f"Sesión anterior {old_jti} para el usuario {user.id} invalidada.")
 
         access_token, jti = create_access_token(user)
         session_key = f"session:{jti}"
         session_duration_seconds = settings.JWT_EXPIRE_MINUTES * 60
-        
+
         self.redis_client.set(session_key, str(user.id), ex=session_duration_seconds)
         self.redis_client.set(active_session_key, jti, ex=session_duration_seconds)
-        
+
         return access_token
 
     def get_user_by_id(self, user_id: uuid.UUID) -> User:
@@ -147,10 +134,10 @@ class AuthService:
 
     def create_tenant_admin_role(self, tenant_id: uuid.UUID) -> Role:
         """Crea el rol de administrador para un nuevo tenant."""
-        role = Role(name="TENANT_ADMIN", description="Administrador del Tenant", tenant_id=tenant_id)
+        role = Role(name=settings.TENANT_ADMIN_ROLE_NAME, description="Administrador del Tenant", tenant_id=tenant_id)
 
         # Asignar permisos por defecto
-        permissions = self.db.query(Permission).filter(Permission.name.in_(DEFAULT_TENANT_ADMIN_PERMISSIONS)).all()
+        permissions = self.db.query(Permission).filter(Permission.name.in_(p.DEFAULT_TENANT_ADMIN_PERMISSIONS)).all()
         role.permissions = permissions
 
         self.db.add(role)
@@ -161,7 +148,7 @@ class AuthService:
     def logout_user(self, jti: str) -> None:
         user_id = self.redis_client.get(f"session:{jti}")
         if user_id:
-            self.redis_client.delete(f"active_session:{user_id.decode()}")
+            self.redis_client.delete(f"active_session:{user_id}")
         self.redis_client.delete(f"session:{jti}")
 
     def logout_all_users(self, tenant_id: Optional[uuid.UUID] = None) -> int:
@@ -169,11 +156,11 @@ class AuthService:
         active_session_keys = [key for key in self.redis_client.scan_iter("active_session:*")]
         if not session_keys and not active_session_keys:
             return 0
-        
+
         if tenant_id:
             logger.warning("Logout de todas las sesiones por tenant_id no implementado completamente en Redis.")
             return 0
-        
+
         with self.redis_client.pipeline() as pipe:
             for key in session_keys + active_session_keys:
                 pipe.delete(key)

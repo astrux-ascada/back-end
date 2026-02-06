@@ -40,13 +40,20 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 1080  # 18 horas
+    
     FIRST_SUPERUSER_EMAIL: str
     FIRST_SUPERUSER_PASSWORD: str
+    SUPER_ADMIN_ROLE_NAME: str = "GLOBAL_SUPER_ADMIN"
+    TENANT_ADMIN_ROLE_NAME: str = "TENANT_ADMIN"
+
+    # Políticas de Contraseña y Bloqueo
     PASSWORD_MIN_LENGTH: int = 12
     PASSWORD_REQUIRE_UPPERCASE: bool = True
     PASSWORD_REQUIRE_LOWERCASE: bool = True
     PASSWORD_REQUIRE_NUMBERS: bool = True
     PASSWORD_REQUIRE_SPECIAL_CHARS: bool = True
+    AUTH_MAX_LOGIN_ATTEMPTS: int = 5
+    AUTH_LOCKOUT_DURATION_SECONDS: int = 900
 
     # --- Almacenamiento de Archivos ---
     STORAGE_TYPE: str = "local"

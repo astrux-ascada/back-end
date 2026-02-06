@@ -9,13 +9,15 @@ from datetime import datetime, timedelta
 from app.payments import models, schemas
 from app.auditing.approval_service import ApprovalService
 from app.auditing.schemas import ApprovalRequestCreate
+from app.auditing.service import AuditService # Importar AuditService
 from app.identity.models import User
 from app.core.exceptions import NotFoundException
 
 class ManualPaymentService:
-    def __init__(self, db: Session, approval_service: ApprovalService):
+    def __init__(self, db: Session, approval_service: ApprovalService, audit_service: AuditService):
         self.db = db
         self.approval_service = approval_service
+        self.audit_service = audit_service
 
     def create_payment_request(self, payment_in: schemas.ManualPaymentCreate, user: User, tenant_id: uuid.UUID) -> models.PaymentTransaction:
         """
@@ -49,7 +51,7 @@ class ManualPaymentService:
         self.db.refresh(db_transaction)
         return db_transaction
 
-    def _execute_approve_payment(self, transaction_id: uuid.UUID):
+    def _execute_approve_payment(self, transaction_id: uuid.UUID, approver: User):
         """
         (Método interno) Ejecuta la aprobación del pago.
         Llamado por el ApprovalService.
@@ -71,3 +73,6 @@ class ManualPaymentService:
             
         self.db.add(transaction)
         self.db.commit()
+
+        # 3. Registrar en la auditoría
+        self.audit_service.log_operation(user=approver, action="EXECUTE_APPROVE_PAYMENT", entity=transaction)
