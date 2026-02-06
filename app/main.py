@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
     
     # --- Iniciar procesos de background ---
     event_broker.start_listening()
-    core_engine_service.start_all_connectors()
+    await core_engine_service.start_all_connectors()
     
     logger.info("Handler de logs de Astruxa para acciones automáticas activado.")
     logger.info("Motor de comunicación (Core Engine) y Event Broker iniciados.")
@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
     yield
     
     logger.info("Apagando aplicación...")
-    app.state.core_engine_service.stop_all_connectors()
+    await app.state.core_engine_service.stop_all_connectors()
     logger.info("Motor de comunicación (Core Engine) detenido.")
     db.close()
 

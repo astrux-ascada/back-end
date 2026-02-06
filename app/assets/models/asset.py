@@ -20,6 +20,9 @@ class Asset(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # --- Relaciones ---
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant = relationship("Tenant") # No hay back_populates porque Tenant no necesita saber sus assets directamente
+
     asset_type_id = Column(UUID(as_uuid=True), ForeignKey("asset_types.id"), nullable=False)
     asset_type = relationship("AssetType", back_populates="assets")
 
