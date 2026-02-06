@@ -12,8 +12,8 @@ from app.assets.repository import AssetRepository
 
 def map_asset_to_dto(asset: models.Asset, asset_repo: AssetRepository) -> schemas.AssetReadDTO:
     """Mapea un objeto Asset de SQLAlchemy al DTO plano de la API."""
-    # Obtener el ID del padre usando el repositorio
-    parent_type = asset_repo.get_parent_asset_type(asset.asset_type.id)
+    # Obtener el ID del padre usando el repositorio, pasando el tenant_id del activo
+    parent_type = asset_repo.get_parent_asset_type(asset.asset_type.id, asset.tenant_id)
     parent_id = parent_type.id if parent_type else None
 
     # Construir el DTO
@@ -29,5 +29,9 @@ def map_asset_to_dto(asset: models.Asset, asset_repo: AssetRepository) -> schema
         description=asset.asset_type.description,
         type=asset.asset_type.category,
         sector=asset.sector,
-        parent_id=parent_id
+        parent_id=parent_id,
+        # Añadir campos que faltaban en el DTO para que coincida con el test
+        serial_number=asset.serial_number,
+        location=asset.location,
+        asset_type=asset.asset_type
     )

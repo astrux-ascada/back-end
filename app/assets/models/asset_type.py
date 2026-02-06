@@ -7,7 +7,7 @@ Contiene la información reutilizable como el nombre, fabricante y modelo.
 """
 import uuid
 
-from sqlalchemy import Column, String, func, TIMESTAMP
+from sqlalchemy import Column, String, func, TIMESTAMP, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -17,10 +17,16 @@ from app.db.base_class import Base
 class AssetType(Base):
     """Modelo SQLAlchemy para un Tipo de Activo (Catálogo)."""
     __tablename__ = "asset_types"
+    __table_args__ = (
+        UniqueConstraint('name', 'tenant_id', name='_name_tenant_uc'),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant = relationship("Tenant")
 
-    name = Column(String(100), unique=True, index=True, nullable=False)
+    name = Column(String(100), index=True, nullable=False) # Ya no es unique por sí solo
     description = Column(String(255), nullable=True)
     manufacturer = Column(String(100), nullable=True)
     model_number = Column(String(100), nullable=True)
