@@ -1,5 +1,4 @@
 import asyncio
-import sys
 import os
 import sys
 
@@ -7,12 +6,13 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.database import AsyncSessionLocal
-from app.core.security import get_password_hash
+from app.core.security import hash_password
 from sqlalchemy import text
+
 
 async def create_superuser():
     print("🔐 Creando Super Usuario Administrador...")
-    
+
     # --- CONFIGURACIÓN DEL ADMIN ---
     email = "admin@astruxa.com"
     password = "admin123"  # ¡Cámbiala en producción!
@@ -20,7 +20,7 @@ async def create_superuser():
     role = "admin"
     # -------------------------------
 
-    hashed_password = get_password_hash(password)
+    hashed_password = hash_password(password)
 
     async with AsyncSessionLocal() as session:
         try:
@@ -49,7 +49,7 @@ async def create_superuser():
                     """),
                     {"email": email, "name": name, "role": role, "pwd": hashed_password}
                 )
-            
+
             await session.commit()
             print(f"✅ ¡Éxito! Usuario: {email} / Password: {password}")
             print("🚀 Ahora puedes loguearte en el frontend.")
@@ -57,6 +57,7 @@ async def create_superuser():
         except Exception as e:
             print(f"❌ Error: {e}")
             print("💡 Pista: ¿Ya ejecutaste la migración para agregar 'password_hash' a la tabla users?")
+
 
 if __name__ == "__main__":
     asyncio.run(create_superuser())

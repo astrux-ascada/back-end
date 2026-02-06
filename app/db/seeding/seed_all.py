@@ -1,67 +1,68 @@
 # /app/db/seeding/seed_all.py
 """
-Script de siembra maestro para la base de datos de Astruxa.
+Script maestro para poblar la base de datos con TODOS los datos de ejemplo.
 """
-
+import asyncio
 import logging
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-
-# --- Importar todos los modelos para que Alembic los vea ---
-from app.assets.models import *
-from app.identity.models import *
-from app.sectors.models import *
-from app.configuration.models import *
-from app.alarming.models import *
-from app.telemetry.models import *
-from app.core_engine.models import *
-from app.notifications.models import *
-from app.procurement.models import *
-from app.maintenance.models import *
-
-# --- Importar todos los seeders de nuestros módulos ---
-from ._seed_configuration import seed_configuration
-from ._seed_sectors import seed_sectors
-from ._seed_identity import seed_identity
-from ._seed_assets import seed_assets
-from ._seed_core_engine import seed_core_engine
-from ._seed_alarming import seed_alarming
-from ._seed_procurement import seed_procurement
-from ._seed_maintenance import seed_maintenance
+from app.db.seeding.initial_data import seed_initial_data
+from app.db.seeding._seed_identity import seed_identity
+from app.db.seeding._seed_sectors import seed_sectors
+from app.db.seeding._seed_assets import seed_assets
+from app.db.seeding._seed_procurement import seed_procurement
+from app.db.seeding._seed_maintenance import seed_maintenance
+from app.db.seeding._seed_alarming import seed_alarming
+from app.db.seeding._seed_core_engine import seed_core_engine
+from app.db.seeding._seed_configuration import seed_configuration
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-def seed_all(db: Session):
-    """
-    Ejecuta todos los scripts de siembra en el orden correcto.
-    """
-    logger.info("--- Iniciando Proceso de Siembra Maestro para Astruxa ---")
+async def seed_all_data(db: Session):
+    logger.info("--- Iniciando Proceso de Seeding Maestro ---")
     
-    # El orden es crucial para respetar las claves foráneas y las dependencias.
-    seed_configuration(db)
-    seed_sectors(db)
-    seed_identity(db)
-    seed_assets(db)
-    seed_core_engine(db)
-    seed_alarming(db)
-    seed_procurement(db)
-    seed_maintenance(db)
+    # El orden es crucial para respetar las dependencias (ej: crear usuarios antes de asignarles tareas)
     
-    logger.info("--- Proceso de Siembra Maestro Finalizado ---")
+    logger.info("1. Poblando datos iniciales (Planes, Permisos, Super Admin)...")
+    initial_data = await seed_initial_data(db)
+    
+    logger.info("2. Poblando datos de Identidad (Usuarios y Roles de demo)...")
+    await seed_identity(db, initial_data)
+    
+    logger.info("3. Poblando Sectores...")
+    await seed_sectors(db, initial_data)
+    
+    logger.info("4. Poblando Activos...")
+    await seed_assets(db, initial_data)
+    
+    logger.info("5. Poblando datos de Compras (Proveedores, Repuestos)...")
+    await seed_procurement(db, initial_data)
+    
+    logger.info("6. Poblando datos de Mantenimiento (Órdenes de Trabajo)...")
+    await seed_maintenance(db, initial_data)
+    
+    logger.info("7. Poblando datos de Alarmas...")
+    await seed_alarming(db, initial_data)
+    
+    logger.info("8. Poblando Core Engine (Fuentes de Datos)...")
+    await seed_core_engine(db, initial_data)
+    
+    logger.info("9. Poblando Configuración...")
+    await seed_configuration(db, initial_data)
 
+    logger.info("--- Proceso de Seeding Maestro Finalizado con Éxito ---")
+
+async def main():
+    db = SessionLocal()
+    try:
+        await seed_all_data(db)
+    except Exception as e:
+        logger.error(f"Ocurrió un error durante el seeding maestro: {e}", exc_info=True)
+        raise
+    finally:
+        db.close()
 
 if __name__ == "__main__":
-    logger.info("Ejecutando el script de siembra maestro...")
-    db_session = SessionLocal()
-    try:
-        seed_all(db_session)
-        logger.info("Siembra maestra completada con éxito.")
-    except Exception as e:
-        logger.error(f"Ocurrió un error inesperado durante la siembra maestra: {e}", exc_info=True)
-        db_session.rollback()
-    finally:
-        db_session.close()
-    logger.info("Script de siembra maestro finalizado.")
+    asyncio.run(main())
