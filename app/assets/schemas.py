@@ -53,21 +53,25 @@ class AssetStatusUpdate(BaseModel):
 # --- DTO Principal para la API, alineado con `assets-api.md` ---
 
 class AssetReadDTO(BaseModel):
-    id: uuid.UUID = Field(..., alias="uuid")
-    is_active: bool = Field(..., alias="isActive")
-    created_at: datetime = Field(..., alias="createdAt")
-    updated_at: datetime = Field(..., alias="updatedAt")
+    id: uuid.UUID
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
     name: str
     description: Optional[str] = None
-    type: Optional[str] = None
+    type: Optional[str] = None # Este es 'category' del AssetType
     status: str
     properties: Optional[Dict[str, Any]] = None
     sector: Optional[SectorRead] = None
-    parent_id: Optional[uuid.UUID] = Field(None, alias="parentId")
+    parent_id: Optional[uuid.UUID] = None
+    
+    serial_number: Optional[str] = None
+    location: Optional[str] = None
+    asset_type: AssetTypeRead
 
     class Config:
         from_attributes = True
-        populate_by_name = True
+        populate_by_name = False
 
 
 # --- Esquemas para AssetHierarchy ---

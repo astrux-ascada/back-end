@@ -103,8 +103,8 @@ async def seed_initial_data(db: Session):
     if not db.query(Plan).first():
         plans_data = [
             {"code": "FREE", "name": "Free Tier", "price_monthly": 0, "price_yearly": 0, "limits": {"max_users": 1, "max_assets": 5}},
-            {"code": "PRO", "name": "Professional", "price_monthly": 99, "price_yearly": 999, "limits": {"max_users": 10, "max_assets": 100}, "features": {"module_procurement": True}},
-            {"code": "ENTERPRISE", "name": "Enterprise", "price_monthly": 499, "price_yearly": 4999, "limits": {"max_users": -1, "max_assets": -1}, "features": {"module_procurement": True, "api_access": True}},
+            {"code": "PRO", "name": "Professional", "price_monthly": 99, "price_yearly": 999, "limits": {"max_users": 10, "max_assets": 100}, "features": {"module_assets": True, "module_procurement": True}},
+            {"code": "ENTERPRISE", "name": "Enterprise", "price_monthly": 499, "price_yearly": 4999, "limits": {"max_users": -1, "max_assets": -1}, "features": {"module_assets": True, "module_procurement": True, "api_access": True}},
         ]
         for plan_data in plans_data:
             db.add(Plan(**plan_data))
