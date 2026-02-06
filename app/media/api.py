@@ -12,6 +12,7 @@ from app.dependencies.tenant import get_tenant_id
 from app.dependencies.auth import get_current_active_user
 from app.identity.models import User
 from app.media import schemas
+from app.core.exceptions import NotFoundException, PermissionDeniedException # Importar excepciones
 
 router = APIRouter(prefix="/media", tags=["Media"])
 
@@ -68,4 +69,7 @@ def confirm_upload(
         )
         return media_item
     except (NotFoundException, PermissionDeniedException) as e:
+        # Es mejor devolver 403 para PermissionDenied y 404 para NotFound
+        if isinstance(e, PermissionDeniedException):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
