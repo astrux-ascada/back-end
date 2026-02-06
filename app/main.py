@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.redis import get_redis_client
 from app.core.limiter import limiter
-from app.core.middlewares.tenant_middleware import TenantMiddleware
+# from app.core.middlewares.tenant_middleware import TenantMiddleware # DESACTIVADA
 from app.core.event_broker import EventBroker
 from app.core_engine.service import CoreEngineService
 from app.telemetry.service import TelemetryService
@@ -77,7 +77,7 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_headers=["*"],
     )
 
-app.add_middleware(TenantMiddleware)
+# app.add_middleware(TenantMiddleware) # DESACTIVADA
 app.state.limiter = limiter
 
 # Montar el router principal bajo el prefijo /api/v1

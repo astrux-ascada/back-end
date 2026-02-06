@@ -16,9 +16,14 @@ async def seed_assets(db: Session, context: dict):
     sector_linea_1 = context["sector_linea_1"]
 
     # 1. Crear o buscar el Tipo de Activo (AssetType)
-    robot_type = db.query(AssetType).filter(AssetType.name == "Robot de Soldadura").first()
+    robot_type = db.query(AssetType).filter(
+        AssetType.name == "Robot de Soldadura",
+        AssetType.tenant_id == demo_tenant.id
+    ).first()
+    
     if not robot_type:
         robot_type = AssetType(
+            tenant_id=demo_tenant.id, # Asignar tenant_id
             name="Robot de Soldadura",
             description="Brazo robótico industrial de 6 ejes",
             manufacturer="KUKA",

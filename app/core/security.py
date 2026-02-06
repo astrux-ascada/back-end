@@ -52,6 +52,7 @@ def create_access_token(user: User) -> Tuple[str, str]:
         "sub": str(user.id),
         "email": user.email,
         "is_admin": is_admin,
+        "tenant_id": str(user.tenant_id) if user.tenant_id else None, # Añadir tenant_id al token
         "exp": expire,
         "jti": jti,  # JWT ID: Identificador único para este token
     }
