@@ -514,6 +514,78 @@
                 ]
             }
         },
+        "/api/v1/saas/my-tenant": {
+            "get": {
+                "tags": [
+                    "SaaS Management"
+                ],
+                "summary": "Get My Tenant Details",
+                "description": "Devuelve los detalles completos del tenant del usuario autenticado.",
+                "operationId": "get_my_tenant_details_api_v1_saas_my_tenant_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TenantRead"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "SaaS Management"
+                ],
+                "summary": "Update My Tenant Details",
+                "description": "Permite a un admin de tenant actualizar los datos de su propia empresa.",
+                "operationId": "update_my_tenant_details_api_v1_saas_my_tenant_put",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TenantUpdate"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TenantRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ]
+            }
+        },
         "/api/v1/saas/plans": {
             "post": {
                 "tags": [
@@ -794,6 +866,120 @@
                         }
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TenantRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "SaaS Management"
+                ],
+                "summary": "Update Tenant",
+                "description": "(Super Admin) Actualiza los datos de cualquier tenant.",
+                "operationId": "update_tenant_api_v1_saas_tenants__tenant_id__put",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Tenant Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TenantUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TenantRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "SaaS Management"
+                ],
+                "summary": "Delete Tenant",
+                "description": "(Super Admin) Realiza un borrado lógico de un tenant.",
+                "operationId": "delete_tenant_api_v1_saas_tenants__tenant_id__delete",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "tenant_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Tenant Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TenantDeletionConfirmation"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -6059,7 +6245,8 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Logo Url"
+                        "title": "Logo Url",
+                        "description": "URL del logo de la empresa."
                     },
                     "website": {
                         "anyOf": [
@@ -6070,7 +6257,8 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Website"
+                        "title": "Website",
+                        "description": "Sitio web de la empresa."
                     },
                     "tax_id": {
                         "anyOf": [
@@ -6081,7 +6269,8 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Tax Id"
+                        "title": "Tax Id",
+                        "description": "Identificador fiscal (CIF, NIF, VAT ID)."
                     },
                     "billing_address": {
                         "anyOf": [
@@ -6092,7 +6281,8 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Billing Address"
+                        "title": "Billing Address",
+                        "description": "Dirección de facturación."
                     },
                     "contact_email": {
                         "anyOf": [
@@ -6104,7 +6294,8 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Contact Email"
+                        "title": "Contact Email",
+                        "description": "Email central para notificaciones."
                     },
                     "contact_phone": {
                         "anyOf": [
@@ -6115,21 +6306,25 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Contact Phone"
+                        "title": "Contact Phone",
+                        "description": "Teléfono de contacto principal."
                     },
                     "timezone": {
                         "type": "string",
                         "title": "Timezone",
+                        "description": "Zona horaria del tenant (ej: 'Europe/Madrid').",
                         "default": "UTC"
                     },
                     "language": {
                         "type": "string",
                         "title": "Language",
+                        "description": "Idioma preferido (ej: 'es', 'en').",
                         "default": "es"
                     },
                     "currency": {
                         "type": "string",
                         "title": "Currency",
+                        "description": "Moneda por defecto (ej: 'USD', 'EUR').",
                         "default": "USD"
                     },
                     "config": {
@@ -6143,7 +6338,13 @@
                             }
                         ],
                         "title": "Config",
+                        "description": "Configuración flexible en formato JSON.",
                         "default": {}
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Is Active",
+                        "default": true
                     },
                     "slug": {
                         "type": "string",
@@ -6169,11 +6370,178 @@
                 ],
                 "title": "TenantCreate"
             },
+            "TenantDeletionConfirmation": {
+                "properties": {
+                    "confirmation_key": {
+                        "type": "string",
+                        "title": "Confirmation Key",
+                        "description": "Clave de confirmación requerida para el borrado."
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "confirmation_key"
+                ],
+                "title": "TenantDeletionConfirmation"
+            },
             "TenantRead": {
                 "properties": {
                     "name": {
                         "type": "string",
                         "maxLength": 100,
+                        "title": "Name"
+                    },
+                    "logo_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Logo Url",
+                        "description": "URL del logo de la empresa."
+                    },
+                    "website": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Website",
+                        "description": "Sitio web de la empresa."
+                    },
+                    "tax_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Tax Id",
+                        "description": "Identificador fiscal (CIF, NIF, VAT ID)."
+                    },
+                    "billing_address": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Billing Address",
+                        "description": "Dirección de facturación."
+                    },
+                    "contact_email": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Contact Email",
+                        "description": "Email central para notificaciones."
+                    },
+                    "contact_phone": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Contact Phone",
+                        "description": "Teléfono de contacto principal."
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "title": "Timezone",
+                        "description": "Zona horaria del tenant (ej: 'Europe/Madrid').",
+                        "default": "UTC"
+                    },
+                    "language": {
+                        "type": "string",
+                        "title": "Language",
+                        "description": "Idioma preferido (ej: 'es', 'en').",
+                        "default": "es"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "title": "Currency",
+                        "description": "Moneda por defecto (ej: 'USD', 'EUR').",
+                        "default": "USD"
+                    },
+                    "config": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Config",
+                        "description": "Configuración flexible en formato JSON.",
+                        "default": {}
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Is Active",
+                        "default": true
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Id"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "title": "Slug"
+                    },
+                    "deleted_at": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Deleted At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "id",
+                    "slug"
+                ],
+                "title": "TenantRead"
+            },
+            "TenantUpdate": {
+                "properties": {
+                    "name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Name"
                     },
                     "logo_url": {
@@ -6244,19 +6612,37 @@
                         "title": "Contact Phone"
                     },
                     "timezone": {
-                        "type": "string",
-                        "title": "Timezone",
-                        "default": "UTC"
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Timezone"
                     },
                     "language": {
-                        "type": "string",
-                        "title": "Language",
-                        "default": "es"
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Language"
                     },
                     "currency": {
-                        "type": "string",
-                        "title": "Currency",
-                        "default": "USD"
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Currency"
                     },
                     "config": {
                         "anyOf": [
@@ -6268,26 +6654,22 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Config",
-                        "default": {}
+                        "title": "Config"
                     },
-                    "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "title": "Id"
-                    },
-                    "slug": {
-                        "type": "string",
-                        "title": "Slug"
+                    "is_active": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Is Active"
                     }
                 },
                 "type": "object",
-                "required": [
-                    "name",
-                    "id",
-                    "slug"
-                ],
-                "title": "TenantRead"
+                "title": "TenantUpdate"
             },
             "TfaToken": {
                 "properties": {

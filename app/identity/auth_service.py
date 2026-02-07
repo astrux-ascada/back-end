@@ -104,6 +104,10 @@ class AuthService:
 
     def list_users(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[User]:
         return self.user_repo.list_users(tenant_id=tenant_id, skip=skip, limit=limit)
+        
+    def list_all_users(self, skip: int = 0, limit: int = 100) -> List[User]:
+        """Lista todos los usuarios de la plataforma (para Super Admin)."""
+        return self.user_repo.list_all_users(skip=skip, limit=limit)
 
     def update_user(self, user_id: uuid.UUID, user_in: UserUpdate) -> User:
         db_user = self.get_user_by_id(user_id)
