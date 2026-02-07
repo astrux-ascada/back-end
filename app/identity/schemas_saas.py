@@ -40,10 +40,33 @@ class PlanRead(PlanBase):
 
 class TenantBase(BaseModel):
     name: str = Field(..., max_length=100)
+    logo_url: Optional[str] = None
+    website: Optional[str] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    contact_email: Optional[EmailStr] = None
+    contact_phone: Optional[str] = None
+    timezone: str = "UTC"
+    language: str = "es"
+    currency: str = "USD"
+    config: Optional[Dict[str, Any]] = {}
 
 class TenantCreate(TenantBase):
     slug: str
     partner_id: Optional[uuid.UUID] = None
+
+class TenantUpdate(BaseModel):
+    name: Optional[str] = None
+    logo_url: Optional[str] = None
+    website: Optional[str] = None
+    tax_id: Optional[str] = None
+    billing_address: Optional[str] = None
+    contact_email: Optional[EmailStr] = None
+    contact_phone: Optional[str] = None
+    timezone: Optional[str] = None
+    language: Optional[str] = None
+    currency: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
 
 class TenantRead(TenantBase):
     id: uuid.UUID
