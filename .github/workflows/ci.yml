@@ -47,8 +47,14 @@ jobs:
           # Usar el .env.test como base para el entorno de CI
           cp .env.test .env
 
-      - name: Build the Docker containers
+      - name: Build and Start Services
         run: docker compose up -d --build
+
+      - name: Apply Database Migrations
+        run: docker compose run --rm backend_api alembic upgrade head
+        
+      - name: Seed the Database
+        run: docker compose run --rm backend_api python -m app.db.seeding.seed_all
 
       - name: Run tests with pytest
         run: docker compose run --rm backend_api pytest
