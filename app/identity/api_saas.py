@@ -85,6 +85,15 @@ def update_plan(plan_id: uuid.UUID, plan_in: PlanUpdate, saas_service: SaasServi
 
 # --- Endpoints para Tenants (Gestión de Super Admin) ---
 
+@router.get("/tenants", response_model=List[TenantRead], dependencies=[Depends(require_permission("tenant:read"))])
+def list_tenants(
+    skip: int = 0,
+    limit: int = 100,
+    saas_service: SaasService = Depends(get_saas_service)
+):
+    """(Super Admin) Lista todos los tenants activos en la plataforma."""
+    return saas_service.list_tenants(skip, limit)
+
 @router.post("/tenants", response_model=TenantRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("tenant:create"))])
 def create_tenant(tenant_in: TenantCreate, saas_service: SaasService = Depends(get_saas_service)):
     # Este endpoint es para que un Super Admin cree un tenant manualmente.

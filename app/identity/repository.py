@@ -99,6 +99,10 @@ class UserRepository:
         """Devuelve una lista de usuarios para un tenant específico."""
         return self.db.query(User).filter(User.tenant_id == tenant_id).offset(skip).limit(limit).all()
 
+    def list_all_users(self, skip: int = 0, limit: int = 100) -> List[User]:
+        """Devuelve una lista de todos los usuarios de la plataforma."""
+        return self.db.query(User).offset(skip).limit(limit).all()
+
     def create(self, user_in: UserCreate, tenant_id: Optional[uuid.UUID] = None) -> User:
         user_data = user_in.model_dump(exclude={"password", "role_ids", "sector_ids"})
         user_data["hashed_password"] = hash_password(user_in.password)
