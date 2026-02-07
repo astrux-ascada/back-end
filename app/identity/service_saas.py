@@ -5,7 +5,7 @@ Capa de Servicio para la gestión del modelo de negocio SaaS.
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from app.identity.models.saas import Plan, Tenant, Subscription
 from app.identity.schemas_saas import PlanCreate, PlanUpdate, TenantCreate, TenantUpdate, SubscriptionUpdate, PublicRegistrationRequest
@@ -54,6 +54,9 @@ class SaasService:
         if not tenant:
             raise NotFoundException(ErrorMessages.TENANT_NOT_FOUND)
         return tenant
+
+    def list_tenants(self, skip: int = 0, limit: int = 100) -> List[Tenant]:
+        return self.db.query(Tenant).filter(Tenant.deleted_at == None).offset(skip).limit(limit).all()
 
     def update_tenant(self, tenant_id: uuid.UUID, tenant_in: TenantUpdate) -> Tenant:
         db_tenant = self.get_tenant(tenant_id)

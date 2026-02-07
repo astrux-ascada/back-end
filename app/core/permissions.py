@@ -11,6 +11,7 @@ PLAN_UPDATE = "plan:update"
 TENANT_READ = "tenant:read"
 TENANT_CREATE = "tenant:create"
 TENANT_UPDATE = "tenant:update"
+TENANT_DELETE = "tenant:delete" # Añadido
 
 SUBSCRIPTION_READ = "subscription:read"
 SUBSCRIPTION_UPDATE = "subscription:update"
@@ -81,6 +82,7 @@ USER_READ = "user:read"
 USER_CREATE = "user:create"
 USER_UPDATE = "user:update"
 USER_DELETE = "user:delete"
+USER_READ_ALL = "user:read_all" # Nuevo permiso para Super Admin
 
 ROLE_READ = "role:read"
 ROLE_CREATE = "role:create"
