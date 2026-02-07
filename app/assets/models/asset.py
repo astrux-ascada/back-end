@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
-
+from app.assets.schemas import AssetStatus # Importar el Enum
 
 class Asset(Base):
     """Modelo SQLAlchemy para una Instancia de Activo Físico."""
@@ -35,7 +35,7 @@ class Asset(Base):
     # --- Campos de Instancia Única ---
     serial_number = Column(String(100), unique=True, nullable=True, index=True)
     location = Column(String(150), nullable=True)
-    status = Column(String(50), default="operational", nullable=False, index=True)
+    status = Column(String(50), default=AssetStatus.OPERATIONAL, nullable=False, index=True)
     properties = Column(JSONB, nullable=True, comment="Propiedades específicas del activo en formato JSON.")
 
     # --- Fechas Clave del Ciclo de Vida ---

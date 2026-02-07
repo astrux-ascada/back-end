@@ -7,7 +7,7 @@ concretas (Local, Cloud) y una fábrica para seleccionarlas.
 """
 import os
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, BinaryIO
 
 from app.core.config import settings
 
@@ -21,6 +21,14 @@ class StorageInterface(ABC):
         """
         Genera una URL presignada para subir un archivo.
         Retorna un diccionario con la URL y los headers necesarios.
+        """
+        pass
+
+    @abstractmethod
+    def save_file(self, file_path: str, file_content: BinaryIO) -> bool:
+        """
+        Guarda el contenido de un archivo en la ruta especificada.
+        (Principalmente para almacenamiento local).
         """
         pass
 
@@ -46,30 +54,38 @@ class LocalStorageStrategy(StorageInterface):
 
     def generate_upload_url(self, file_path: str, content_type: str) -> Dict[str, str]:
         """
-        Para el almacenamiento local, la "URL de subida" es simplemente un endpoint
-        interno que el frontend puede usar, aunque el flujo de URL presignada
-        está más orientado a la nube. Aquí simulamos el concepto.
-        
-        Devolvemos una URL relativa que el backend manejará para guardar el archivo.
-        Esto es una simplificación para desarrollo. El flujo real de S3 es diferente.
+        Para almacenamiento local, el flujo de URL presignada no aplica.
+        Devolvemos una URL de API simbólica para que el cliente sepa dónde subir.
         """
-        # En un entorno de desarrollo real, el frontend podría subir a un endpoint
-        # específico que guarde el archivo. Aquí, simplemente confirmamos la ruta.
-        # La lógica de subida real se manejaría en un endpoint específico si usamos esta estrategia.
-        # Por simplicidad del patrón, asumimos que el frontend "sube" y luego confirma.
-        
-        # La URL que devolvemos es simbólica. El frontend no la usará para un PUT directo.
-        # En su lugar, subirá a un endpoint de nuestra API que use esta ruta.
-        # Para mantener el patrón, devolvemos una estructura similar a S3.
         return {
-            "url": f"/api/v1/ops/media/local-upload/{file_path}", # Endpoint de API para manejar la subida
-            "method": "POST" # O PUT, dependiendo de la implementación del endpoint
+            "url": f"/api/v1/ops/media/local-upload/{file_path}",
+            "method": "PUT"
         }
+
+    def save_file(self, file_path: str, file_content: BinaryIO) -> bool:
+        """
+        Guarda un archivo en el sistema de archivos local, creando los directorios necesarios.
+        """
+        full_path = os.path.join(self.base_path, file_path)
+        directory = os.path.dirname(full_path)
+
+        try:
+            # Crear la estructura de directorios si no existe
+            os.makedirs(directory, exist_ok=True)
+
+            # Escribir el archivo
+            with open(full_path, "wb") as f:
+                f.write(file_content.read())
+            return True
+        except IOError as e:
+            # Loggear el error
+            print(f"Error guardando archivo en {full_path}: {e}")
+            return False
 
     def get_download_url(self, file_path: str) -> str:
         """Devuelve una ruta local para servir el archivo."""
         # Esto requerirá un endpoint que sirva archivos estáticos desde el directorio de storage.
-        return f"/static/{file_path}"
+        return f"/static/storage/{file_path}"
 
     def delete_file(self, file_path: str) -> bool:
         full_path = os.path.join(self.base_path, file_path)
@@ -85,58 +101,25 @@ class CloudStorageStrategy(StorageInterface):
     """
 
     def __init__(self):
-        # Aquí se inicializaría el cliente de S3 (boto3) con las credenciales
-        # import boto3
-        # self.s3_client = boto3.client(
-        #     's3',
-        #     aws_access_key_id=settings.S3_ACCESS_KEY,
-        #     aws_secret_access_key=settings.S3_SECRET_KEY,
-        #     endpoint_url=settings.S3_ENDPOINT_URL # Opcional, para MinIO
-        # )
-        # self.bucket_name = settings.S3_BUCKET_NAME
         pass
 
     def generate_upload_url(self, file_path: str, content_type: str) -> Dict[str, str]:
-        """Genera una URL presignada de S3 para una subida con PUT."""
-        # Lógica de ejemplo con boto3 (actualmente comentada)
-        # try:
-        #     response = self.s3_client.generate_presigned_post(
-        #         Bucket=self.bucket_name,
-        #         Key=file_path,
-        #         Fields={"Content-Type": content_type},
-        #         Conditions=[{"Content-Type": content_type}],
-        #         ExpiresIn=3600  # 1 hora
-        #     )
-        #     return response
-        # except Exception as e:
-        #     # Loggear el error
-        #     return None
-        
-        # Placeholder mientras no tenemos boto3 configurado
+        # Lógica de boto3 para generar URL presignada (comentada por ahora)
         return {
             "url": f"https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/{file_path}",
             "fields": {"Content-Type": content_type, "key": file_path}
         }
-
+    
+    def save_file(self, file_path: str, file_content: BinaryIO) -> bool:
+        # En S3, no se usa un save_file directo, se usa la URL presignada.
+        # Este método podría usarse para subidas desde el backend, pero no es el flujo principal.
+        # Lógica de ejemplo: self.s3_client.upload_fileobj(file_content, self.bucket_name, file_path)
+        raise NotImplementedError("El guardado directo no es el flujo principal para S3. Use URLs presignadas.")
 
     def get_download_url(self, file_path: str) -> str:
-        # Lógica de ejemplo con boto3
-        # url = self.s3_client.generate_presigned_url(
-        #     'get_object',
-        #     Params={'Bucket': self.bucket_name, 'Key': file_path},
-        #     ExpiresIn=3600 # 1 hora
-        # )
-        # return url
         return f"https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/{file_path}"
 
-
     def delete_file(self, file_path: str) -> bool:
-        # Lógica de ejemplo con boto3
-        # try:
-        #     self.s3_client.delete_object(Bucket=self.bucket_name, Key=file_path)
-        #     return True
-        # except Exception as e:
-        #     return False
         return True
 
 # --- 3. Fábrica de Estrategias ---
@@ -148,7 +131,7 @@ def get_storage_strategy() -> StorageInterface:
     """
     storage_type = settings.STORAGE_TYPE
     if storage_type == "local":
-        return LocalStorageStrategy()
+        return LocalStorageStrategy(settings.STORAGE_PATH)
     elif storage_type == "s3":
         return CloudStorageStrategy()
     else:

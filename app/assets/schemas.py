@@ -5,10 +5,21 @@ Esquemas Pydantic para el módulo de Activos (Assets), alineados con el contrato
 import uuid
 from datetime import date, datetime
 from typing import Optional, List, Any, Dict
+from enum import Enum
 
 from pydantic import BaseModel, Field
 
 from app.sectors.schemas import SectorRead
+
+
+# --- Enums para Estados y Tipos ---
+
+class AssetStatus(str, Enum):
+    OPERATIONAL = "operational"
+    MAINTENANCE = "maintenance"
+    PENDING_DELETION = "pending_deletion"
+    DECOMMISSIONED = "decommissioned"
+    UNKNOWN = "unknown"
 
 
 # --- Esquemas para AssetType (El Catálogo) ---
@@ -41,13 +52,13 @@ class AssetUpdate(BaseModel):
     sector_id: Optional[uuid.UUID] = None
     serial_number: Optional[str] = None
     location: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[AssetStatus] = None # Usar el Enum
     properties: Optional[Dict[str, Any]] = None
     last_maintenance_at: Optional[date] = None
     warranty_expires_at: Optional[date] = None
 
 class AssetStatusUpdate(BaseModel):
-    status: str = Field(..., example="MAINTENANCE")
+    status: AssetStatus = Field(..., example=AssetStatus.MAINTENANCE)
 
 
 # --- DTO Principal para la API, alineado con `assets-api.md` ---
@@ -60,7 +71,7 @@ class AssetReadDTO(BaseModel):
     name: str
     description: Optional[str] = None
     type: Optional[str] = None # Este es 'category' del AssetType
-    status: str
+    status: AssetStatus # Usar el Enum
     properties: Optional[Dict[str, Any]] = None
     sector: Optional[SectorRead] = None
     parent_id: Optional[uuid.UUID] = None

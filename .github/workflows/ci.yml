@@ -44,19 +44,21 @@ jobs:
 
       - name: Create .env file for Docker
         run: |
-          echo "POSTGRES_USER=testuser" >> .env
-          echo "POSTGRES_PASSWORD=testpassword" >> .env
-          echo "POSTGRES_DB=testdb" >> .env
-          echo "JWT_SECRET=testsecret" >> .env
-          echo "FIRST_SUPERUSER_EMAIL=admin@test.com" >> .env
-          echo "FIRST_SUPERUSER_PASSWORD=testpassword" >> .env
+          # Usar el .env.test como base para el entorno de CI
+          cp .env.test .env
 
-      - name: Build the Docker containers
-        run: docker-compose up -d --build
+      - name: Build and Start Services
+        run: docker compose up -d --build
+
+      - name: Apply Database Migrations
+        run: docker compose run --rm backend_api alembic upgrade head
+        
+      - name: Seed the Database
+        run: docker compose run --rm backend_api python -m app.db.seeding.seed_all
 
       - name: Run tests with pytest
-        run: docker-compose run --rm backend_api pytest
+        run: docker compose run --rm backend_api pytest
 
       - name: Tear down services
         if: always() # Asegura que esto se ejecute incluso si los tests fallan
-        run: docker-compose down -v
+        run: docker compose down -v
