@@ -3,7 +3,7 @@
 Modelo para las Organizaciones (Clientes Finales) de Astruxa.
 """
 import uuid
-from sqlalchemy import Column, String, ForeignKey, Text
+from sqlalchemy import Column, String, ForeignKey, Text, Boolean, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -31,12 +31,11 @@ class Tenant(Base):
     language = Column(String(10), default="es", nullable=False)
     currency = Column(String(3), default="USD", nullable=False)
 
+    # --- Estado y Borrado Lógico ---
+    is_active = Column(Boolean, default=True, nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+
     # --- Configuración Flexible ---
-    # Aquí guardaremos:
-    # - Preferencias de email (remitentes por módulo)
-    # - Colores de marca (primary_color, secondary_color)
-    # - Configuración regional extra
-    # - Políticas de seguridad (password rotation, etc.)
     config = Column(JSONB, nullable=True, default={})
 
     partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True)

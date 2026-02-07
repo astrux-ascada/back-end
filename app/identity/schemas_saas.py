@@ -40,16 +40,17 @@ class PlanRead(PlanBase):
 
 class TenantBase(BaseModel):
     name: str = Field(..., max_length=100)
-    logo_url: Optional[str] = None
-    website: Optional[str] = None
-    tax_id: Optional[str] = None
-    billing_address: Optional[str] = None
-    contact_email: Optional[EmailStr] = None
-    contact_phone: Optional[str] = None
-    timezone: str = "UTC"
-    language: str = "es"
-    currency: str = "USD"
-    config: Optional[Dict[str, Any]] = {}
+    logo_url: Optional[str] = Field(None, description="URL del logo de la empresa.")
+    website: Optional[str] = Field(None, description="Sitio web de la empresa.")
+    tax_id: Optional[str] = Field(None, description="Identificador fiscal (CIF, NIF, VAT ID).")
+    billing_address: Optional[str] = Field(None, description="Dirección de facturación.")
+    contact_email: Optional[EmailStr] = Field(None, description="Email central para notificaciones.")
+    contact_phone: Optional[str] = Field(None, description="Teléfono de contacto principal.")
+    timezone: str = Field("UTC", description="Zona horaria del tenant (ej: 'Europe/Madrid').")
+    language: str = Field("es", description="Idioma preferido (ej: 'es', 'en').")
+    currency: str = Field("USD", description="Moneda por defecto (ej: 'USD', 'EUR').")
+    config: Optional[Dict[str, Any]] = Field({}, description="Configuración flexible en formato JSON.")
+    is_active: bool = True
 
 class TenantCreate(TenantBase):
     slug: str
@@ -67,12 +68,18 @@ class TenantUpdate(BaseModel):
     language: Optional[str] = None
     currency: Optional[str] = None
     config: Optional[Dict[str, Any]] = None
+    is_active: Optional[bool] = None
 
 class TenantRead(TenantBase):
     id: uuid.UUID
     slug: str
+    deleted_at: Optional[datetime] = None
     class Config:
         from_attributes = True
+
+class TenantDeletionConfirmation(BaseModel):
+    confirmation_key: str = Field(..., description="Clave de confirmación requerida para el borrado.")
+
 
 # --- Esquemas para Suscripción ---
 
