@@ -1,108 +1,95 @@
-# 🗺️ Roadmap Estratégico - Astruxa SaaS (Industrial Orchestrator 5.0)
+# 🗺️ Roadmap Estratégico V2 - La Evolución de Astruxa
 
-> **Estado del Proyecto:** Hito 1, 2 y 3 Completados.
-> **Visión:** Convertir Astruxa en una plataforma SaaS comercial, escalable y líder en la Industria 5.0.
-
----
-
-## ✅ Hito 1: Fundación SaaS & Seguridad (COMPLETADO)
-
-Se ha completado la refactorización del backend a una arquitectura Multi-Tenant segura y robusta. El motor está listo.
+> **Visión:** Transformar Astruxa de un producto viable a una plataforma de inteligencia industrial indispensable, culminando en la visión de la "Fábrica Autónoma".
+> **Estado Actual:** Fundación del MVP completada. El backend es robusto, seguro y está listo para ser consumido.
 
 ---
 
-## ✅ Hito 2: Producto Mínimo Viable y Seguro (MVP) — (COMPLETADO)
+## 🚀 Horizonte 1: Viabilidad Comercial y Experiencia de Cliente (Próximos 3-6 Meses)
 
-**Objetivo:** Implementar las funcionalidades mínimas para poder vender, operar y facturar el producto de forma segura.
+**Objetivo Estratégico:** Lograr que los primeros clientes puedan registrarse, usar y obtener valor del producto de forma autónoma, sentando las bases para el crecimiento.
 
-### Prioridad 1: Gestión de la Plataforma (SaaS Core)
-- **Descripción:** Endpoints para que el `GLOBAL_SUPER_ADMIN` pueda crear y gestionar los componentes básicos del negocio.
-- **Tareas:**
-  - [x] **CRUD para `Plans`:** Crear, actualizar y desactivar planes de precios.
-  - [x] **Gestión de `Tenants`:** Crear nuevos clientes y asignarles suscripciones.
-  - [x] **Gestión de `Subscriptions`:** Modificar manually la suscripción de un cliente.
+### Prioridad 1: Interfaz de Usuario (Frontend MVP)
+- **Descripción:** Construir la primera versión funcional del frontend que permita a los usuarios interactuar con el potente backend que hemos creado.
+- **Tareas Clave:**
+  - [ ] **Flujo de Autenticación:** Pantalla de login, gestión de tokens JWT, rutas protegidas.
+  - [ ] **Dashboard Principal:** Visualización de KPIs clave (activos operativos, OTs abiertas, alarmas activas).
+  - [ ] **Gestión de Activos:** CRUD completo para Activos y Tipos de Activos. Visualización de jerarquías.
+  - [ ] **Gestión de Mantenimiento:** CRUD completo para Órdenes de Trabajo.
+  - [ ] **Visualización de Telemetría:** Gráficos de series temporales para las métricas de los activos.
 
-### Prioridad 2: Funcionalidad Operativa Completa (CRUDs)
-- **Descripción:** Añadir las operaciones de Update y Delete (soft delete) que faltan para que el producto se sienta completo y usable.
-- **Tareas:**
-  - [x] **Procurement:** `PUT`/`DELETE` para Proveedores y Repuestos.
-  - [x] **AlarmRule:** `PUT`/`PATCH`/`DELETE` para Reglas de Alarma.
-  - [x] **Assets:** `DELETE` (soft delete) para Activos, integrado con el Módulo de Aprobaciones.
-  - [x] **WorkOrder:** `PATCH` para cancelar órdenes y `POST` para asignar proveedores externos.
-  - [x] **Sectors:** `PUT`/`DELETE` para Sectores.
-  - [x] **Configuration:** `POST`/`DELETE` (soft delete) para parámetros globales.
-  - [x] **DataSource:** Implementar CRUD completo.
+### Prioridad 2: Portal de Cliente Completo (Autoservicio)
+- **Descripción:** Empoderar a los administradores de cada tenant para que gestionen su cuenta sin necesidad de contactar a soporte.
+- **Tareas Clave:**
+  - [ ] **UI de Gestión de Suscripción:** Permitir cambiar de plan (upgrade/downgrade).
+  - [ ] **UI de Facturación:** Ver historial de pagos y descargar facturas.
+  - [ ] **UI de Perfil de Tenant:** Permitir al cliente subir su logo, y rellenar sus datos fiscales y de contacto.
+  - [ ] **UI de Gestión de Usuarios y Roles:** Interfaz para crear/editar usuarios y asignarles roles dentro de su propio tenant.
 
-### Prioridad 3: RBAC Avanzado y Seguridad de Acceso
-- **Descripción:** Pasar de roles fijos a un sistema de permisos granulares para que los clientes puedan gestionar sus propios equipos.
-- **Tareas:**
-  - [x] Crear dependencia `require_permission(permission_name: str)`.
-  - [x] Reemplazar `Depends(get_current_admin_user)` con el nuevo sistema en todos los endpoints.
-  - [x] Actualizar el script de Seeding para crear permisos y asignarlos a roles por defecto.
+### Prioridad 3: Onboarding y Primer Uso
+- **Descripción:** Asegurar que la experiencia de un nuevo cliente sea fluida y guiada, evitando el "síndrome de la pantalla en blanco".
+- **Tareas Clave:**
+  - [ ] **Wizard de Configuración Inicial:** Un asistente paso a paso para que el nuevo admin configure su `timezone`, `currency` y suba su logo.
+  - [ ] **Generación de Datos de Ejemplo:** Un botón "Poblar con datos de demostración" para que el cliente pueda explorar la plataforma con activos y OTs de ejemplo.
 
 ---
 
-## ✅ Hito 3: Automatización Comercial y Arquitectura Avanzada — (COMPLETADO)
+## 🧠 Horizonte 2: Inteligencia y Excelencia Operativa (Próximos 6-12 Meses)
 
-**Objetivo:** Convertir el producto en un negocio que escala y retiene clientes, sobre una arquitectura robusta.
+**Objetivo Estratégico:** Evolucionar de una plataforma de "registro de datos" a una de "toma de decisiones inteligentes", aumentando drásticamente el valor para el cliente.
 
-### Prioridad 4: Modularización por Monetización (Feature Flags)
-- **Descripción:** Implementar la lógica de negocio de los planes (Bueno, Mejor, Excelente) para justificar diferentes precios.
-- **Tareas:**
-  - [x] Proteger todos los routers de módulos con la dependencia `require_feature`.
-  - [x] Implementar lógica `check_limit` en los servicios (ej: límite de usuarios o activos).
+### Prioridad 4: Mantenimiento Predictivo (PdM) v1.0
+- **Descripción:** Utilizar los datos de telemetría para predecir fallos antes de que ocurran.
+- **Tareas Clave:**
+  - [ ] **Motor de Detección de Anomalías:** Implementar modelos (ej. Isolation Forest, Autoencoders) que detecten patrones de vibración, temperatura o consumo inusuales.
+  - [ ] **Generación Automática de OT Predictivas:** Cuando se detecta una anomalía con alta confianza, crear automáticamente una OT de tipo "PREDICTIVA".
+  - [ ] **Dashboard de Salud del Activo:** Una interfaz que muestre un "health score" para cada activo crítico.
 
-### Prioridad 5: Sistema de Pagos y Auto-Suscripción
-- **Descripción:** Permitir que los clientes se registren y paguen por sí mismos.
-- **Tareas:**
-  - [x] **Sistema de Pagos Flexible:**
-    - [x] **Interfaz de Pasarela:** Definir un contrato común para todas las pasarelas.
-    - [x] **Implementación de PayPal:** Integrar con la pasarela de PayPal.
-    - [x] **Implementación de Pasarela Configurable:** Crear una pasarela genérica.
-    - [x] **Flujo de Pago Manual (Transferencia):** Implementar un sistema para que los clientes suban comprobantes de pago y los administradores los aprueben.
-  - [x] **Portal de Auto-Suscripción:** Crear flujo de registro público y "provisioning" automático de tenants.
+### Prioridad 5: Gestión de Inventario y Compras Inteligentes
+- **Descripción:** Optimizar la cadena de suministro de repuestos para reducir costos y tiempos de parada.
+- **Tareas Clave:**
+  - [ ] **Módulo de Inventario Avanzado:** Control de stock, puntos de re-orden automáticos, historial de movimientos.
+  - [ ] **Asociación de Repuestos a Activos (BOM):** Definir qué repuestos necesita cada `AssetType`.
+  - [ ] **Integración del SSI:** Conectar el "Sistema de Sugerencias Inteligentes" para que, al crear una OT, sugiera automáticamente qué repuestos comprar y a qué proveedor.
 
-### Prioridad 6: Portal de Gestión de Cuenta (Customer Portal)
-- **Descripción:** Reducir costos de soporte permitiendo a los clientes autogestionarse.
-- **Tareas:**
-  - [x] **Endpoint de Uso:** Permitir al cliente ver cuánto ha consumido de su plan.
-  - [x] **Endpoint de Historial de Pagos:** Permitir al cliente ver sus facturas y pagos anteriores.
-  - [x] **Acceso Restringido para Pagos:** Implementar el "modo de gracia" para que los `TENANT_ADMIN` puedan acceder a facturación si su pago ha fallado.
-  - [ ] UI para cambiar de plan, actualizar método de pago y ver facturas.
-
-### Prioridad 7: Expansión de Canales (Portal de Partners)
-- **Descripción:** Habilitar canales de venta indirectos para escalar el crecimiento.
-- **Tareas:**
-  - [x] **Dashboard para Partners:** Crear endpoints para que los partners gestionen a sus clientes. (Implementación pendiente de la relación User-Partner).
-
-### Prioridad 11: Arquitectura a Escala
-- **Descripción:** Evolucionar la arquitectura para soportar un crecimiento masivo.
-- **Tareas:**
-  - [x] **Arquitectura Orientada a Eventos (EDA):** Desacoplar servicios con un Message Broker (Redis Pub/Sub).
-  - [x] **Gestión del Ciclo de Vida de Datos (ILM):** Políticas para archivar datos de telemetría antiguos (TimescaleDB Compression).
-  - [ ] **Migración a Kubernetes (K8s):** Plan para mover la infraestructura de producción a K8s.
+### Prioridad 6: Analítica Avanzada y Reportes Personalizados
+- **Descripción:** Permitir a los gerentes y directores obtener insights de alto nivel sobre su operación.
+- **Tareas Clave:**
+  - [ ] **Motor de Reportes:** Un servicio para generar reportes programados en PDF (OEE, MTBF, MTTR, costos de mantenimiento) con el logo y branding del tenant.
+  - [ ] **Conector de Business Intelligence (BI):** Ofrecer un endpoint de API seguro (o una réplica de BD de solo lectura) para que los clientes puedan conectar sus propias herramientas como Power BI o Tableau.
 
 ---
 
-## 🧠 Fase 4: Madurez e Inteligencia — (Criticidad: 🟢 BAJA)
+## 🌐 Horizonte 3: Plataforma y Ecosistema (1-2 Años)
 
-**Objetivo:** Asegurar la salud a largo plazo del proyecto, añadir valor con IA y prepararse para un crecimiento masivo.
+**Objetivo Estratégico:** Convertir Astruxa en el "sistema operativo" de la planta industrial, una plataforma abierta que se integra con el ecosistema del cliente.
 
-### Prioridad 8: Sistema de Sugerencias Inteligentes (SSI) para Compras
-- **Descripción:** Motor de evaluación que lee cotizaciones de proveedores y sugiere la mejor opción basada en precio, desempeño histórico y tiempo de entrega.
-- **Tareas:**
-  - [x] **Modelado de Datos:** Crear modelos para `RequestForQuotation`, `Quote` y `PurchaseOrder`.
-  - [x] **Motor de Evaluación:** Implementar la lógica de puntuación y justificación.
-  - [x] **Flujo de API:** Crear endpoints para gestionar el ciclo de vida de las cotizaciones.
+### Prioridad 7: Integraciones de Terceros (Connectors)
+- **Descripción:** Romper los silos de datos conectando Astruxa con los sistemas que el cliente ya utiliza.
+- **Tareas Clave:**
+  - [ ] **Conector ERP:** Sincronización bidireccional con SAP, Oracle o Microsoft Dynamics (órdenes de compra, costos).
+  - [ ] **Conector SCADA/Historian:** Integración con OSIsoft PI, Ignition, para ingesta de datos de alta frecuencia.
+  - [ ] **Conector de Comunicación:** Enviar alertas críticas a canales de Slack o Microsoft Teams.
 
-### Prioridad 9: Recopilación de Datos para IA
-- **Descripción:** Implementar los mecanismos de feedback que alimentarán los futuros modelos de IA.
-- **Tareas:**
-  - [x] **Evaluación de `WorkOrder`:** API para que los supervisores califiquen la ejecución de las tareas.
-  - [x] **Recepción de Órdenes de Compra:** API para registrar la recepción de pedidos y evaluar a los proveedores.
+### Prioridad 8: API Pública y Webhooks
+- **Descripción:** Permitir a los clientes y partners construir sus propias automatizaciones sobre Astruxa.
+- **Tareas Clave:**
+  - [ ] **API Pública Segura:** Exponer una parte de la API con autenticación por API Key para clientes del plan Enterprise.
+  - [ ] **Sistema de Webhooks:** Notificar a sistemas externos en tiempo real cuando ocurran eventos (ej. `workorder:created`, `asset:status_changed`).
+  - [ ] **Portal para Desarrolladores:** Documentación interactiva y herramientas para la API pública.
 
-### Prioridad 10: Calidad y Automatización (DevEx)
-- **Descripción:** Implementar una estrategia de testing y despliegue robusta.
-- **Tareas:**
-  - [ ] **Estrategia de Testing:** Implementar tests unitarios, de integración y E2E.
-  - [ ] **Pipeline de CI/CD:** Automatizar los tests y el despliegue a Staging/Producción.
+### Prioridad 9: Multi-Región y Cumplimiento Normativo
+- **Descripción:** Preparar la plataforma para una expansión global, cumpliendo con las leyes de residencia de datos.
+- **Tareas Clave:**
+  - [ ] **Infraestructura como Código (Terraform):** Automatizar el despliegue de la pila completa de Astruxa en cualquier región de GCP.
+  - [ ] **Gestión de Datos Regional:** Lógica para asegurar que los datos de un tenant europeo residan en servidores europeos (GDPR).
+
+---
+
+## 🤖 Horizonte 4: La Fábrica Autónoma (Visión a Largo Plazo)
+
+**Objetivo Estratégico:** Posicionar a Astruxa como el cerebro central que no solo monitoriza, sino que orquesta la operación de la planta de forma autónoma.
+
+- **Digital Twin (Gemelo Digital):** Crear una réplica virtual 1:1 de la planta del cliente, donde se puedan simular cambios y predecir su impacto antes de implementarlos en el mundo real.
+- **Operaciones Autónomas:** El sistema no solo predice un fallo, sino que automáticamente crea la OT, verifica el inventario de repuestos, genera la orden de compra al proveedor óptimo, asigna al técnico disponible con las mejores habilidades y reprograma la producción afectada.
+- **Analítica Prescriptiva:** El sistema no solo dice "qué va a pasar" (predictivo), sino que recomienda "qué se debe hacer" (prescriptivo). Ejemplo: "Recomendamos operar la línea 5 a un 92% de su capacidad durante las próximas 48 horas para evitar un fallo crítico con un costo estimado de 50.000€. ¿Aplicar recomendación?".
