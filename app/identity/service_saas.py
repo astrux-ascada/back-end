@@ -5,12 +5,13 @@ Capa de Servicio para la gestión del modelo de negocio SaaS.
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.identity.models.saas import Plan, Tenant, Subscription
-from app.identity.schemas_saas import PlanCreate, PlanUpdate, TenantCreate, SubscriptionUpdate, PublicRegistrationRequest
+from app.identity.schemas_saas import PlanCreate, PlanUpdate, TenantCreate, TenantUpdate, SubscriptionUpdate, PublicRegistrationRequest
 from app.identity.auth_service import AuthService
-from app.core.exceptions import NotFoundException, ConflictException
+from app.core.exceptions import NotFoundException, ConflictException, PermissionDeniedException
+from app.core.error_messages import ErrorMessages
 from slugify import slugify
 
 class SaasService:
@@ -34,7 +35,7 @@ class SaasService:
     def get_plan(self, plan_id: uuid.UUID) -> Plan:
         plan = self.db.query(Plan).filter(Plan.id == plan_id).first()
         if not plan:
-            raise NotFoundException("Plan no encontrado.")
+            raise NotFoundException(ErrorMessages.PLAN_NOT_FOUND)
         return plan
 
     def update_plan(self, plan_id: uuid.UUID, plan_in: PlanUpdate) -> Plan:
@@ -48,56 +49,70 @@ class SaasService:
         return db_plan
 
     # --- Métodos para Tenants y Suscripciones ---
-    def create_tenant_and_admin(self, tenant_in: TenantCreate) -> Tenant:
-        # Lógica existente para creación por un Super Admin
-        # (Se puede refactorizar para reutilizarla en public_registration)
-        pass
-
     def get_tenant(self, tenant_id: uuid.UUID) -> Tenant:
-        tenant = self.db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        tenant = self.db.query(Tenant).filter(Tenant.id == tenant_id, Tenant.deleted_at == None).first()
         if not tenant:
-            raise NotFoundException("Tenant no encontrado.")
+            raise NotFoundException(ErrorMessages.TENANT_NOT_FOUND)
         return tenant
+
+    def update_tenant(self, tenant_id: uuid.UUID, tenant_in: TenantUpdate) -> Tenant:
+        db_tenant = self.get_tenant(tenant_id)
+        update_data = tenant_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_tenant, field, value)
+        self.db.add(db_tenant)
+        self.db.commit()
+        self.db.refresh(db_tenant)
+        return db_tenant
+
+    def delete_tenant(self, tenant_id: uuid.UUID, confirmation_key: str) -> Tenant:
+        db_tenant = self.get_tenant(tenant_id)
+        
+        # Clave de confirmación simple: el slug del tenant
+        if confirmation_key != db_tenant.slug:
+            raise PermissionDeniedException(ErrorMessages.TENANT_DELETION_CONFIRMATION_INVALID)
+            
+        # Borrado lógico
+        db_tenant.deleted_at = datetime.now(timezone.utc)
+        db_tenant.is_active = False
+        self.db.add(db_tenant)
+        self.db.commit()
+        self.db.refresh(db_tenant)
+        
+        # Aquí se podría disparar un evento para un borrado físico asíncrono en el futuro
+        # self.event_broker.publish("tenant:deleted", {"tenant_id": tenant_id})
+        
+        return db_tenant
 
     def update_subscription(self, tenant_id: uuid.UUID, sub_in: SubscriptionUpdate) -> Subscription:
         subscription = self.db.query(Subscription).filter(Subscription.tenant_id == tenant_id).first()
         if not subscription:
             raise NotFoundException("Suscripción no encontrada.")
         
-        # Validar que el nuevo plan existe
         self.get_plan(sub_in.plan_id)
         
         subscription.plan_id = sub_in.plan_id
-        # Aquí podría haber lógica para prorrateo, etc.
         self.db.commit()
         self.db.refresh(subscription)
         return subscription
 
     def public_registration(self, registration_in: PublicRegistrationRequest) -> Tenant:
-        """
-        Orquesta el proceso de registro público de un nuevo tenant.
-        """
-        # 1. Validar que el email no exista
         if self.auth_service.get_user_by_email(registration_in.admin_email):
-            raise ConflictException("El email ya está registrado.")
+            raise ConflictException(ErrorMessages.AUTH_EMAIL_ALREADY_EXISTS)
 
-        # 2. Validar que el plan seleccionado existe
         plan = self.get_plan(registration_in.plan_id)
 
-        # 3. Crear el Tenant
         tenant_slug = slugify(registration_in.company_name)
         if self.db.query(Tenant).filter(Tenant.slug == tenant_slug).first():
-            tenant_slug = f"{tenant_slug}-{uuid.uuid4().hex[:6]}" # Añadir aleatoriedad si el slug ya existe
+            tenant_slug = f"{tenant_slug}-{uuid.uuid4().hex[:6]}"
         
         db_tenant = Tenant(name=registration_in.company_name, slug=tenant_slug)
         self.db.add(db_tenant)
-        self.db.flush() # Para obtener el ID del tenant
+        self.db.flush()
 
-        # 4. Crear el rol de Admin para este Tenant
         admin_role = self.auth_service.create_tenant_admin_role(db_tenant.id)
 
-        # 5. Crear el usuario Administrador
-        admin_user = self.auth_service.create_user(
+        self.auth_service.create_user(
             email=registration_in.admin_email,
             name=registration_in.admin_name,
             password=registration_in.admin_password,
@@ -105,9 +120,6 @@ class SaasService:
             roles=[admin_role]
         )
 
-        # 6. Crear la Suscripción
-        # Para planes de pago, el periodo podría ser 0 hasta que se confirme el pago.
-        # Para planes gratuitos, se activa inmediatamente.
         period_end = datetime.utcnow() + timedelta(days=30) if plan.price_monthly == 0 else None
         
         subscription = Subscription(
