@@ -13,10 +13,10 @@ from app.identity.service_saas import SaasService
 from app.identity.service_usage import UsageService
 from app.identity.schemas_saas import (
     PlanCreate, PlanUpdate, PlanRead, 
-    TenantCreate, TenantRead, 
+    TenantCreate, TenantUpdate, TenantRead, TenantDeletionConfirmation,
     SubscriptionUpdate, SubscriptionRead,
     PublicRegistrationRequest,
-    UsageReport # Importar el nuevo esquema
+    UsageReport
 )
 
 router = APIRouter(
@@ -36,7 +36,7 @@ def public_registration(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-# --- Endpoints para el Portal de Cliente ---
+# --- Endpoints para el Portal de Cliente (Autogestión) ---
 
 @router.get("/usage", response_model=UsageReport, dependencies=[Depends(require_permission("tenant:read"))])
 def get_tenant_usage(
@@ -45,6 +45,24 @@ def get_tenant_usage(
 ):
     """Devuelve un reporte del uso de recursos actual del tenant."""
     return usage_service.get_usage_report(tenant_id)
+
+@router.get("/my-tenant", response_model=TenantRead, dependencies=[Depends(require_permission("tenant:read"))])
+def get_my_tenant_details(
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    saas_service: SaasService = Depends(get_saas_service)
+):
+    """Devuelve los detalles completos del tenant del usuario autenticado."""
+    return saas_service.get_tenant(tenant_id)
+
+@router.put("/my-tenant", response_model=TenantRead, dependencies=[Depends(require_permission("tenant:update"))])
+def update_my_tenant_details(
+    tenant_in: TenantUpdate,
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    saas_service: SaasService = Depends(get_saas_service)
+):
+    """Permite a un admin de tenant actualizar los datos de su propia empresa."""
+    return saas_service.update_tenant(tenant_id, tenant_in)
+
 
 # --- Endpoints para Planes (Gestión de Super Admin) ---
 
@@ -69,14 +87,32 @@ def update_plan(plan_id: uuid.UUID, plan_in: PlanUpdate, saas_service: SaasServi
 
 @router.post("/tenants", response_model=TenantRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_permission("tenant:create"))])
 def create_tenant(tenant_in: TenantCreate, saas_service: SaasService = Depends(get_saas_service)):
-    try:
-        return saas_service.create_tenant_and_admin(tenant_in)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    # Este endpoint es para que un Super Admin cree un tenant manualmente.
+    # La lógica podría ser diferente a la del registro público.
+    # Por ahora, asumimos que es similar.
+    pass
 
 @router.get("/tenants/{tenant_id}", response_model=TenantRead, dependencies=[Depends(require_permission("tenant:read"))])
 def get_tenant(tenant_id: uuid.UUID, saas_service: SaasService = Depends(get_saas_service)):
     return saas_service.get_tenant(tenant_id)
+
+@router.put("/tenants/{tenant_id}", response_model=TenantRead, dependencies=[Depends(require_permission("tenant:update"))])
+def update_tenant(
+    tenant_id: uuid.UUID,
+    tenant_in: TenantUpdate,
+    saas_service: SaasService = Depends(get_saas_service)
+):
+    """(Super Admin) Actualiza los datos de cualquier tenant."""
+    return saas_service.update_tenant(tenant_id, tenant_in)
+
+@router.delete("/tenants/{tenant_id}", response_model=TenantRead, dependencies=[Depends(require_permission("tenant:delete"))])
+def delete_tenant(
+    tenant_id: uuid.UUID,
+    confirmation: TenantDeletionConfirmation,
+    saas_service: SaasService = Depends(get_saas_service)
+):
+    """(Super Admin) Realiza un borrado lógico de un tenant."""
+    return saas_service.delete_tenant(tenant_id, confirmation.confirmation_key)
 
 
 # --- Endpoints para Suscripciones (Gestión de Super Admin) ---

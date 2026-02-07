@@ -2111,7 +2111,12 @@
                             }
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ]
             }
         },
         "/api/v1/ops/telemetry/readings/{asset_id}": {
@@ -2493,7 +2498,7 @@
                     "Media"
                 ],
                 "summary": "Solicitar una URL para subir un archivo",
-                "description": "Inicia el proceso de subida de un archivo.\n\nEl cliente proporciona el contexto y los metadatos del archivo, y el backend\ndevuelve una URL presignada donde el cliente debe subir el archivo directamente.",
+                "description": "Inicia el proceso de subida de un archivo.\n\nEl cliente proporciona el contexto y los metadatos del archivo, y el backend\ndevuelve una URL presignada (o una ruta de API para subida local) donde el \ncliente debe subir el archivo.",
                 "operationId": "request_upload_url_api_v1_ops_media_upload_request_post",
                 "requestBody": {
                     "content": {
@@ -2534,13 +2539,64 @@
                 ]
             }
         },
+        "/api/v1/ops/media/local-upload/{file_path}": {
+            "put": {
+                "tags": [
+                    "Media"
+                ],
+                "summary": "Subir un archivo al almacenamiento local (para desarrollo)",
+                "description": "Endpoint para manejar la subida de archivos cuando se usa la estrategia 'local'.\nEl frontend usa este endpoint como si fuera una URL presignada.",
+                "operationId": "upload_local_file_api_v1_ops_media_local_upload__file_path__put",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "file_path",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "File Path"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_upload_local_file_api_v1_ops_media_local_upload__file_path__put"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/ops/media/{media_item_id}/confirm-upload": {
             "post": {
                 "tags": [
                     "Media"
                 ],
                 "summary": "Confirmar que un archivo ha sido subido",
-                "description": "Confirma al backend que el archivo fue subido exitosamente a la URL presignada.\n\nEl backend actualiza el estado del MediaItem a 'AVAILABLE'.",
+                "description": "Confirma al backend que el archivo fue subido exitosamente.\n\nEl backend actualiza el estado del MediaItem a 'AVAILABLE'.",
                 "operationId": "confirm_upload_api_v1_ops_media__media_item_id__confirm_upload_post",
                 "security": [
                     {
@@ -4230,24 +4286,24 @@
             },
             "AssetReadDTO": {
                 "properties": {
-                    "uuid": {
+                    "id": {
                         "type": "string",
                         "format": "uuid",
-                        "title": "Uuid"
+                        "title": "Id"
                     },
-                    "isActive": {
+                    "is_active": {
                         "type": "boolean",
-                        "title": "Isactive"
+                        "title": "Is Active"
                     },
-                    "createdAt": {
+                    "created_at": {
                         "type": "string",
                         "format": "date-time",
-                        "title": "Createdat"
+                        "title": "Created At"
                     },
-                    "updatedAt": {
+                    "updated_at": {
                         "type": "string",
                         "format": "date-time",
-                        "title": "Updatedat"
+                        "title": "Updated At"
                     },
                     "name": {
                         "type": "string",
@@ -4276,8 +4332,7 @@
                         "title": "Type"
                     },
                     "status": {
-                        "type": "string",
-                        "title": "Status"
+                        "$ref": "#/components/schemas/AssetStatus"
                     },
                     "properties": {
                         "anyOf": [
@@ -4301,7 +4356,7 @@
                             }
                         ]
                     },
-                    "parentId": {
+                    "parent_id": {
                         "anyOf": [
                             {
                                 "type": "string",
@@ -4311,26 +4366,62 @@
                                 "type": "null"
                             }
                         ],
-                        "title": "Parentid"
+                        "title": "Parent Id"
+                    },
+                    "serial_number": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Serial Number"
+                    },
+                    "location": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Location"
+                    },
+                    "asset_type": {
+                        "$ref": "#/components/schemas/AssetTypeRead"
                     }
                 },
                 "type": "object",
                 "required": [
-                    "uuid",
-                    "isActive",
-                    "createdAt",
-                    "updatedAt",
+                    "id",
+                    "is_active",
+                    "created_at",
+                    "updated_at",
                     "name",
-                    "status"
+                    "status",
+                    "asset_type"
                 ],
                 "title": "AssetReadDTO"
+            },
+            "AssetStatus": {
+                "type": "string",
+                "enum": [
+                    "operational",
+                    "maintenance",
+                    "pending_deletion",
+                    "decommissioned",
+                    "unknown"
+                ],
+                "title": "AssetStatus"
             },
             "AssetStatusUpdate": {
                 "properties": {
                     "status": {
-                        "type": "string",
-                        "title": "Status",
-                        "example": "MAINTENANCE"
+                        "$ref": "#/components/schemas/AssetStatus",
+                        "example": "maintenance"
                     }
                 },
                 "type": "object",
@@ -4338,6 +4429,51 @@
                     "status"
                 ],
                 "title": "AssetStatusUpdate"
+            },
+            "AssetTypeRead": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name",
+                        "example": "Servo Motor X5"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description",
+                        "example": "Motor de alta precisión para brazos robóticos."
+                    },
+                    "category": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Category",
+                        "description": "MACHINE, SENSOR, PLC, AREA, etc.",
+                        "example": "MOTOR"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "id"
+                ],
+                "title": "AssetTypeRead"
             },
             "AssetUpdate": {
                 "properties": {
@@ -4378,13 +4514,12 @@
                     "status": {
                         "anyOf": [
                             {
-                                "type": "string"
+                                "$ref": "#/components/schemas/AssetStatus"
                             },
                             {
                                 "type": "null"
                             }
-                        ],
-                        "title": "Status"
+                        ]
                     },
                     "properties": {
                         "anyOf": [
@@ -4564,6 +4699,20 @@
                     "justification"
                 ],
                 "title": "Body_request_delete_asset_api_v1_ops_assets__asset_id__delete"
+            },
+            "Body_upload_local_file_api_v1_ops_media_local_upload__file_path__put": {
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "title": "File"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "file"
+                ],
+                "title": "Body_upload_local_file_api_v1_ops_media_local_upload__file_path__put"
             },
             "BulkIngestionResponse": {
                 "properties": {
@@ -5901,6 +6050,101 @@
                         "maxLength": 100,
                         "title": "Name"
                     },
+                    "logo_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Logo Url"
+                    },
+                    "website": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Website"
+                    },
+                    "tax_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Tax Id"
+                    },
+                    "billing_address": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Billing Address"
+                    },
+                    "contact_email": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Contact Email"
+                    },
+                    "contact_phone": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Contact Phone"
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "title": "Timezone",
+                        "default": "UTC"
+                    },
+                    "language": {
+                        "type": "string",
+                        "title": "Language",
+                        "default": "es"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "title": "Currency",
+                        "default": "USD"
+                    },
+                    "config": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Config",
+                        "default": {}
+                    },
                     "slug": {
                         "type": "string",
                         "title": "Slug"
@@ -5931,6 +6175,101 @@
                         "type": "string",
                         "maxLength": 100,
                         "title": "Name"
+                    },
+                    "logo_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Logo Url"
+                    },
+                    "website": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Website"
+                    },
+                    "tax_id": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Tax Id"
+                    },
+                    "billing_address": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Billing Address"
+                    },
+                    "contact_email": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Contact Email"
+                    },
+                    "contact_phone": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Contact Phone"
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "title": "Timezone",
+                        "default": "UTC"
+                    },
+                    "language": {
+                        "type": "string",
+                        "title": "Language",
+                        "default": "es"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "title": "Currency",
+                        "default": "USD"
+                    },
+                    "config": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": true,
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Config",
+                        "default": {}
                     },
                     "id": {
                         "type": "string",
