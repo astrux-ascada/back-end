@@ -9,6 +9,8 @@ services:
     environment:
       - POSTGRES_HOST=backend_db
       - REDIS_HOST=redis
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
     env_file:
       - .env
 
@@ -33,6 +35,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   # --- TimescaleDB Service ---
   backend_db:
@@ -66,6 +70,21 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Mailpit Service (SMTP Mock) ---
+  mailpit:
+    image: axllent/mailpit
+    container_name: astruxa_mailpit
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP Port
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    volumes:
+      - mailpit_data:/data
+
   # --- Servicio para ejecutar comandos y scripts ---
   runner:
     build: .
@@ -73,6 +92,8 @@ services:
     environment:
       - POSTGRES_HOST=backend_db
       - REDIS_HOST=redis
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
     env_file:
       - .env
 
@@ -97,3 +118,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  mailpit_data:

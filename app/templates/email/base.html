@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}Astruxa Notification{% endblock %}</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; }
+        .header { text-align: center; padding-bottom: 20px; border-bottom: 2px solid #eee; }
+        .logo { max-height: 50px; }
+        .content { padding: 20px 0; }
+        .footer { text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {% if tenant and tenant.logo_url %}
+                <img src="{{ tenant.logo_url }}" alt="{{ tenant.name }}" class="logo">
+            {% else %}
+                <h1>{{ tenant.name if tenant else 'Astruxa' }}</h1>
+            {% endif %}
+        </div>
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+
+        <div class="footer">
+            <p>&copy; {{ year }} {{ tenant.name if tenant else 'Astruxa' }}. All rights reserved.</p>
+            {% if tenant and tenant.billing_address %}
+                <p>{{ tenant.billing_address }}</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

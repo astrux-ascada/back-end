@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Bienvenido a {{ tenant.name if tenant else 'Astruxa' }}{% endblock %}
+
+{% block content %}
+    <h2>¡Hola, {{ user_name }}!</h2>
+    <p>Bienvenido a <strong>{{ tenant.name if tenant else 'Astruxa' }}</strong>.</p>
+    <p>Tu cuenta ha sido creada exitosamente. Ahora puedes acceder a la plataforma para gestionar tus activos y mantenimiento.</p>
+
+    <p>
+        <a href="{{ login_url }}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Ir al Dashboard
+        </a>
+    </p>
+
+    <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
+{% endblock %}

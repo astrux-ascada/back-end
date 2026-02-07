@@ -67,11 +67,11 @@ class AssetService:
         db_asset = self.asset_repo.get_asset(asset_id, tenant_id)
         if not db_asset:
             raise NotFoundException("Activo no encontrado.")
-        if db_asset.status != "operational":
-            raise ConflictException(f"El activo no está en estado 'operational', no se puede solicitar su borrado.")
+        if db_asset.status != schemas.AssetStatus.OPERATIONAL:
+            raise ConflictException(f"El activo no está en estado '{schemas.AssetStatus.OPERATIONAL}', no se puede solicitar su borrado.")
 
         # Cambiar estado a pendiente de borrado
-        db_asset.status = "pending_deletion"
+        db_asset.status = schemas.AssetStatus.PENDING_DELETION
         self.db.commit()
 
         # Crear la solicitud de aprobación
@@ -98,7 +98,7 @@ class AssetService:
         if not db_asset:
             raise NotFoundException("Activo no encontrado durante la ejecución del borrado.")
         
-        db_asset.status = "decommissioned"
+        db_asset.status = schemas.AssetStatus.DECOMMISSIONED
         self.db.commit()
         self.db.refresh(db_asset)
         

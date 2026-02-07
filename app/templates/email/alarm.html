@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Alerta de Sistema - {{ tenant.name if tenant else 'Astruxa' }}{% endblock %}
+
+{% block content %}
+    <h2 style="color: #d9534f;">⚠️ Alerta Detectada</h2>
+    <p>Hola {{ user_name }},</p>
+    <p>El sistema ha detectado una condición de alarma en tus activos:</p>
+
+    <div style="background-color: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <strong>{{ alarm_content }}</strong>
+    </div>
+
+    <p>Por favor, accede a la plataforma para revisar los detalles y tomar acción.</p>
+
+    <p>
+        <a href="{{ login_url }}" style="background-color: #d9534f; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+            Ver Alarma
+        </a>
+    </p>
+{% endblock %}
