@@ -5,10 +5,15 @@ Capa de Servicio para el módulo de Notificaciones.
 import logging
 from typing import List
 import uuid
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.notifications import models, schemas
 from app.core.event_broker import EventBroker
+from app.core.email import email_sender # Importar el servicio de email
+from app.identity.models import User
+from app.identity.models.saas.tenant import Tenant
+from app.core.config import settings
 
 logger = logging.getLogger("app.notifications.service")
 
@@ -30,17 +35,61 @@ class NotificationService:
     def _handle_alarm_triggered(self, event_data: dict):
         """
         Manejador para el evento 'alarm:triggered'.
-        Crea una notificación en la base de datos.
+        Crea una notificación en la base de datos y envía un email.
         """
         logger.info(f"Evento 'alarm:triggered' recibido: {event_data}")
         
+        user_id = event_data.get("user_id")
+        if not user_id:
+            logger.warning("Evento de alarma sin user_id, no se puede notificar.")
+            return
+
+        # 1. Crear notificación in-app
         notification_in = schemas.NotificationCreate(
-            user_id=event_data["user_id"], # Asumiendo que el evento contiene el user_id
+            user_id=user_id,
             type="ALARM",
             content=event_data["content"],
             reference_id=event_data["alarm_id"]
         )
         self.create_notification(notification_in)
+
+        # 2. Enviar Email (Centralización de Comunicaciones)
+        self._send_alarm_email(user_id, event_data)
+
+    def _send_alarm_email(self, user_id: uuid.UUID, event_data: dict):
+        """Envía un correo de alerta al usuario, personalizado por tenant."""
+        try:
+            user = self.db.query(User).filter(User.id == user_id).first()
+            if not user or not user.email:
+                return
+
+            # Obtener datos del tenant para personalización
+            tenant_config = {}
+            if user.tenant_id:
+                tenant = self.db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
+                if tenant:
+                    tenant_config = {
+                        "name": tenant.name,
+                        "logo_url": tenant.logo_url,
+                        "contact_email": tenant.contact_email,
+                        "billing_address": tenant.billing_address
+                    }
+
+            # Enviar el correo
+            email_sender.send_email(
+                to_email=user.email,
+                subject=f"🚨 ALERTA: {event_data['content']}",
+                template_name="alarm.html", # Necesitaremos crear esta plantilla
+                context={
+                    "user_name": user.name,
+                    "alarm_content": event_data["content"],
+                    "year": datetime.now().year,
+                    "login_url": f"{settings.BASE_URL}/login"
+                },
+                tenant_config=tenant_config
+            )
+        except Exception as e:
+            logger.error(f"Error enviando email de alarma: {e}")
 
     def create_notification(self, notification_in: schemas.NotificationCreate) -> models.Notification:
         """Crea una nueva notificación en la base de datos."""

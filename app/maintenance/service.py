@@ -45,7 +45,7 @@ class MaintenanceService:
     def cancel_work_order(self, work_order_id: uuid.UUID, cancel_in: schemas.WorkOrderCancel, tenant_id: uuid.UUID, user: User) -> models.WorkOrder:
         db_work_order = self.get_work_order(work_order_id, tenant_id)
         
-        if db_work_order.status in ["COMPLETED", "CANCELLED"]:
+        if db_work_order.status in [models.WorkOrderStatus.COMPLETED, models.WorkOrderStatus.CANCELLED]:
             raise ConflictException(f"No se puede cancelar una orden en estado {db_work_order.status}.")
             
         cancelled_work_order = self.maintenance_repo.cancel_work_order(db_work_order, cancel_in.cancellation_reason)

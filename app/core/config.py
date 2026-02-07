@@ -4,7 +4,7 @@ Módulo de Configuración de la Aplicación.
 
 Carga las variables de entorno y las expone a través de un objeto `settings`.
 """
-from typing import List, Union
+from typing import List, Union, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -63,6 +63,15 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str = ""
     S3_SECRET_KEY: str = ""
     S3_ENDPOINT_URL: str = ""
+
+    # --- Email y Notificaciones (SMTP) ---
+    SMTP_HOST: str = "mailpit"
+    SMTP_PORT: int = 1025
+    SMTP_USER: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_TLS: bool = False
+    EMAILS_FROM_EMAIL: str = "no-reply@astruxa.com"
+    EMAILS_FROM_NAME: str = "Astruxa System"
 
     # --- Pasarelas de Pago ---
     PAYPAL_CLIENT_ID: str = ""
