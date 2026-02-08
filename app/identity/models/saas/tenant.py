@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
 from app.db.base_class import Base
+from app.identity.models.user import User # Importar User para la relación
 
 class Tenant(Base):
     __tablename__ = "tenants"
@@ -35,11 +36,17 @@ class Tenant(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
-    # --- Configuración Flexible ---
-    config = Column(JSONB, nullable=True, default={})
-
+    # --- Relaciones de Gestión ---
     partner_id = Column(UUID(as_uuid=True), ForeignKey("partners.id"), nullable=True)
     partner = relationship("Partner", back_populates="tenants")
+
+    account_manager_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    account_manager = relationship("User", foreign_keys=[account_manager_id])
+
+    # --- Configuración Flexible ---
+    config = Column(JSONB, nullable=True, default={})
     
     subscription = relationship("Subscription", uselist=False, back_populates="tenant")
-    users = relationship("User", back_populates="tenant")
+    
+    # Relación con los usuarios que pertenecen a este tenant
+    users = relationship("User", foreign_keys=[User.tenant_id], back_populates="tenant")

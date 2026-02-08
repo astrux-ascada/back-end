@@ -36,13 +36,13 @@
 
 ## 🧠 Horizonte 2: Inteligencia y Excelencia Operativa (Próximos 6-12 Meses)
 
-**Objetivo Estratégico:** Evolucionar de una plataforma de "registro de datos" a una de "toma de decisiones inteligentes", aumentando drásticamente el valor para el cliente.
+**Objetivo Estratégico:** Evolucionar de una plataforma de "registro de datos" a una de "toma de decisiones inteligentes", aumentando drásticamente el valor para el cliente y escalando el modelo de negocio.
 
 ### Prioridad 4: Mantenimiento Predictivo (PdM) v1.0
 - **Descripción:** Utilizar los datos de telemetría para predecir fallos antes de que ocurran.
 - **Tareas Clave:**
-  - [ ] **Motor de Detección de Anomalías:** Implementar modelos (ej. Isolation Forest, Autoencoders) que detecten patrones de vibración, temperatura o consumo inusuales.
-  - [ ] **Generación Automática de OT Predictivas:** Cuando se detecta una anomalía con alta confianza, crear automáticamente una OT de tipo "PREDICTIVA".
+  - [ ] **Motor de Detección de Anomalías:** Implementar modelos (ej. Isolation Forest, Autoencoders) que detecten patrones inusuales.
+  - [ ] **Generación Automática de OT Predictivas:** Crear automáticamente una OT de tipo "PREDICTIVA" ante una anomalía.
   - [ ] **Dashboard de Salud del Activo:** Una interfaz que muestre un "health score" para cada activo crítico.
 
 ### Prioridad 5: Gestión de Inventario y Compras Inteligentes
@@ -50,13 +50,20 @@
 - **Tareas Clave:**
   - [ ] **Módulo de Inventario Avanzado:** Control de stock, puntos de re-orden automáticos, historial de movimientos.
   - [ ] **Asociación de Repuestos a Activos (BOM):** Definir qué repuestos necesita cada `AssetType`.
-  - [ ] **Integración del SSI:** Conectar el "Sistema de Sugerencias Inteligentes" para que, al crear una OT, sugiera automáticamente qué repuestos comprar y a qué proveedor.
+  - [ ] **Integración del SSI:** Conectar el "Sistema de Sugerencias Inteligentes" para que, al crear una OT, sugiera automáticamente qué repuestos comprar.
 
-### Prioridad 6: Analítica Avanzada y Reportes Personalizados
+### Prioridad 6: Portal de Partners (Resellers)
+- **Descripción:** Crear un portal para socios comerciales que les permita registrar y gestionar a sus propios clientes dentro de Astruxa, escalando las ventas.
+- **Tareas Clave:**
+  - [ ] **Nuevo Rol `PARTNER_ADMIN`:** Un rol global que solo puede ver y gestionar los tenants asociados a su `Partner`.
+  - [ ] **API de Partner:** Endpoints dedicados (`/partner/my-tenants`) para que los partners gestionen su cartera de clientes.
+  - [ ] **Dashboard de Partner:** Una interfaz para que los partners vean el estado de sus clientes y sus comisiones.
+
+### Prioridad 7: Analítica Avanzada y Reportes Personalizados
 - **Descripción:** Permitir a los gerentes y directores obtener insights de alto nivel sobre su operación.
 - **Tareas Clave:**
-  - [ ] **Motor de Reportes:** Un servicio para generar reportes programados en PDF (OEE, MTBF, MTTR, costos de mantenimiento) con el logo y branding del tenant.
-  - [ ] **Conector de Business Intelligence (BI):** Ofrecer un endpoint de API seguro (o una réplica de BD de solo lectura) para que los clientes puedan conectar sus propias herramientas como Power BI o Tableau.
+  - [ ] **Motor de Reportes:** Un servicio para generar reportes programados en PDF (OEE, MTBF, MTTR) con el branding del tenant.
+  - [ ] **Conector de Business Intelligence (BI):** Ofrecer un endpoint de API seguro para que los clientes conecten sus propias herramientas como Power BI o Tableau.
 
 ---
 
@@ -64,25 +71,25 @@
 
 **Objetivo Estratégico:** Convertir Astruxa en el "sistema operativo" de la planta industrial, una plataforma abierta que se integra con el ecosistema del cliente.
 
-### Prioridad 7: Integraciones de Terceros (Connectors)
+### Prioridad 8: Gestión de Plataforma Avanzada (Multi-Admin)
+- **Descripción:** Implementar un sistema de roles de plataforma más granular para mejorar la seguridad y la delegación operativa interna.
+- **Tareas Clave:**
+  - [ ] **Nuevo Rol `PLATFORM_ADMIN`:** Un rol de empleado de Astruxa que puede gestionar tenants pero no puede crear otros administradores.
+  - [ ] **Flujo de Aprobación Dual:** Implementar un sistema "Maker-Checker" para acciones destructivas como el borrado de tenants.
+
+### Prioridad 9: Integraciones de Terceros (Connectors)
 - **Descripción:** Romper los silos de datos conectando Astruxa con los sistemas que el cliente ya utiliza.
 - **Tareas Clave:**
-  - [ ] **Conector ERP:** Sincronización bidireccional con SAP, Oracle o Microsoft Dynamics (órdenes de compra, costos).
-  - [ ] **Conector SCADA/Historian:** Integración con OSIsoft PI, Ignition, para ingesta de datos de alta frecuencia.
-  - [ ] **Conector de Comunicación:** Enviar alertas críticas a canales de Slack o Microsoft Teams.
+  - [ ] **Conector ERP:** Sincronización con SAP, Oracle o Microsoft Dynamics.
+  - [ ] **Conector SCADA/Historian:** Integración con OSIsoft PI, Ignition.
+  - [ ] **Conector de Comunicación:** Enviar alertas a Slack o Microsoft Teams.
 
-### Prioridad 8: API Pública y Webhooks
+### Prioridad 10: API Pública y Webhooks
 - **Descripción:** Permitir a los clientes y partners construir sus propias automatizaciones sobre Astruxa.
 - **Tareas Clave:**
-  - [ ] **API Pública Segura:** Exponer una parte de la API con autenticación por API Key para clientes del plan Enterprise.
-  - [ ] **Sistema de Webhooks:** Notificar a sistemas externos en tiempo real cuando ocurran eventos (ej. `workorder:created`, `asset:status_changed`).
-  - [ ] **Portal para Desarrolladores:** Documentación interactiva y herramientas para la API pública.
-
-### Prioridad 9: Multi-Región y Cumplimiento Normativo
-- **Descripción:** Preparar la plataforma para una expansión global, cumpliendo con las leyes de residencia de datos.
-- **Tareas Clave:**
-  - [ ] **Infraestructura como Código (Terraform):** Automatizar el despliegue de la pila completa de Astruxa en cualquier región de GCP.
-  - [ ] **Gestión de Datos Regional:** Lógica para asegurar que los datos de un tenant europeo residan en servidores europeos (GDPR).
+  - [ ] **API Pública Segura:** Exponer una parte de la API con autenticación por API Key.
+  - [ ] **Sistema de Webhooks:** Notificar a sistemas externos en tiempo real.
+  - [ ] **Portal para Desarrolladores:** Documentación interactiva para la API pública.
 
 ---
 
@@ -90,6 +97,6 @@
 
 **Objetivo Estratégico:** Posicionar a Astruxa como el cerebro central que no solo monitoriza, sino que orquesta la operación de la planta de forma autónoma.
 
-- **Digital Twin (Gemelo Digital):** Crear una réplica virtual 1:1 de la planta del cliente, donde se puedan simular cambios y predecir su impacto antes de implementarlos en el mundo real.
-- **Operaciones Autónomas:** El sistema no solo predice un fallo, sino que automáticamente crea la OT, verifica el inventario de repuestos, genera la orden de compra al proveedor óptimo, asigna al técnico disponible con las mejores habilidades y reprograma la producción afectada.
-- **Analítica Prescriptiva:** El sistema no solo dice "qué va a pasar" (predictivo), sino que recomienda "qué se debe hacer" (prescriptivo). Ejemplo: "Recomendamos operar la línea 5 a un 92% de su capacidad durante las próximas 48 horas para evitar un fallo crítico con un costo estimado de 50.000€. ¿Aplicar recomendación?".
+- **Digital Twin (Gemelo Digital):** Crear una réplica virtual 1:1 de la planta del cliente para simular cambios.
+- **Operaciones Autónomas:** El sistema no solo predice un fallo, sino que automatiza toda la cadena de respuesta (OT, compra, asignación).
+- **Analítica Prescriptiva:** El sistema no solo dice "qué va a pasar", sino que recomienda "qué se debe hacer".

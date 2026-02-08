@@ -74,12 +74,15 @@ class TenantRead(TenantBase):
     id: uuid.UUID
     slug: str
     deleted_at: Optional[datetime] = None
+    account_manager_id: Optional[uuid.UUID] = None
     class Config:
         from_attributes = True
 
 class TenantDeletionConfirmation(BaseModel):
     confirmation_key: str = Field(..., description="Clave de confirmación requerida para el borrado.")
 
+class TenantManagerAssignment(BaseModel):
+    account_manager_id: uuid.UUID = Field(..., description="ID del usuario (PLATFORM_ADMIN) a asignar como gestor de cuenta.")
 
 # --- Esquemas para Suscripción ---
 

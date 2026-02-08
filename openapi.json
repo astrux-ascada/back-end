@@ -797,21 +797,87 @@
             }
         },
         "/api/v1/saas/tenants": {
+            "get": {
+                "tags": [
+                    "SaaS Management"
+                ],
+                "summary": "List Tenants",
+                "description": "(Super Admin) Lista todos los tenants activos en la plataforma.",
+                "operationId": "list_tenants_api_v1_saas_tenants_get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Skip"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 100,
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/TenantRead"
+                                    },
+                                    "title": "Response List Tenants Api V1 Saas Tenants Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "tags": [
                     "SaaS Management"
                 ],
                 "summary": "Create Tenant",
                 "operationId": "create_tenant_api_v1_saas_tenants_post",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
                 "requestBody": {
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/TenantCreate"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "201": {
@@ -834,12 +900,7 @@
                             }
                         }
                     }
-                },
-                "security": [
-                    {
-                        "HTTPBearer": []
-                    }
-                ]
+                }
             }
         },
         "/api/v1/saas/tenants/{tenant_id}": {
@@ -3951,6 +4012,69 @@
                 }
             }
         },
+        "/api/v1/sys-mgt/identity/users/all": {
+            "get": {
+                "tags": [
+                    "Super Admin - Identity"
+                ],
+                "summary": "List All Users",
+                "description": "(Super Admin) Lista todos los usuarios de todos los tenants.",
+                "operationId": "list_all_users_api_v1_sys_mgt_identity_users_all_get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Skip"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 100,
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserRead"
+                                    },
+                                    "title": "Response List All Users Api V1 Sys Mgt Identity Users All Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/notifications/": {
             "get": {
                 "tags": [
@@ -4302,7 +4426,6 @@
                     "payload": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -4454,7 +4577,6 @@
                     "properties": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -4523,7 +4645,6 @@
                     "properties": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -4606,7 +4727,11 @@
             "AssetStatusUpdate": {
                 "properties": {
                     "status": {
-                        "$ref": "#/components/schemas/AssetStatus",
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/AssetStatus"
+                            }
+                        ],
                         "example": "maintenance"
                     }
                 },
@@ -4710,7 +4835,6 @@
                     "properties": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -4784,7 +4908,6 @@
                     "details": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -5044,7 +5167,6 @@
                         "example": "modbus_tcp"
                     },
                     "connection_params": {
-                        "additionalProperties": true,
                         "type": "object",
                         "title": "Connection Params",
                         "example": {
@@ -5079,7 +5201,6 @@
                         "example": "modbus_tcp"
                     },
                     "connection_params": {
-                        "additionalProperties": true,
                         "type": "object",
                         "title": "Connection Params",
                         "example": {
@@ -5140,7 +5261,6 @@
                     "connection_params": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -5369,7 +5489,6 @@
                     "limits": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -5382,7 +5501,6 @@
                     "features": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -5438,7 +5556,6 @@
                     "limits": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -5451,7 +5568,6 @@
                     "features": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -5531,7 +5647,6 @@
                     "limits": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -5543,7 +5658,6 @@
                     "features": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -6330,7 +6444,6 @@
                     "config": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -6485,7 +6598,6 @@
                     "config": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -6647,7 +6759,6 @@
                     "config": {
                         "anyOf": [
                             {
-                                "additionalProperties": true,
                                 "type": "object"
                             },
                             {
@@ -6761,7 +6872,6 @@
                         "title": "Media Item Id"
                     },
                     "upload_info": {
-                        "additionalProperties": true,
                         "type": "object",
                         "title": "Upload Info"
                     }
@@ -7040,7 +7150,11 @@
                         "title": "Description"
                     },
                     "priority": {
-                        "$ref": "#/components/schemas/WorkOrderPriority",
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkOrderPriority"
+                            }
+                        ],
                         "default": "MEDIUM"
                     },
                     "asset_id": {
@@ -7179,7 +7293,11 @@
                         "title": "Description"
                     },
                     "priority": {
-                        "$ref": "#/components/schemas/WorkOrderPriority",
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/WorkOrderPriority"
+                            }
+                        ],
                         "default": "MEDIUM"
                     },
                     "asset_id": {
