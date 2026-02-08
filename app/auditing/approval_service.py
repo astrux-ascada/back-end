@@ -15,6 +15,7 @@ from app.identity.models import User
 if TYPE_CHECKING:
     from app.assets.service import AssetService
     from app.payments.service_manual import ManualPaymentService
+    from app.identity.service_saas import SaasService
 
 class ApprovalService:
     """Servicio de negocio para la gestión de aprobaciones (Maker-Checker)."""
@@ -23,11 +24,13 @@ class ApprovalService:
         self, 
         db: Session, 
         asset_service: Optional['AssetService'] = None,
-        manual_payment_service: Optional['ManualPaymentService'] = None
+        manual_payment_service: Optional['ManualPaymentService'] = None,
+        saas_service: Optional['SaasService'] = None
     ):
         self.db = db
         self.asset_service = asset_service
         self.manual_payment_service = manual_payment_service
+        self.saas_service = saas_service
         self.approval_repo = ApprovalRepository(self.db)
 
     def create_request(self, request_in: schemas.ApprovalRequestCreate, requester: User, tenant_id: uuid.UUID) -> schemas.ApprovalRequestRead:
@@ -63,28 +66,20 @@ class ApprovalService:
         """
         (Método interno) Llama al servicio correspondiente para ejecutar la acción aprobada.
         """
-        # Importaciones diferidas para romper ciclos
-        from app.assets.service import AssetService
-        from app.payments.service_manual import ManualPaymentService
-
         if request.action == "DELETE_ASSET":
             if not self.asset_service:
-                raise RuntimeError("AssetService no está disponible para ejecutar la acción.")
-            
-            if isinstance(self.asset_service, AssetService):
-                self.asset_service._execute_delete_asset(request.entity_id, request.tenant_id, approver)
-            else:
-                raise RuntimeError("El servicio inyectado no es una instancia válida de AssetService.")
+                raise RuntimeError("AssetService no está disponible.")
+            self.asset_service._execute_delete_asset(request.entity_id, request.tenant_id, approver)
         
         elif request.action == "APPROVE_MANUAL_PAYMENT":
             if not self.manual_payment_service:
-                raise RuntimeError("ManualPaymentService no está disponible para ejecutar la acción.")
+                raise RuntimeError("ManualPaymentService no está disponible.")
+            self.manual_payment_service._execute_approve_payment(request.entity_id, approver)
             
-            if isinstance(self.manual_payment_service, ManualPaymentService):
-                # Asumiendo que este método también necesita el approver para auditoría
-                self.manual_payment_service._execute_approve_payment(request.entity_id, approver)
-            else:
-                raise RuntimeError("El servicio inyectado no es una instancia válida de ManualPaymentService.")
-
+        elif request.action == "DELETE_TENANT":
+            if not self.saas_service:
+                raise RuntimeError("SaasService no está disponible.")
+            # La confirmación se asume válida porque la aprobación es el segundo factor
+            self.saas_service._execute_delete_tenant(request.entity_id, request.payload.get("confirmation_key"))
         else:
             pass

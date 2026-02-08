@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 ALL_PERMISSIONS = [
     p.PLAN_READ, p.PLAN_CREATE, p.PLAN_UPDATE,
-    p.TENANT_READ, p.TENANT_CREATE, p.TENANT_UPDATE, p.TENANT_DELETE,
+    p.TENANT_READ, p.TENANT_READ_ALL, p.TENANT_CREATE, p.TENANT_UPDATE, p.TENANT_ASSIGN_MANAGER,
+    p.TENANT_DELETE_REQUEST, p.TENANT_DELETE_APPROVE, p.TENANT_DELETE_FORCE,
     p.SUBSCRIPTION_READ, p.SUBSCRIPTION_UPDATE,
     p.ASSET_READ, p.ASSET_CREATE, p.ASSET_UPDATE, p.ASSET_UPDATE_STATUS, p.ASSET_DELETE,
     p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER, p.WORK_ORDER_EVALUATE,
@@ -34,12 +35,13 @@ ALL_PERMISSIONS = [
     p.CONFIG_PARAM_READ, p.CONFIG_PARAM_CREATE, p.CONFIG_PARAM_UPDATE, p.CONFIG_PARAM_DELETE,
     p.DATA_SOURCE_READ, p.DATA_SOURCE_CREATE, p.DATA_SOURCE_UPDATE, p.DATA_SOURCE_DELETE,
     p.AUDIT_LOG_READ, p.APPROVAL_READ, p.APPROVAL_DECIDE,
-    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE, p.USER_READ_ALL,
+    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE, p.USER_READ_ALL, p.USER_CREATE_ADMIN,
     p.ROLE_READ, p.ROLE_CREATE, p.ROLE_UPDATE, p.ROLE_DELETE,
     p.PERMISSION_READ, p.SESSION_DELETE
 ]
 
 TENANT_ADMIN_PERMISSIONS = p.DEFAULT_TENANT_ADMIN_PERMISSIONS
+PLATFORM_ADMIN_PERMISSIONS = p.DEFAULT_PLATFORM_ADMIN_PERMISSIONS
 
 async def seed_initial_data(db: Session):
     """
@@ -49,35 +51,45 @@ async def seed_initial_data(db: Session):
     logger.info("--- [1/9] Poblando Datos Iniciales ---")
 
     # 1. Permisos
-    permissions_map = {}
+    permissions_map = {perm.name: perm for perm in db.query(Permission).all()}
     for perm_name in ALL_PERMISSIONS:
-        db_perm = db.query(Permission).filter(Permission.name == perm_name).first()
-        if not db_perm:
+        if perm_name not in permissions_map:
             db_perm = Permission(name=perm_name, description=f"Permite la acción: {perm_name}")
             db.add(db_perm)
-        permissions_map[perm_name] = db_perm
+            permissions_map[perm_name] = db_perm
     db.commit()
 
-    # 2. Rol Super Admin Global
+    # 2. Roles Globales
     super_admin_role = db.query(Role).filter(Role.name == "GLOBAL_SUPER_ADMIN").first()
     if not super_admin_role:
         super_admin_role = Role(name="GLOBAL_SUPER_ADMIN", description="Acceso total a la plataforma.", tenant_id=None)
         super_admin_role.permissions = list(permissions_map.values())
         db.add(super_admin_role)
+
+    platform_admin_role = db.query(Role).filter(Role.name == "PLATFORM_ADMIN").first()
+    if not platform_admin_role:
+        platform_admin_role = Role(name="PLATFORM_ADMIN", description="Gestión operativa de la plataforma.", tenant_id=None)
+        platform_admin_role.permissions = [permissions_map[p_name] for p_name in PLATFORM_ADMIN_PERMISSIONS]
+        db.add(platform_admin_role)
     db.commit()
 
-    # 3. Usuario Super Admin Global
-    super_admin_user = db.query(User).filter(User.email == settings.FIRST_SUPERUSER_EMAIL).first()
-    if not super_admin_user:
+    # 3. Usuarios Globales
+    if not db.query(User).filter(User.email == settings.FIRST_SUPERUSER_EMAIL).first():
         super_admin_user = User(
             email=settings.FIRST_SUPERUSER_EMAIL,
             hashed_password=hash_password(settings.FIRST_SUPERUSER_PASSWORD),
-            name="Global Super Admin",
-            is_active=True,
-            tenant_id=None
+            name="Global Super Admin", is_active=True, tenant_id=None
         )
         super_admin_user.roles.append(super_admin_role)
         db.add(super_admin_user)
+    
+    if not db.query(User).filter(User.email == "platform.admin@astruxa.com").first():
+        platform_admin_user = User(
+            email="platform.admin@astruxa.com",
+            hashed_password=hash_password("platform_password"),
+            name="Platform Admin", is_active=True, tenant_id=None
+        )
+        platform_admin_user.roles.append(platform_admin_role)
     db.commit()
 
     # 4. Partner Global
@@ -105,23 +117,18 @@ async def seed_initial_data(db: Session):
         db.add(demo_tenant)
         db.commit()
         
-        # Rol Admin del Tenant
         tenant_admin_role = Role(name="TENANT_ADMIN", description="Administrador del Tenant", tenant_id=demo_tenant.id)
         tenant_admin_role.permissions = [permissions_map[p_name] for p_name in TENANT_ADMIN_PERMISSIONS]
         db.add(tenant_admin_role)
         
-        # Usuario Admin del Tenant
         demo_admin_user = User(
             email="admin@demo.com",
             hashed_password=hash_password("demo_password"),
-            name="Demo Admin",
-            is_active=True,
-            tenant_id=demo_tenant.id
+            name="Demo Admin", is_active=True, tenant_id=demo_tenant.id
         )
         demo_admin_user.roles.append(tenant_admin_role)
         db.add(demo_admin_user)
         
-        # Suscripción
         pro_plan = db.query(Plan).filter(Plan.code == "PRO").first()
         subscription = Subscription(
             tenant_id=demo_tenant.id,

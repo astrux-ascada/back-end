@@ -3,6 +3,7 @@
 Dependencias de FastAPI para la autorización basada en permisos (RBAC granular).
 """
 from fastapi import Depends, HTTPException, status
+from typing import List
 
 from app.dependencies.auth import get_current_active_user
 from app.identity.models import User
@@ -24,18 +25,24 @@ def require_permission(permission_name: str):
         """
         Valida si el usuario actual tiene el permiso requerido a través de alguno de sus roles.
         """
-        # Recorrer todos los roles asignados al usuario
-        for role in current_user.roles:
-            # Recorrer todos los permisos de cada rol
-            for permission in role.permissions:
-                if permission.name == permission_name:
-                    # Si se encuentra el permiso, la validación es exitosa.
-                    return
-
-        # Si el bucle termina y no se encontró el permiso, lanzar un error.
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Permiso requerido: '{permission_name}' no encontrado para este usuario."
-        )
+        if not check_user_permissions(current_user, [permission_name]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Permiso requerido: '{permission_name}' no encontrado para este usuario."
+            )
 
     return _dependency
+
+def check_user_permissions(user: User, required_permissions: List[str]) -> bool:
+    """
+    Función helper que verifica si un usuario tiene al menos uno de los permisos de una lista.
+    
+    Args:
+        user: El objeto de usuario a verificar.
+        required_permissions: Una lista de nombres de permisos.
+
+    Returns:
+        True si el usuario tiene al menos uno de los permisos, False en caso contrario.
+    """
+    user_permissions = {perm.name for role in user.roles for perm in role.permissions}
+    return any(perm in user_permissions for perm in required_permissions)

@@ -31,7 +31,7 @@ from app.payments.service import PaymentService
 from app.payments.service_manual import ManualPaymentService
 from app.payments.service_online import OnlinePaymentService
 from app.procurement.service import ProcurementService
-from app.procurement.service_evaluation import EvaluationService  # Importar EvaluationService
+from app.procurement.service_evaluation import EvaluationService
 from app.sectors.service import SectorService
 from app.telemetry.service import TelemetryService
 
@@ -44,9 +44,12 @@ def get_auth_service(db: Session = Depends(get_db),
     return AuthService(db=db, redis_client=redis_client, tfa_service=tfa_service)
 
 
-def get_saas_service(db: Session = Depends(get_db),
-                     auth_service: AuthService = Depends(get_auth_service)) -> SaasService:
-    return SaasService(db=db, auth_service=auth_service)
+def get_saas_service(
+    db: Session = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service),
+    approval_service: ApprovalService = Depends(lambda: get_approval_service(db)) # Lazy dependency
+) -> SaasService:
+    return SaasService(db=db, auth_service=auth_service, approval_service=approval_service)
 
 
 def get_usage_service(db: Session = Depends(get_db)) -> UsageService:
@@ -66,7 +69,7 @@ def get_media_service(db: Session = Depends(get_db)) -> MediaService:
 
 
 def get_notification_service(db: Session = Depends(get_db)) -> NotificationService:
-    return NotificationService(db)
+    return NotificationService(db, event_broker=None) # Event broker is injected at startup
 
 
 def get_alarming_service(
@@ -89,7 +92,6 @@ def get_payment_service(db: Session = Depends(get_db)) -> PaymentService:
 
 
 def get_manual_payment_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> ManualPaymentService:
-    # ApprovalService se inyecta después para evitar dependencia circular
     return ManualPaymentService(db, approval_service=None, audit_service=audit_service)
 
 
@@ -111,7 +113,6 @@ def get_asset_service(
         db: Session = Depends(get_db),
         audit_service: AuditService = Depends(get_audit_service)
 ) -> AssetService:
-    # ApprovalService se inyecta después para evitar dependencia circular
     return AssetService(db=db, audit_service=audit_service, approval_service=None)
 
 
@@ -121,7 +122,6 @@ def get_approval_service(
         manual_payment_service: ManualPaymentService = Depends(get_manual_payment_service)
 ) -> ApprovalService:
     approval_service = ApprovalService(db, asset_service=asset_service, manual_payment_service=manual_payment_service)
-    # Romper la dependencia circular inyectando el servicio de aprobación en los otros servicios
     asset_service.approval_service = approval_service
     manual_payment_service.approval_service = approval_service
     return approval_service
@@ -160,13 +160,10 @@ def get_configuration_service(db: Session = Depends(get_db),
 
 
 def get_limiter_key(request: Request) -> str:
-    # Prioridad 1: Usar tenant_id si está disponible (middleware ya lo inyecta)
     if 'tenant_id' in request.scope:
         return str(request.scope['tenant_id'])
 
-    # Prioridad 2: Usar IP del cliente si existe
     if request.client is not None and request.client.host is not None:
         return request.client.host
 
-    # Fallback seguro para tests o entornos sin info de cliente
-    return "test_fallback_key"  # Evita crash; todas las requests de test comparten bucket
+    return "test_fallback_key"
