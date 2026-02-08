@@ -10,6 +10,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.v1.routers import api_router
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.core.exception_handlers import add_exception_handlers
 from app.core.redis import get_redis_client
 from app.core.limiter import limiter
 # from app.core.middlewares.tenant_middleware import TenantMiddleware # DESACTIVADA
@@ -67,6 +68,8 @@ app = FastAPI(
     redoc_url="/api/v1/redoc", # URL para ReDoc
     lifespan=lifespan
 )
+
+add_exception_handlers(app)
 
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(

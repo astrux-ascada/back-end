@@ -19,6 +19,7 @@ from app.identity.auth_service import AuthService
 from app.auditing.service import AuditService
 from app.identity.models import User
 from app.identity.schemas import UserCreate, TokenWithUser, UserRead, TfaToken, UserUpdate
+from app.schemas.password import PasswordChange, ForgotPasswordRequest, ResetPasswordRequest
 
 logger = logging.getLogger("app.identity.api")
 
@@ -47,6 +48,62 @@ def read_users_me(current_user: User = Depends(get_current_active_user)):
 def logout(payload: Dict[str, Any] = Depends(get_current_token_payload), auth_service: AuthService = Depends(get_auth_service)):
     jti = payload.get("jti")
     auth_service.logout_user(jti)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Endpoints de Cambio y Recuperación de Contraseña ---
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_active_user),
+    auth_service: AuthService = Depends(get_auth_service),
+    audit_service: AuditService = Depends(get_audit_service)
+):
+    """
+    Permite a un usuario autenticado cambiar su propia contraseña.
+    """
+    auth_service.change_password(
+        user=current_user,
+        current_password=password_data.current_password,
+        new_password=password_data.new_password
+    )
+    audit_service.log_operation(user=current_user, action="CHANGE_PASSWORD", entity=current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
+async def forgot_password(
+    request_data: ForgotPasswordRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """
+    Inicia el proceso de recuperación de contraseña para un usuario.
+    Genera un token y (en una implementación real) enviaría un correo.
+    """
+    # NOTA: La implementación del envío de correo se omite por ahora.
+    # El token se podría devolver en la respuesta para facilitar las pruebas.
+    reset_token = await auth_service.forgot_password(email=request_data.email)
+    
+    # En un entorno real, aquí se enviaría el correo con el token.
+    # Por ahora, podemos registrar el evento o simplemente aceptar la solicitud.
+    logger.info(f"Solicitud de restablecimiento de contraseña para {request_data.email}. Token: {reset_token}")
+    
+    return {"message": "Si el correo electrónico está registrado, se enviarán instrucciones para restablecer la contraseña."}
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+def reset_password(
+    request_data: ResetPasswordRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+    audit_service: AuditService = Depends(get_audit_service)
+):
+    """
+    Restablece la contraseña del usuario utilizando un token de un solo uso.
+    """
+    updated_user = auth_service.reset_password(
+        token=request_data.token,
+        new_password=request_data.new_password
+    )
+    audit_service.log_operation(user=None, action="RESET_PASSWORD", entity=updated_user, details={"source": "forgot_password"})
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
