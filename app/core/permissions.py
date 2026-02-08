@@ -9,9 +9,13 @@ PLAN_CREATE = "plan:create"
 PLAN_UPDATE = "plan:update"
 
 TENANT_READ = "tenant:read"
+TENANT_READ_ALL = "tenant:read_all"
 TENANT_CREATE = "tenant:create"
 TENANT_UPDATE = "tenant:update"
-TENANT_DELETE = "tenant:delete" # Añadido
+TENANT_ASSIGN_MANAGER = "tenant:assign_manager"
+TENANT_DELETE_REQUEST = "tenant:delete_request"
+TENANT_DELETE_APPROVE = "tenant:delete_approve"
+TENANT_DELETE_FORCE = "tenant:delete_force"
 
 SUBSCRIPTION_READ = "subscription:read"
 SUBSCRIPTION_UPDATE = "subscription:update"
@@ -43,11 +47,11 @@ SPARE_PART_DELETE = "spare_part:delete"
 # --- Permisos del Flujo de Compras Inteligente ---
 RFQ_CREATE = "rfq:create"
 RFQ_READ = "rfq:read"
-QUOTE_SUBMIT = "quote:submit" # Para proveedores
-QUOTE_EVALUATE = "quote:evaluate" # Para gestores
+QUOTE_SUBMIT = "quote:submit"
+QUOTE_EVALUATE = "quote:evaluate"
 PO_CREATE = "po:create"
 PO_READ = "po:read"
-PO_RECEIVE = "po:receive" # Añadido
+PO_RECEIVE = "po:receive"
 
 ALARM_RULE_READ = "alarm_rule:read"
 ALARM_RULE_CREATE = "alarm_rule:create"
@@ -82,7 +86,8 @@ USER_READ = "user:read"
 USER_CREATE = "user:create"
 USER_UPDATE = "user:update"
 USER_DELETE = "user:delete"
-USER_READ_ALL = "user:read_all" # Nuevo permiso para Super Admin
+USER_READ_ALL = "user:read_all"
+USER_CREATE_ADMIN = "user:create_admin"
 
 ROLE_READ = "role:read"
 ROLE_CREATE = "role:create"
@@ -90,13 +95,12 @@ ROLE_UPDATE = "role:update"
 ROLE_DELETE = "role:delete"
 
 PERMISSION_READ = "permission:read"
-
-# --- Permisos de Sesión ---
 SESSION_DELETE = "session:delete"
 
 # --- Conjuntos de Permisos por Rol ---
 
 DEFAULT_TENANT_ADMIN_PERMISSIONS = [
+    TENANT_READ, TENANT_UPDATE,
     ASSET_READ, ASSET_CREATE, ASSET_UPDATE, ASSET_DELETE,
     WORK_ORDER_READ, WORK_ORDER_CREATE, WORK_ORDER_UPDATE, WORK_ORDER_CANCEL, WORK_ORDER_ASSIGN_PROVIDER,
     PROVIDER_READ, PROVIDER_CREATE, PROVIDER_UPDATE, PROVIDER_DELETE,
@@ -107,4 +111,11 @@ DEFAULT_TENANT_ADMIN_PERMISSIONS = [
     AUDIT_LOG_READ, APPROVAL_READ, APPROVAL_DECIDE,
     USER_READ, USER_CREATE, USER_UPDATE, USER_DELETE,
     ROLE_READ, ROLE_CREATE, ROLE_UPDATE, ROLE_DELETE,
+]
+
+DEFAULT_PLATFORM_ADMIN_PERMISSIONS = [
+    PLAN_READ, PLAN_CREATE, PLAN_UPDATE,
+    TENANT_READ, TENANT_CREATE, TENANT_UPDATE, TENANT_DELETE_REQUEST,
+    SUBSCRIPTION_READ, SUBSCRIPTION_UPDATE,
+    USER_READ_ALL,
 ]

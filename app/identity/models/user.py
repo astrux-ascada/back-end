@@ -15,7 +15,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True)
-    tenant = relationship("Tenant", back_populates="users")
+    tenant = relationship("Tenant", foreign_keys=[tenant_id], back_populates="users")
     
     roles = relationship("Role", secondary="user_roles", back_populates="users")
     

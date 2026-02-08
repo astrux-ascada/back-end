@@ -7,19 +7,24 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
+from app.identity.models import User
 from app.identity.models.saas import Plan, Tenant, Subscription
 from app.identity.schemas_saas import PlanCreate, PlanUpdate, TenantCreate, TenantUpdate, SubscriptionUpdate, PublicRegistrationRequest
 from app.identity.auth_service import AuthService
 from app.core.exceptions import NotFoundException, ConflictException, PermissionDeniedException
 from app.core.error_messages import ErrorMessages
+from app.auditing.approval_service import ApprovalService
+from app.auditing.schemas import ApprovalRequestCreate
+from app.dependencies.permissions import check_user_permissions # CORRECCIÓN: Importar desde la ubicación correcta
 from slugify import slugify
 
 class SaasService:
     """Servicio de negocio para la gestión de Planes, Tenants y Suscripciones."""
 
-    def __init__(self, db: Session, auth_service: AuthService):
+    def __init__(self, db: Session, auth_service: AuthService, approval_service: ApprovalService):
         self.db = db
         self.auth_service = auth_service
+        self.approval_service = approval_service
 
     # --- Métodos para Planes ---
     def create_plan(self, plan_in: PlanCreate) -> Plan:
@@ -48,15 +53,21 @@ class SaasService:
         self.db.refresh(db_plan)
         return db_plan
 
-    # --- Métodos para Tenants y Suscripciones ---
+    # --- Métodos para Tenants ---
     def get_tenant(self, tenant_id: uuid.UUID) -> Tenant:
         tenant = self.db.query(Tenant).filter(Tenant.id == tenant_id, Tenant.deleted_at == None).first()
         if not tenant:
             raise NotFoundException(ErrorMessages.TENANT_NOT_FOUND)
         return tenant
 
-    def list_tenants(self, skip: int = 0, limit: int = 100) -> List[Tenant]:
-        return self.db.query(Tenant).filter(Tenant.deleted_at == None).offset(skip).limit(limit).all()
+    def list_tenants(self, current_user: User, skip: int = 0, limit: int = 100) -> List[Tenant]:
+        query = self.db.query(Tenant).filter(Tenant.deleted_at == None)
+        
+        # Si el usuario NO es Super Admin, filtramos por los tenants que tiene asignados.
+        if not check_user_permissions(current_user, ["tenant:read_all"]):
+            query = query.filter(Tenant.account_manager_id == current_user.id)
+            
+        return query.offset(skip).limit(limit).all()
 
     def update_tenant(self, tenant_id: uuid.UUID, tenant_in: TenantUpdate) -> Tenant:
         db_tenant = self.get_tenant(tenant_id)
@@ -68,25 +79,41 @@ class SaasService:
         self.db.refresh(db_tenant)
         return db_tenant
 
-    def delete_tenant(self, tenant_id: uuid.UUID, confirmation_key: str) -> Tenant:
+    def assign_manager_to_tenant(self, tenant_id: uuid.UUID, manager_id: uuid.UUID) -> Tenant:
         db_tenant = self.get_tenant(tenant_id)
+        manager = self.auth_service.get_user_by_id(manager_id)
         
-        # Clave de confirmación simple: el slug del tenant
+        db_tenant.account_manager_id = manager.id
+        self.db.commit()
+        self.db.refresh(db_tenant)
+        return db_tenant
+
+    def request_tenant_deletion(self, tenant_id: uuid.UUID, user, justification: str):
+        db_tenant = self.get_tenant(tenant_id)
+        approval_request_in = ApprovalRequestCreate(
+            entity_type="TENANT",
+            entity_id=tenant_id,
+            action="DELETE_TENANT",
+            request_justification=justification,
+            payload={"confirmation_key": db_tenant.slug} # Guardamos la clave para la aprobación
+        )
+        return self.approval_service.create_request(approval_request_in, user, user.tenant_id)
+
+    def force_delete_tenant(self, tenant_id: uuid.UUID, confirmation_key: str) -> Tenant:
+        return self._execute_delete_tenant(tenant_id, confirmation_key)
+
+    def _execute_delete_tenant(self, tenant_id: uuid.UUID, confirmation_key: str) -> Tenant:
+        db_tenant = self.get_tenant(tenant_id)
         if confirmation_key != db_tenant.slug:
             raise PermissionDeniedException(ErrorMessages.TENANT_DELETION_CONFIRMATION_INVALID)
-            
-        # Borrado lógico
+        
         db_tenant.deleted_at = datetime.now(timezone.utc)
         db_tenant.is_active = False
         self.db.add(db_tenant)
         self.db.commit()
         self.db.refresh(db_tenant)
-        
-        # Aquí se podría disparar un evento para un borrado físico asíncrono en el futuro
-        # self.event_broker.publish("tenant:deleted", {"tenant_id": tenant_id})
-        
         return db_tenant
-
+    
     def update_subscription(self, tenant_id: uuid.UUID, sub_in: SubscriptionUpdate) -> Subscription:
         subscription = self.db.query(Subscription).filter(Subscription.tenant_id == tenant_id).first()
         if not subscription:
