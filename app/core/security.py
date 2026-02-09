@@ -9,7 +9,7 @@ Contiene la lógica para:
 """
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Tuple
+from typing import Any, Tuple, Optional
 
 import jwt
 from passlib.context import CryptContext
@@ -71,5 +71,33 @@ def verify_jwt_token(token: str) -> dict[str, Any] | None:
             token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
         )
         return payload
+    except jwt.PyJWTError:
+        return None
+
+def create_password_reset_token(email: str) -> str:
+    """
+    Genera un token JWT específico para el restablecimiento de contraseña.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(minutes=30)  # Token válido por 30 minutos
+    payload = {
+        "sub": email,
+        "exp": expire,
+        "scope": "password_reset"  # Ámbito específico para seguridad
+    }
+    return jwt.encode(
+        payload, settings.JWT_PASSWORD_RESET_SECRET, algorithm=settings.JWT_ALGORITHM
+    )
+
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """
+    Verifica un token de restablecimiento de contraseña y devuelve el email si es válido.
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.JWT_PASSWORD_RESET_SECRET, algorithms=[settings.JWT_ALGORITHM]
+        )
+        if payload.get("scope") == "password_reset":
+            return payload.get("sub")
+        return None
     except jwt.PyJWTError:
         return None

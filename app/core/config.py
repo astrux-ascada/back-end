@@ -38,6 +38,7 @@ class Settings(BaseSettings):
 
     # --- Seguridad y Autenticación ---
     JWT_SECRET: str
+    JWT_PASSWORD_RESET_SECRET: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 1080  # 18 horas
     

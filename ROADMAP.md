@@ -100,3 +100,22 @@
 - **Digital Twin (Gemelo Digital):** Crear una réplica virtual 1:1 de la planta del cliente para simular cambios.
 - **Operaciones Autónomas:** El sistema no solo predice un fallo, sino que automatiza toda la cadena de respuesta (OT, compra, asignación).
 - **Analítica Prescriptiva:** El sistema no solo dice "qué va a pasar", sino que recomienda "qué se debe hacer".
+
+---
+
+### 📝 NOTA: Estimación de Recursos para Horizonte 2 (Inteligencia y Excelencia Operativa)
+
+**Alcance:** Implementación de Mantenimiento Predictivo, Gestión Avanzada de Inventario, Portal de Partners y Analítica Avanzada.
+
+**Tiempo Estimado:**
+*   **Desarrollo:** 4 a 6 meses.
+*   **Equipo Sugerido:** 2 Desarrolladores Full-Stack Senior, 1 Ingeniero de Datos/ML (parcial), 1 QA Engineer.
+
+**Presupuesto Estimado (Aprox.):**
+*   **Rango:** $60,000 - $100,000 USD.
+*   **Desglose:**
+    *   Desarrollo Backend/Frontend: ~65%
+    *   Infraestructura ML/Datos: ~15%
+    *   QA y Pruebas Automatizadas: ~20%
+
+*Esta estimación asume una arquitectura base estable (Horizonte 1 completado) y puede variar según la complejidad específica de los modelos de ML y las integraciones requeridas.*
