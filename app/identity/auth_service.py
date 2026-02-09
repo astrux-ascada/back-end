@@ -14,8 +14,9 @@ from app.core import permissions as p
 from app.core.config import settings
 from app.core.error_messages import ErrorMessages
 from app.core.exceptions import AuthenticationException, DuplicateRegistrationError, ConflictException, \
-    NotFoundException, PermissionDeniedException
-from app.core.security import create_access_token, verify_password
+    NotFoundException, PermissionDeniedException, ValidationException
+from app.core.security import create_access_token, verify_password, hash_password, \
+    create_password_reset_token, verify_password_reset_token
 from app.identity.models import User, Role, Permission
 from app.identity.models.saas.subscription import Subscription, SubscriptionStatus
 from app.identity.models.saas.tenant import Tenant
@@ -170,6 +171,45 @@ class AuthService:
                 pipe.delete(key)
             pipe.execute()
         return len(session_keys)
+
+    def change_password(self, user: User, current_password: str, new_password: str):
+        if not verify_password(current_password, user.hashed_password):
+            raise AuthenticationException("La contraseña actual es incorrecta.")
+        
+        user.hashed_password = hash_password(new_password)
+        self.db.commit()
+        logger.info(f"Contraseña cambiada exitosamente para el usuario {user.email}.")
+
+    async def forgot_password(self, email: str) -> Optional[str]:
+        user = self.user_repo.get_by_email(email)
+        if not user:
+            # No revelamos si el usuario existe o no por seguridad
+            logger.info(f"Solicitud de restablecimiento de contraseña para un email no registrado: {email}")
+            return None
+        
+        # Generar token de restablecimiento
+        reset_token = create_password_reset_token(email=user.email)
+        
+        # Aquí iría la lógica para enviar el correo electrónico
+        # from app.core.email import send_password_reset_email
+        # await send_password_reset_email(email_to=user.email, token=reset_token)
+        
+        return reset_token
+
+    def reset_password(self, token: str, new_password: str) -> User:
+        email = verify_password_reset_token(token)
+        if not email:
+            raise AuthenticationException("El token de restablecimiento es inválido o ha expirado.")
+            
+        user = self.user_repo.get_by_email(email)
+        if not user:
+            # Esto no debería ocurrir si el token es válido, pero es una salvaguarda
+            raise NotFoundException("Usuario no encontrado.")
+            
+        user.hashed_password = hash_password(new_password)
+        self.db.commit()
+        logger.info(f"Contraseña restablecida exitosamente para el usuario {user.email}.")
+        return user
 
     def setup_tfa(self, user: User) -> Dict[str, str]:
         if user.is_tfa_enabled:
