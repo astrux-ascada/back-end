@@ -20,6 +20,7 @@ Este documento proporciona una guía detallada sobre cómo utilizar los endpoint
 15. [Configuración del Sistema (Configuration)](#configuración-del-sistema-configuration)
 16. [Fuentes de Datos (Data Sources)](#fuentes-de-datos-data-sources)
 17. [Notificaciones (Notifications)](#notificaciones-notifications)
+18. [Anexo: Simuladores de Desarrollo](#anexo-simuladores-de-desarrollo)
 
 ---
 
@@ -549,3 +550,35 @@ Paso 2, después de subir el binario.
 ### Marcar como Leída
 *   **URL:** `/api/v1/notifications/{notification_id}/read`
 *   **Método:** `POST`
+
+---
+
+## Anexo: Simuladores de Desarrollo
+
+El proyecto incluye scripts para simular dispositivos y generar tráfico de datos sin necesidad de hardware real.
+
+### 1. Simulador de PLC (Generador de Tráfico HTTP)
+Este script simula un PLC inteligente que envía datos directamente a la API REST de Astruxa. Es ideal para probar la visualización de gráficos en el frontend.
+
+*   **Ubicación:** `simulators/plc_simulator.py`
+*   **Configuración:**
+    *   Abre el archivo y edita la variable `MACHINE_ID` con el UUID de un activo real que hayas creado en tu base de datos.
+    *   Asegúrate de que la `API_URL` apunte a tu instancia local (por defecto `http://localhost:8071...`).
+*   **Ejecución:**
+    ```bash
+    python simulators/plc_simulator.py
+    ```
+*   **Comportamiento:** Genera valores aleatorios de "velocidad de proceso" y simula paradas de máquina ocasionales.
+
+### 2. Simulador Modbus TCP (Servidor Virtual)
+Este script levanta un servidor Modbus TCP local. Es útil para probar el desarrollo de "Edge Connectors" o drivers de comunicación.
+
+*   **Ubicación:** `simulators/modbus_simulator.py`
+*   **Ejecución:**
+    ```bash
+    python simulators/modbus_simulator.py
+    ```
+*   **Comportamiento:**
+    *   Escucha en el puerto **5020**.
+    *   **Registro 0 (Holding):** Simula el nivel de un tanque (0-1000).
+    *   **Registro 1 (Holding):** Simula el estado de una válvula (0/1) basado en el nivel del tanque.
