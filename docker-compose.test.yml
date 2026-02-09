@@ -1,42 +1,30 @@
 # docker-compose.test.yml
-# Configuración para el entorno de pruebas automatizadas.
+# Entorno Aislado para Pruebas Automatizadas
 
 services:
-  # --- Base de Datos para Pruebas ---
+  # --- Base de Datos de Pruebas (Efímera) ---
   db_test:
     image: postgres:16-alpine
-    container_name: emergqr_backend_db_test
-    # Carga las variables de entorno específicas para el testing
-    env_file:
-      - .env.test
+    container_name: astruxa_db_test
+    env_file: .env.test
     ports:
-      # Mapea a un puerto diferente en el host para evitar colisiones con la BD de desarrollo
-      - "5434:5432"
+      - "5434:5432" # Puerto distinto al de desarrollo
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U test_user -d astruxa_test_db"]
+      interval: 2s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  # --- Servicio para Ejecutar Pruebas (Pytest) ---
+  # --- Ejecutor de Pruebas (Pytest) ---
   test_runner:
     build: .
-    # Carga las variables de entorno de testing
-    env_file:
-      - .env.test
-    # Sobrescribe la variable de entorno para que apunte a la BD de test
+    container_name: astruxa_test_runner
+    env_file: .env.test
     environment:
       - POSTGRES_HOST=db_test
-    # Monta los volúmenes para que tenga acceso a todo el código y scripts
     volumes:
-      - ./app:/app/app
-      - ./scripts:/app/scripts
-      - ./alembic.ini:/app/alembic.ini
-      - ./alembic:/app/alembic
-      - ./tests:/app/tests # Monta el directorio de pruebas
-    # El comando por defecto será ejecutar pytest
-    command: ["pytest", "-v"]
-    # Depende de que la base de datos de pruebas esté lista y saludable
+      - .:/app # Montamos código para ver cambios sin reconstruir
+    command: pytest -v
     depends_on:
       db_test:
         condition: service_healthy
