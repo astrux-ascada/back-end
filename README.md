@@ -1,49 +1,52 @@
-# Astruxa - Industrial Orchestrator 5.0 (SaaS Backend)
+# Astruxa - El Sistema Operativo Industrial (Industrial OS)
 
-Este proyecto es el backend principal para **Astruxa**, una plataforma de orquestación industrial Multi-Tenant (SaaS) construida con **FastAPI**, diseñada para la Industria 5.0.
+> **Visión:** Astruxa no es solo un software de mantenimiento; es la infraestructura digital que orquesta la operación de la fábrica moderna, desde la gestión de activos hasta la inteligencia predictiva.
 
-## 🚀 Descripción
-
-Astruxa permite a múltiples organizaciones industriales gestionar sus activos, mantenimiento y operaciones de forma segura y aislada en una única plataforma.
-
-### Características Clave
-- **Arquitectura Multi-Tenant Híbrida:** Aislamiento lógico de datos por `tenant_id`.
-- **Modelo de Negocio SaaS:** Gestión de Partners, Planes y Suscripciones.
-- **Seguridad Enterprise:** Login con "Gatekeeper" (validación de suscripción), protección contra fuerza bruta y control de sesiones.
-- **Media Manager:** Sistema seguro de subida de archivos (Local/S3).
-- **Módulo de Aprobaciones:** Flujo "Maker-Checker" para acciones críticas.
+Este repositorio contiene el **Backend Core** de la plataforma, construido con una arquitectura robusta, escalable y segura para soportar operaciones de misión crítica en entornos industriales.
 
 ---
 
-## 🏗️ Arquitectura y Roles
+## 📚 Documentación Oficial
 
-El sistema se divide en tres niveles de gestión:
+Para entender en profundidad cómo interactuar con la plataforma, consulta nuestros manuales:
 
-### 1. Nivel Plataforma (`/sys-mgt`)
-Gestionado por los dueños del SaaS y Partners Regionales.
-- **`GLOBAL_SUPER_ADMIN`**: Acceso total. Gestiona Partners y Planes.
-- **`PARTNER_ADMIN`**: Gestiona sus propios Tenants (Clientes).
+*   📖 **[Manual de Uso de la API y Arquitectura](./MANUAL_DE_USO_API.md)**: Guía completa de endpoints, roles, modelo SaaS y visión del frontend.
+*   🗺️ **[Roadmap Estratégico](./ROADMAP.md)**: Hacia dónde vamos (Mantenimiento Predictivo, Gemelo Digital).
 
-### 2. Nivel Organización (`/back-office`)
-Gestionado por el cliente final.
-- **`TENANT_ADMIN`**: El "Gerente de Planta". Gestiona usuarios, roles y facturación de su organización.
+---
 
-### 3. Nivel Operativo (`/ops`)
-El día a día en la planta.
-- **`MAINTENANCE_MANAGER`**: Planifica paradas y mantenimientos.
-- **`SUPERVISOR`**: Aprueba solicitudes y asigna tareas.
-- **`TECHNICIAN`**: Ejecuta órdenes de trabajo.
+## 🚀 Arquitectura y Capacidades
+
+Astruxa está diseñada bajo una arquitectura **Multi-Tenant Híbrida** que garantiza el aislamiento de datos y la escalabilidad.
+
+### 1. Núcleo SaaS (Software as a Service)
+*   **Gestión de Inquilinos (Tenants):** Aislamiento lógico total de datos por organización.
+*   **Planes y Suscripciones:** Control granular de límites (cuotas) y características (feature flags) según el plan contratado.
+*   **Onboarding Automatizado:** Flujo de registro público y provisión instantánea de entornos.
+
+### 2. Módulos Operativos (The "OS" Kernel)
+*   **Activos (Assets):** Registro jerárquico y trazabilidad completa del ciclo de vida de la maquinaria.
+*   **Mantenimiento (Maintenance):** Gestión de Órdenes de Trabajo (OTs) con flujos de aprobación y ejecución móvil.
+*   **Compras (Procurement):** Gestión integrada de proveedores y repuestos críticos.
+*   **Telemetría e IoT:** Ingesta masiva de datos de sensores para monitoreo en tiempo real.
+*   **Alarmas Inteligentes:** Motor de reglas para detección temprana de anomalías.
+
+### 3. Seguridad y Control (Enterprise Grade)
+*   **RBAC Granular:** Sistema de roles y permisos dinámicos (`GLOBAL_SUPER_ADMIN`, `PLATFORM_ADMIN`, `TENANT_ADMIN`, `OPERATOR`).
+*   **Auditoría Completa:** Registro inmutable de todas las acciones críticas ("Quién hizo qué y cuándo").
+*   **Aprobaciones (Maker-Checker):** Flujos de doble validación para acciones sensibles (ej. borrado de activos).
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-- **Backend:** FastAPI (Python 3.12)
-- **Base de Datos:** PostgreSQL 16 + TimescaleDB (Series de Tiempo)
-- **ORM:** SQLAlchemy 2.0
-- **Cache & Sesiones:** Redis
-- **Migraciones:** Alembic
-- **Infraestructura:** Docker Compose
+Construido sobre hombros de gigantes para garantizar rendimiento y mantenibilidad a largo plazo:
+
+- **Backend Framework:** FastAPI (Python 3.12) - Alto rendimiento y tipado estático.
+- **Base de Datos:** PostgreSQL 16 + TimescaleDB (Optimizado para series de tiempo IoT).
+- **ORM:** SQLAlchemy 2.0 (Moderno, asíncrono).
+- **Cache & Sesiones:** Redis.
+- **Infraestructura:** Docker & Docker Compose.
 
 ---
 
@@ -72,8 +75,8 @@ Aplica el esquema más reciente.
 docker-compose exec backend_api alembic upgrade head
 ```
 
-### 4. Poblar Datos Maestros (Seeding SaaS)
-Este script crea el Partner Global, los Planes y un Tenant de Demostración.
+### 4. Poblar Datos Maestros (Seeding)
+Este script crea la estructura base: Roles, Permisos, Planes y un Tenant de Demostración.
 ```sh
 docker-compose exec backend_api python scripts/seed_saas.py
 ```
