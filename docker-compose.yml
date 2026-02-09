@@ -1,32 +1,19 @@
+# docker-compose.yml
+# Entorno de Desarrollo Local para Astruxa Backend
+
 services:
-  # --- FastAPI Application Service ---
+  # --- API de la Aplicación ---
   backend_api:
     build: .
     container_name: astruxa_backend_api
     ports:
-      - "5678:5678"
-      - "8071:8000" # Puerto de salida cambiado a 8071
+      - "8071:8000" # API
+      - "5678:5678" # Debugger
+    env_file: .env
     environment:
       - POSTGRES_HOST=backend_db
       - REDIS_HOST=redis
       - SMTP_HOST=mailpit
-      - SMTP_PORT=1025
-    env_file:
-      - .env
-
-    #    - "8051:8000"
-    # --- MEJORA: Definimos explícitamente las variables de entorno ---
-    # Esto evita que una variable DATABASE_URL conflictiva del .env entre al contenedor.
-    # Docker-compose leerá las variables del .env y las sustituirá aquí.
-    # environment:
-    #  - POSTGRES_HOST=backend_db
-    #  - POSTGRES_USER=${POSTGRES_USER}
-    #  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    #  - POSTGRES_DB=${POSTGRES_DB}
-    #  - POSTGRES_PORT=${POSTGRES_PORT}
-    #  - JWT_SECRET=${JWT_SECRET}
-    #  - ENV=${ENV}
-
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/app
@@ -38,7 +25,7 @@ services:
       mailpit:
         condition: service_started
 
-  # --- TimescaleDB Service ---
+  # --- Base de Datos (PostgreSQL + TimescaleDB) ---
   backend_db:
     image: timescale/timescaledb:latest-pg16
     container_name: astruxa_backend_db
@@ -51,12 +38,12 @@ services:
     ports:
       - "5433:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # --- Redis Service ---
+  # --- Cache y Sesiones ---
   redis:
     image: redis:alpine
     container_name: astruxa_redis
@@ -65,55 +52,20 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # --- Mailpit Service (SMTP Mock) ---
+  # --- Servidor de Correo Falso (para desarrollo) ---
   mailpit:
     image: axllent/mailpit
     container_name: astruxa_mailpit
     ports:
       - "8025:8025" # Web UI
       - "1025:1025" # SMTP Port
-    environment:
-      MP_MAX_MESSAGES: 5000
-      MP_DATABASE: /data/mailpit.db
-      MP_SMTP_AUTH_ACCEPT_ANY: 1
-      MP_SMTP_AUTH_ALLOW_INSECURE: 1
     volumes:
       - mailpit_data:/data
-
-  # --- Servicio para ejecutar comandos y scripts ---
-  runner:
-    build: .
-
-    environment:
-      - POSTGRES_HOST=backend_db
-      - REDIS_HOST=redis
-      - SMTP_HOST=mailpit
-      - SMTP_PORT=1025
-    env_file:
-      - .env
-
-    # Aplicamos la misma mejora al runner
-    #   environment:
-    #     - POSTGRES_HOST=backend_db
-    #    - POSTGRES_USER=${POSTGRES_USER}
-    #    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    #    - POSTGRES_DB=${POSTGRES_DB}
-    #    - POSTGRES_PORT=${POSTGRES_PORT}
-    #    - JWT_SECRET=${JWT_SECRET}
-    #   - ENV=${ENV}
-
-    volumes:
-      - .:/app
-    depends_on:
-      backend_db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
 
 volumes:
   postgres_data:
