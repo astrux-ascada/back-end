@@ -1,127 +1,100 @@
 # /app/notifications/service.py
 """
-Capa de Servicio para el módulo de Notificaciones.
+Capa de Servicio para el Módulo de Notificaciones.
 """
-import logging
-from typing import List
 import uuid
-from datetime import datetime
+from typing import List
 from sqlalchemy.orm import Session
+from datetime import datetime
 
-from app.notifications import models, schemas
-from app.core.event_broker import EventBroker
-from app.core.email import email_sender # Importar el servicio de email
-from app.identity.models import User
-from app.identity.models.saas.tenant import Tenant
-from app.core.config import settings
-
-logger = logging.getLogger("app.notifications.service")
+from .models import Notification
+from .schemas import NotificationCreate
+from app.identity.models import User, Role
 
 class NotificationService:
-    """Servicio de negocio para la gestión de notificaciones."""
-
-    def __init__(self, db: Session, event_broker: EventBroker):
+    def __init__(self, db: Session):
         self.db = db
-        self.event_broker = event_broker
-        # Suscribirse a los eventos relevantes al iniciar el servicio
-        self._subscribe_to_events()
 
-    def _subscribe_to_events(self):
-        """Define las suscripciones a eventos del sistema."""
-        self.event_broker.subscribe("alarm:triggered", self._handle_alarm_triggered)
-        # Aquí se podrían añadir más suscripciones, ej:
-        # self.event_broker.subscribe("maintenance:completed", self._handle_maintenance_completed)
-
-    def _handle_alarm_triggered(self, event_data: dict):
+    def create_notification(self, notif_in: NotificationCreate) -> Notification:
         """
-        Manejador para el evento 'alarm:triggered'.
-        Crea una notificación en la base de datos y envía un email.
+        Crea una única notificación para un destinatario específico.
         """
-        logger.info(f"Evento 'alarm:triggered' recibido: {event_data}")
-        
-        user_id = event_data.get("user_id")
-        if not user_id:
-            logger.warning("Evento de alarma sin user_id, no se puede notificar.")
-            return
-
-        # 1. Crear notificación in-app
-        notification_in = schemas.NotificationCreate(
-            user_id=user_id,
-            type="ALARM",
-            content=event_data["content"],
-            reference_id=event_data["alarm_id"]
-        )
-        self.create_notification(notification_in)
-
-        # 2. Enviar Email (Centralización de Comunicaciones)
-        self._send_alarm_email(user_id, event_data)
-
-    def _send_alarm_email(self, user_id: uuid.UUID, event_data: dict):
-        """Envía un correo de alerta al usuario, personalizado por tenant."""
-        try:
-            user = self.db.query(User).filter(User.id == user_id).first()
-            if not user or not user.email:
-                return
-
-            # Obtener datos del tenant para personalización
-            tenant_config = {}
-            if user.tenant_id:
-                tenant = self.db.query(Tenant).filter(Tenant.id == user.tenant_id).first()
-                if tenant:
-                    tenant_config = {
-                        "name": tenant.name,
-                        "logo_url": tenant.logo_url,
-                        "contact_email": tenant.contact_email,
-                        "billing_address": tenant.billing_address
-                    }
-
-            # Enviar el correo
-            email_sender.send_email(
-                to_email=user.email,
-                subject=f"🚨 ALERTA: {event_data['content']}",
-                template_name="alarm.html", # Necesitaremos crear esta plantilla
-                context={
-                    "user_name": user.name,
-                    "alarm_content": event_data["content"],
-                    "year": datetime.now().year,
-                    "login_url": f"{settings.BASE_URL}/login"
-                },
-                tenant_config=tenant_config
-            )
-        except Exception as e:
-            logger.error(f"Error enviando email de alarma: {e}")
-
-    def create_notification(self, notification_in: schemas.NotificationCreate) -> models.Notification:
-        """Crea una nueva notificación en la base de datos."""
-        db_notification = models.Notification(
-            user_id=notification_in.user_id,
-            type=notification_in.type,
-            content=notification_in.content,
-            reference_id=notification_in.reference_id
-        )
-        self.db.add(db_notification)
+        db_notif = Notification(**notif_in.model_dump())
+        self.db.add(db_notif)
         self.db.commit()
-        self.db.refresh(db_notification)
-        logger.info(f"Notificación creada para el usuario {db_notification.user_id}")
-        return db_notification
+        self.db.refresh(db_notif)
+        return db_notif
 
-    def get_notifications_for_user(self, user_id: uuid.UUID) -> List[models.Notification]:
-        """Obtiene todas las notificaciones no leídas para un usuario."""
-        return self.db.query(models.Notification).filter(
-            models.Notification.user_id == user_id,
-            models.Notification.is_read == False
-        ).order_by(models.Notification.created_at.desc()).all()
-
-    def mark_as_read(self, notification_id: uuid.UUID, user_id: uuid.UUID) -> models.Notification:
-        """Marca una notificación como leída."""
-        db_notification = self.db.query(models.Notification).filter(
-            models.Notification.id == notification_id,
-            models.Notification.user_id == user_id
-        ).first()
+    def create_platform_notification_for_role(
+        self,
+        role_name: str,
+        title: str,
+        message: str,
+        icon: str = "bell",
+        action_url: str = None
+    ) -> List[Notification]:
+        """
+        Crea una notificación para todos los usuarios con un rol específico a nivel de plataforma.
+        """
+        users_with_role = self.db.query(User).join(User.roles).filter(Role.name == role_name).all()
         
-        if db_notification:
-            db_notification.is_read = True
+        notifications = []
+        for user in users_with_role:
+            notif_in = NotificationCreate(
+                recipient_id=user.id,
+                level="PLATFORM",
+                icon=icon,
+                title=title,
+                message=message,
+                action_url=action_url
+            )
+            notifications.append(Notification(**notif_in.model_dump()))
+
+        if notifications:
+            self.db.add_all(notifications)
             self.db.commit()
-            self.db.refresh(db_notification)
         
-        return db_notification
+        return notifications
+
+    def get_notifications_for_user(
+        self, 
+        user_id: uuid.UUID, 
+        unread_only: bool = True, 
+        limit: int = 20
+    ) -> List[Notification]:
+        """
+        Obtiene las notificaciones para un usuario.
+        """
+        query = self.db.query(Notification).filter(Notification.recipient_id == user_id)
+        if unread_only:
+            query = query.filter(Notification.read_at == None)
+        
+        return query.order_by(Notification.created_at.desc()).limit(limit).all()
+
+    def mark_as_read(self, notification_id: uuid.UUID, user_id: uuid.UUID) -> Notification:
+        """
+        Marca una notificación específica como leída.
+        """
+        notification = self.db.query(Notification).filter(
+            Notification.id == notification_id,
+            Notification.recipient_id == user_id
+        ).first()
+
+        if notification and not notification.read_at:
+            notification.read_at = datetime.utcnow()
+            self.db.commit()
+            self.db.refresh(notification)
+        
+        return notification
+
+    def mark_all_as_read(self, user_id: uuid.UUID) -> int:
+        """
+        Marca todas las notificaciones de un usuario como leídas.
+        """
+        result = self.db.query(Notification).filter(
+            Notification.recipient_id == user_id,
+            Notification.read_at == None
+        ).update({"read_at": datetime.utcnow()})
+        
+        self.db.commit()
+        return result

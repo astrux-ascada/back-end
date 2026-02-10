@@ -33,10 +33,9 @@ El **Orquestador Industrial 5.0** es un sistema de control, monitoreo y automati
 | **Core Engine**      | Conexión con PLCs, sensores, actuadores. Tiempo real, tolerancia a fallos.  | [`core-engine.md`](03-modulos/core-engine.md) |
 | **AI Orchestrator**  | IA predictiva: mantenimiento, optimización autónoma, gemelo digital.        | [`ai-orchestrator.md`](03-modulos/ai-orchestrator.md) |
 | **Maintenance**      | Gestión de OTs, inventario inteligente, asignación de técnicos.             | [`maintenance.md`](03-modulos/maintenance.md) |
-| **Assets**           | Catálogo vivo de máquinas, sensores, salud predictiva, gemelos digitales.   | [`assets.md`](03-modulos/assets.md) |
-| **Procurement**      | Compras inteligentes: repuestos, proveedores, proyectos de capital.         | [`procurement.md`](03-modulos/procurement.md) |
-| **Reporting**        | Dashboards por rol, KPIs en tiempo real, reportes ESG, exportación.         | [`reporting.md`](03-modulos/reporting.md) |
-| **Notifications**    | Alertas multimodal: push, email, SMS, sirenas, tableros LED.                | [`notifications.md`](03-modulos/notifications.md) |
+| **Assets**           | Catálogo vivo de máquinas, sensores, salud predictiva, gemelos digitales.   | [`assets.md`](03-modulos/a ssets.md) || **Procureme    nt**      | Compras inteligentes: repuestos, proveedores, proyectos de capital. | [`procurement.md`          ](03-modulos/procurement.md) |
+| **Reporting**        | Dashboards por rol, KPIs en tiempo real, reportes      ESG, exportación.         | [`reporting.md`](03-modulos/reporting.md) |
+| **No tifications**    | Alerta    s multimodal: push, email, SMS, sirenas, tableros LED.                | [`notif ications.md`](../../03_Modul os/notifications.md) |
 | **Identity**         | Autenticación, autorización granular, MFA, Zero Trust, auditoría inmutable. | [`identity.md`](03-modulos/identity.md) |
 
 ---

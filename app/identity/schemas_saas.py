@@ -78,6 +78,9 @@ class TenantRead(TenantBase):
     class Config:
         from_attributes = True
 
+class TenantDeletionRequest(BaseModel):
+    justification: str = Field(..., min_length=10, description="Justificación detallada para la solicitud de borrado.")
+
 class TenantDeletionConfirmation(BaseModel):
     confirmation_key: str = Field(..., description="Clave de confirmación requerida para el borrado.")
 
