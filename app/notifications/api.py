@@ -1,43 +1,52 @@
 # /app/notifications/api.py
 """
-API Router para el módulo de Notificaciones.
+API Router para el Módulo de Notificaciones.
 """
-import logging
 import uuid
 from typing import List
+from fastapi import APIRouter, Depends, status
 
-from fastapi import APIRouter, Depends, status, HTTPException
-
-from app.notifications import schemas
-from app.notifications.service import NotificationService
-from app.dependencies.services import get_notification_service
 from app.dependencies.auth import get_current_active_user
+from app.dependencies.services import get_notification_service
 from app.identity.models import User
+from .service import NotificationService
+from .schemas import NotificationRead, MarkAsReadResponse
 
-logger = logging.getLogger("app.notifications.api")
+router = APIRouter(
+    prefix="/notifications",
+    tags=["Notifications"]
+)
 
-router = APIRouter(prefix="/notifications", tags=["Notifications"])
-
-@router.get("/", response_model=List[schemas.NotificationRead])
+@router.get("/", response_model=List[NotificationRead])
 def get_my_notifications(
-    notification_service: NotificationService = Depends(get_notification_service),
-    current_user: User = Depends(get_current_active_user)
+    unread_only: bool = True,
+    limit: int = 20,
+    current_user: User = Depends(get_current_active_user),
+    notif_service: NotificationService = Depends(get_notification_service)
 ):
     """
-    Obtiene todas las notificaciones no leídas para el usuario autenticado.
+    Obtiene las notificaciones para el usuario autenticado.
     """
-    return notification_service.get_notifications_for_user(current_user.id)
+    return notif_service.get_notifications_for_user(current_user.id, unread_only, limit)
 
-@router.post("/{notification_id}/read", response_model=schemas.NotificationRead)
+@router.post("/{notification_id}/read", response_model=NotificationRead)
 def mark_notification_as_read(
     notification_id: uuid.UUID,
-    notification_service: NotificationService = Depends(get_notification_service),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
+    notif_service: NotificationService = Depends(get_notification_service)
 ):
     """
     Marca una notificación específica como leída.
     """
-    notification = notification_service.mark_as_read(notification_id, current_user.id)
-    if not notification:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notificación no encontrada.")
-    return notification
+    return notif_service.mark_as_read(notification_id, current_user.id)
+
+@router.post("/read-all", response_model=MarkAsReadResponse)
+def mark_all_notifications_as_read(
+    current_user: User = Depends(get_current_active_user),
+    notif_service: NotificationService = Depends(get_notification_service)
+):
+    """
+    Marca todas las notificaciones del usuario como leídas.
+    """
+    updated_count = notif_service.mark_all_as_read(current_user.id)
+    return {"updated": updated_count}

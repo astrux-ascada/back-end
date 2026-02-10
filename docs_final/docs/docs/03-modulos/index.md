@@ -29,10 +29,10 @@ Estos módulos están construidos, integrados y listos para ser probados.
 Estos módulos han sido diseñados o conceptualizados y representan los siguientes grandes pasos en el desarrollo de
 Astruxa.
 
-| Módulo              | Archivo                                          | Descripción                                                                           |
-|:--------------------|:-------------------------------------------------|:--------------------------------------------------------------------------------------|
-| **Videovigilancia** | [`video-surveillance.md`](video-surveillance.md) | El "Ojo Digital": integrar cámaras IP para grabación por evento y análisis con IA.    |
-| **Reporting**       | [`reporting.md`](reporting.md)                   | Generación de informes, dashboards de KPIs y exportación de datos.                    |
-| **Digital Twin**    | [`digital-twin.md`](digital-twin.md)             | Creación de un gemelo digital de la planta para simulaciones y entrenamiento de IA.   |
-| **AI Orchestrator** | [`ai-orchestrator.md`](ai-orchestrator.md)       | Orquesta los diferentes modelos de IA (mantenimiento predictivo, optimización, etc.). |
-| **Notifications**   | [`notifications.md`](notifications.md)           | Sistema para enviar notificaciones a los usuarios (email, push, SMS) sobre eventos.   |
+| Módulo              | Archivo                                                    | Descripción                                                                           |
+|:--------------------|:-----------------------------------------------------------|:--------------------------------------------------------------------------------------|
+| **Videovigilancia** | [`video-surveillance.md`](video-surveillance.md)           | El "Ojo Digital": integrar cámaras IP para grabación por evento y análisis con IA.    |
+| **Reporting**       | [`reporting.md`](reporting.md)                             | Generación de informes, dashboards de KPIs y exportación de datos.                    |
+| **Digital Twin**    | [`digital-twin.md`](digital-twin.md)                       | Creación de un gemelo digital de la planta para simulaciones y entrenamiento de IA.   |
+| **AI Orchestrator** | [`ai-orchestrator.md`](ai-orchestrator.md)                 | Orquesta los diferentes modelos de IA (mantenimiento predictivo, optimización, etc.). |
+| **Notifications**   | [`notifications.md`](../../../03_Modulos/notifications.md) | Sistema para enviar notificaciones a los usuarios (email, push, SMS) sobre eventos.   |

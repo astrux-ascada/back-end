@@ -47,9 +47,21 @@ def get_auth_service(db: Session = Depends(get_db),
 def get_saas_service(
     db: Session = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
-    approval_service: ApprovalService = Depends(lambda: get_approval_service(db)) # Lazy dependency
+    approval_service: ApprovalService = Depends(lambda: get_approval_service(db)),
+    notification_service: NotificationService = Depends(get_notification_service),
+    audit_service: AuditService = Depends(get_audit_service)
 ) -> SaasService:
-    return SaasService(db=db, auth_service=auth_service, approval_service=approval_service)
+    saas_service = SaasService(
+        db=db, 
+        auth_service=auth_service, 
+        approval_service=approval_service, 
+        notification_service=notification_service,
+        audit_service=audit_service
+    )
+    # Inyección para romper dependencia circular
+    if approval_service:
+        approval_service.saas_service = saas_service
+    return saas_service
 
 
 def get_usage_service(db: Session = Depends(get_db)) -> UsageService:
@@ -69,7 +81,7 @@ def get_media_service(db: Session = Depends(get_db)) -> MediaService:
 
 
 def get_notification_service(db: Session = Depends(get_db)) -> NotificationService:
-    return NotificationService(db, event_broker=None) # Event broker is injected at startup
+    return NotificationService(db)
 
 
 def get_alarming_service(
