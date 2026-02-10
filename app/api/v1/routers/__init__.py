@@ -12,7 +12,7 @@ from app.dependencies.permissions import require_permission
 from app.identity import api as identity_api
 from app.identity import api_roles as identity_roles_api
 from app.identity import api_saas as saas_api
-from app.identity import api_superadmin as identity_superadmin_api # Nuevo
+from app.identity import sys_admin_api as identity_sys_admin_api
 from app.assets import api as assets_api
 from app.telemetry import api as telemetry_api
 from app.procurement import api as procurement_api
@@ -48,11 +48,16 @@ back_office_router.include_router(identity_roles_api.router)
 back_office_router.include_router(sectors_api.router)
 back_office_router.include_router(auditing_api.router, dependencies=[Depends(require_feature("module_auditing"))])
 
-# --- Routers de Gestión de Sistema (Super Admin, Protegidos por Suscripción Activa) ---
-sys_mgt_router = APIRouter(prefix="/sys-mgt", dependencies=[Depends(require_active_subscription)])
+# --- Routers de Gestión de Sistema (Super Admin) ---
+# ¡CORRECCIÓN! Estos endpoints no deben depender de una suscripción de tenant.
+sys_mgt_router = APIRouter(prefix="/sys-mgt")
 sys_mgt_router.include_router(configuration_api.router)
 sys_mgt_router.include_router(core_engine_api.router)
-sys_mgt_router.include_router(identity_superadmin_api.router) # Nuevo
+
+# Montamos el nuevo router de identidad para super admins
+identity_superadmin_router = APIRouter(prefix="/identity")
+identity_superadmin_router.include_router(identity_sys_admin_api.router)
+sys_mgt_router.include_router(identity_superadmin_router)
 
 # --- Montaje Final ---
 api_router.include_router(auth_router)
