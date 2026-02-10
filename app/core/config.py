@@ -83,6 +83,10 @@ class Settings(BaseSettings):
     # --- Integraciones Externas ---
     GOOGLE_API_KEY: str = ""
 
+    # --- Paginación por Defecto ---
+    DEFAULT_PAGINATION_SKIP: int = 0
+    DEFAULT_PAGINATION_LIMIT: int = 100
+
     # Configuración de Pydantic
     model_config = SettingsConfigDict(
         env_file=".env",
