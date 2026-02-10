@@ -6,9 +6,10 @@ import logging
 import uuid
 from typing import Dict, Any, List
 
-from fastapi import APIRouter, Depends, Request, status, Response, HTTPException
+from fastapi import APIRouter, Depends, Request, status, Response, HTTPException, Query
 from fastapi.security import OAuth2PasswordRequestForm
 
+from app.core.config import settings
 from app.core.limiter import limiter
 from app.dependencies.auth import get_current_token_payload, get_current_active_user
 from app.dependencies.services import get_auth_service, get_audit_service
@@ -111,8 +112,8 @@ def reset_password(
 
 @router.get("/users", response_model=List[UserRead], dependencies=[Depends(require_permission("user:read"))])
 def list_users(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(default=settings.DEFAULT_PAGINATION_SKIP, ge=0),
+    limit: int = Query(default=settings.DEFAULT_PAGINATION_LIMIT, ge=1, le=1000),
     auth_service: AuthService = Depends(get_auth_service),
     tenant_id: uuid.UUID = Depends(get_tenant_id)
 ):

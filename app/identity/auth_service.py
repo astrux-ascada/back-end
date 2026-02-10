@@ -103,12 +103,29 @@ class AuthService:
     def get_user_by_email(self, email: str) -> Optional[User]:
         return self.user_repo.get_by_email(email)
 
-    def list_users(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[User]:
+    def list_users(self, tenant_id: uuid.UUID, skip: int, limit: int) -> List[User]:
         return self.user_repo.list_users(tenant_id=tenant_id, skip=skip, limit=limit)
         
-    def list_all_users(self, skip: int = 0, limit: int = 100) -> List[User]:
-        """Lista todos los usuarios de la plataforma (para Super Admin)."""
-        return self.user_repo.list_all_users(skip=skip, limit=limit)
+    def list_all_users(self, requesting_user: User, skip: int, limit: int) -> List[User]:
+        """
+        Lista usuarios de la plataforma con lógica de negocio basada en el rol del solicitante.
+        """
+        # Determinar el rol del usuario que hace la petición
+        is_super_admin = any(role.name == settings.SUPER_ADMIN_ROLE_NAME for role in requesting_user.roles)
+        
+        # Un PLATFORM_ADMIN no es un SUPER_ADMIN, pero tiene privilegios elevados
+        is_platform_admin = any(role.name == "PLATFORM_ADMIN" for role in requesting_user.roles)
+
+        if is_super_admin:
+            # El Super Admin puede ver a todos, sin filtros.
+            return self.user_repo.list_all_users(skip=skip, limit=limit)
+        elif is_platform_admin:
+            # El Platform Admin puede ver a todos excepto a los Super Admins.
+            return self.user_repo.list_all_users(exclude_super_admins=True, skip=skip, limit=limit)
+        else:
+            # Si no es ninguno de los anteriores, no tiene permiso para esta acción.
+            # La capa de API ya debería haberlo bloqueado con `require_permission`, pero esto es una defensa extra.
+            raise PermissionDeniedException("No tienes permiso para listar todos los usuarios.")
 
     def update_user(self, user_id: uuid.UUID, user_in: UserUpdate) -> User:
         db_user = self.get_user_by_id(user_id)

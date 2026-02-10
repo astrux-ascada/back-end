@@ -6,7 +6,9 @@ Capa de Repositorio para el módulo de Identidad (User, Role, Permission).
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_, not_ # Importar not_
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.identity.models import User, Role, Permission
 from app.identity.schemas import UserCreate, RoleCreate, UserUpdate, RoleUpdate
@@ -95,13 +97,27 @@ class UserRepository:
         # El email es único en toda la plataforma, no necesita filtro de tenant
         return self.db.query(User).filter(User.email == email).first()
 
-    def list_users(self, tenant_id: uuid.UUID, skip: int = 0, limit: int = 100) -> List[User]:
+    def list_users(self, tenant_id: uuid.UUID, skip: int, limit: int) -> List[User]:
         """Devuelve una lista de usuarios para un tenant específico."""
         return self.db.query(User).filter(User.tenant_id == tenant_id).offset(skip).limit(limit).all()
 
-    def list_all_users(self, skip: int = 0, limit: int = 100) -> List[User]:
-        """Devuelve una lista de todos los usuarios de la plataforma."""
-        return self.db.query(User).offset(skip).limit(limit).all()
+    def list_all_users(self, exclude_super_admins: bool = False, skip: int = 0, limit: int = 100) -> List[User]:
+        """
+        Devuelve una lista de todos los usuarios de la plataforma.
+        Opcionalmente puede excluir a los super administradores.
+        """
+        query = self.db.query(User)
+        if exclude_super_admins:
+            # Subconsulta para encontrar los IDs de los super admins
+            # Usamos .subquery() para que pueda ser referenciada en el .in_()
+            super_admin_role_ids = self.db.query(Role.id).filter(Role.name == settings.SUPER_ADMIN_ROLE_NAME).subquery()
+            
+            # Filtra los usuarios que NO tienen el rol de super admin
+            query = query.filter(
+                not_(User.roles.any(Role.id.in_(super_admin_role_ids)))
+            )
+            
+        return query.offset(skip).limit(limit).all()
 
     def create(self, user_in: UserCreate, tenant_id: Optional[uuid.UUID] = None) -> User:
         user_data = user_in.model_dump(exclude={"password", "role_ids", "sector_ids"})
