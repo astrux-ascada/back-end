@@ -1,28 +1,34 @@
 # /app/notifications/schemas.py
 """
-Esquemas Pydantic para el módulo de Notificaciones.
+Esquemas Pydantic para el Módulo de Notificaciones.
 """
 import uuid
 from datetime import datetime
 from typing import Optional
-
 from pydantic import BaseModel, Field
 
-# --- Esquemas para Notificaciones ---
+from .models import NotificationLevel
 
 class NotificationBase(BaseModel):
-    user_id: uuid.UUID
-    type: str
-    content: str
-    reference_id: str
+    level: NotificationLevel
+    icon: Optional[str] = None
+    title: str
+    message: str
+    action_url: Optional[str] = None
 
 class NotificationCreate(NotificationBase):
-    pass
+    recipient_id: uuid.UUID
+    tenant_id: Optional[uuid.UUID] = None
 
 class NotificationRead(NotificationBase):
     id: uuid.UUID
-    is_read: bool
+    recipient_id: uuid.UUID
+    tenant_id: Optional[uuid.UUID]
+    read_at: Optional[datetime]
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+class MarkAsReadResponse(BaseModel):
+    updated: int

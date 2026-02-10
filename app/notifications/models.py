@@ -1,4 +1,4 @@
-# /app/notifications/models/notification.py
+# /app/notifications/models.py
 """
 Modelos de base de datos para el Módulo de Notificaciones.
 """
