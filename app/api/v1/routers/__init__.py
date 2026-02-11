@@ -23,6 +23,7 @@ from app.auditing import api as auditing_api
 from app.configuration import api as configuration_api
 from app.alarming import api as alarming_api
 from app.notifications import api as notifications_api
+from app.notifications import api_config as notifications_config_api
 from app.media import api as media_api
 
 # --- Router Principal de la API v1 ---
@@ -49,7 +50,6 @@ back_office_router.include_router(sectors_api.router)
 back_office_router.include_router(auditing_api.router, dependencies=[Depends(require_feature("module_auditing"))])
 
 # --- Routers de Gestión de Sistema (Super Admin) ---
-# ¡CORRECCIÓN! Estos endpoints no deben depender de una suscripción de tenant.
 sys_mgt_router = APIRouter(prefix="/sys-mgt")
 sys_mgt_router.include_router(configuration_api.router)
 sys_mgt_router.include_router(core_engine_api.router)
@@ -58,6 +58,14 @@ sys_mgt_router.include_router(core_engine_api.router)
 identity_superadmin_router = APIRouter(prefix="/identity")
 identity_superadmin_router.include_router(identity_sys_admin_api.router)
 sys_mgt_router.include_router(identity_superadmin_router)
+
+# --- Router de Configuración de Notificaciones ---
+notifications_config_router = APIRouter(prefix="/notifications/config")
+notifications_config_router.include_router(notifications_config_api.templates_router)
+notifications_config_router.include_router(notifications_config_api.channels_router)
+notifications_config_router.include_router(notifications_config_api.rules_router)
+sys_mgt_router.include_router(notifications_config_router)
+
 
 # --- Montaje Final ---
 api_router.include_router(auth_router)

@@ -126,13 +126,16 @@ class SaasService:
         )
         approval_request = self.approval_service.create_request(approval_request_in, user, tenant_id=None)
 
-        self.notification_service.create_platform_notification_for_role(
-            role_name="PLATFORM_ADMIN",
-            title=f"Solicitud de borrado para: {db_tenant.name}",
-            message=f"El usuario {user.name} ha solicitado eliminar el tenant. Se requiere aprobación.",
-            icon="warning",
-            action_url=f"/admin/approvals/{approval_request.id}"
-        )
+        # --- Notificación Dinámica ---
+        event_data = {
+            "tenant_name": db_tenant.name,
+            "requester_name": user.name,
+            "requester_id": str(user.id),
+            "approval_request_id": str(approval_request.id),
+            "justification": justification
+        }
+        self.notification_service.process_event("saas:tenant_deletion_requested", event_data)
+        # -----------------------------
 
         return approval_request
 
