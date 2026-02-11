@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.database import SessionLocal
 from app.db.seeding.initial_data import seed_initial_data
 from app.db.seeding._seed_identity import seed_identity
+from app.db.seeding._seed_notifications import seed_notifications
 from app.db.seeding._seed_sectors import seed_sectors
 from app.db.seeding._seed_assets import seed_assets
 from app.db.seeding._seed_procurement import seed_procurement
@@ -30,26 +31,29 @@ async def seed_all_data(db: Session):
     
     logger.info("2. Poblando datos de Identidad (Usuarios y Roles de demo)...")
     await seed_identity(db, initial_data)
+
+    logger.info("3. Poblando Configuración de Notificaciones...")
+    await seed_notifications(db, initial_data)
     
-    logger.info("3. Poblando Sectores...")
+    logger.info("4. Poblando Sectores...")
     await seed_sectors(db, initial_data)
     
-    logger.info("4. Poblando Activos...")
+    logger.info("5. Poblando Activos...")
     await seed_assets(db, initial_data)
     
-    logger.info("5. Poblando datos de Compras (Proveedores, Repuestos)...")
+    logger.info("6. Poblando datos de Compras (Proveedores, Repuestos)...")
     await seed_procurement(db, initial_data)
     
-    logger.info("6. Poblando datos de Mantenimiento (Órdenes de Trabajo)...")
+    logger.info("7. Poblando datos de Mantenimiento (Órdenes de Trabajo)...")
     await seed_maintenance(db, initial_data)
     
-    logger.info("7. Poblando datos de Alarmas...")
+    logger.info("8. Poblando datos de Alarmas...")
     await seed_alarming(db, initial_data)
     
-    logger.info("8. Poblando Core Engine (Fuentes de Datos)...")
+    logger.info("9. Poblando Core Engine (Fuentes de Datos)...")
     await seed_core_engine(db, initial_data)
     
-    logger.info("9. Poblando Configuración...")
+    logger.info("10. Poblando Configuración...")
     await seed_configuration(db, initial_data)
 
     logger.info("--- Proceso de Seeding Maestro Finalizado con Éxito ---")
