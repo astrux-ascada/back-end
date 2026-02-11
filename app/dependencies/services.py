@@ -27,6 +27,7 @@ from app.identity.tfa_service import TfaService
 from app.maintenance.service import MaintenanceService
 from app.media.service import MediaService
 from app.notifications.service import NotificationService
+from app.notifications.service_config import NotificationConfigService
 from app.payments.service import PaymentService
 from app.payments.service_manual import ManualPaymentService
 from app.payments.service_online import OnlinePaymentService
@@ -43,6 +44,14 @@ def get_auth_service(db: Session = Depends(get_db),
     tfa_service = TfaService()
     return AuthService(db=db, redis_client=redis_client, tfa_service=tfa_service)
 
+def get_audit_service(db: Session = Depends(get_db)) -> AuditService:
+    return AuditService(db)
+
+def get_notification_service(db: Session = Depends(get_db)) -> NotificationService:
+    return NotificationService(db)
+
+def get_notification_config_service(db: Session = Depends(get_db)) -> NotificationConfigService:
+    return NotificationConfigService(db)
 
 def get_saas_service(
     db: Session = Depends(get_db),
@@ -72,16 +81,8 @@ def get_partner_service(db: Session = Depends(get_db)) -> PartnerService:
     return PartnerService(db=db)
 
 
-def get_audit_service(db: Session = Depends(get_db)) -> AuditService:
-    return AuditService(db)
-
-
 def get_media_service(db: Session = Depends(get_db)) -> MediaService:
     return MediaService(db)
-
-
-def get_notification_service(db: Session = Depends(get_db)) -> NotificationService:
-    return NotificationService(db)
 
 
 def get_alarming_service(

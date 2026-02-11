@@ -39,10 +39,13 @@ async def lifespan(app: FastAPI):
     app.state.event_broker = event_broker
     
     # --- Inicialización de Servicios ---
-    notification_service = NotificationService(db, event_broker)
+    notification_service = NotificationService(db) # CORRECCIÓN: Solo db
     audit_service = AuditService(db)
     asset_repo = AssetRepository(db)
-    alarming_service = AlarmingService(db, event_broker, asset_repo, audit_service)
+    
+    # Nota: Verificaremos si AlarmingService necesita corrección también
+    alarming_service = AlarmingService(db, notification_service, asset_repo, audit_service) 
+
     telemetry_service = TelemetryService(db, audit_service)
     core_engine_service = CoreEngineService(db, telemetry_service, audit_service)
     app.state.core_engine_service = core_engine_service

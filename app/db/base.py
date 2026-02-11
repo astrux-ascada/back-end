@@ -30,6 +30,7 @@ from app.alarming.models import AlarmRule, Alarm
 
 # 5. Notifications
 from app.notifications.models.notification import Notification
+from app.notifications.models.notification_config import NotificationTemplate, NotificationChannel, NotificationRule
 
 # 6. Sectors
 from app.sectors.models.sector import Sector
