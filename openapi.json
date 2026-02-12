@@ -91,6 +91,121 @@
                 ]
             }
         },
+        "/api/v1/auth/change-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Change Password",
+                "description": "Permite a un usuario autenticado cambiar su propia contraseña.",
+                "operationId": "change_password_api_v1_auth_change_password_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PasswordChange"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Forgot Password",
+                "description": "Inicia el proceso de recuperación de contraseña para un usuario.\nGenera un token y (en una implementación real) enviaría un correo.",
+                "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ForgotPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Reset Password",
+                "description": "Restablece la contraseña del usuario utilizando un token de un solo uso.",
+                "operationId": "reset_password_api_v1_auth_reset_password_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResetPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/users": {
             "get": {
                 "tags": [
@@ -110,6 +225,7 @@
                         "required": false,
                         "schema": {
                             "type": "integer",
+                            "minimum": 0,
                             "default": 0,
                             "title": "Skip"
                         }
@@ -120,6 +236,8 @@
                         "required": false,
                         "schema": {
                             "type": "integer",
+                            "maximum": 1000,
+                            "minimum": 1,
                             "default": 100,
                             "title": "Limit"
                         }
@@ -446,82 +564,14 @@
                 ]
             }
         },
-        "/api/v1/saas/public/register": {
-            "post": {
-                "tags": [
-                    "SaaS Management"
-                ],
-                "summary": "Public Registration",
-                "operationId": "public_registration_api_v1_saas_public_register_post",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PublicRegistrationRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "201": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/TenantRead"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/saas/usage": {
+        "/api/v1/saas/me/tenant": {
             "get": {
                 "tags": [
                     "SaaS Management"
                 ],
-                "summary": "Get Tenant Usage",
-                "description": "Devuelve un reporte del uso de recursos actual del tenant.",
-                "operationId": "get_tenant_usage_api_v1_saas_usage_get",
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/UsageReport"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "HTTPBearer": []
-                    }
-                ]
-            }
-        },
-        "/api/v1/saas/my-tenant": {
-            "get": {
-                "tags": [
-                    "SaaS Management"
-                ],
-                "summary": "Get My Tenant Details",
-                "description": "Devuelve los detalles completos del tenant del usuario autenticado.",
-                "operationId": "get_my_tenant_details_api_v1_saas_my_tenant_get",
+                "summary": "Get My Tenant",
+                "description": "Obtiene los detalles del tenant al que pertenece el usuario actual.",
+                "operationId": "get_my_tenant_api_v1_saas_me_tenant_get",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -540,13 +590,13 @@
                     }
                 ]
             },
-            "put": {
+            "patch": {
                 "tags": [
                     "SaaS Management"
                 ],
-                "summary": "Update My Tenant Details",
-                "description": "Permite a un admin de tenant actualizar los datos de su propia empresa.",
-                "operationId": "update_my_tenant_details_api_v1_saas_my_tenant_put",
+                "summary": "Update My Tenant",
+                "description": "Actualiza los detalles del tenant al que pertenece el usuario actual.\nRequiere permisos de 'tenant:update'.",
+                "operationId": "update_my_tenant_api_v1_saas_me_tenant_patch",
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -586,13 +636,14 @@
                 ]
             }
         },
-        "/api/v1/saas/plans": {
+        "/api/v1/saas/tenants": {
             "post": {
                 "tags": [
                     "SaaS Management"
                 ],
-                "summary": "Create Plan",
-                "operationId": "create_plan_api_v1_saas_plans_post",
+                "summary": "Create Tenant",
+                "description": "(Admin) Crea un nuevo tenant en la plataforma.",
+                "operationId": "create_tenant_api_v1_saas_tenants_post",
                 "security": [
                     {
                         "HTTPBearer": []
@@ -603,7 +654,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/PlanCreate"
+                                "$ref": "#/components/schemas/TenantCreate"
                             }
                         }
                     }
@@ -614,7 +665,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PlanRead"
+                                    "$ref": "#/components/schemas/TenantRead"
                                 }
                             }
                         }
@@ -631,178 +682,12 @@
                     }
                 }
             },
-            "get": {
-                "tags": [
-                    "SaaS Management"
-                ],
-                "summary": "List Plans",
-                "operationId": "list_plans_api_v1_saas_plans_get",
-                "security": [
-                    {
-                        "HTTPBearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "skip",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 0,
-                            "title": "Skip"
-                        }
-                    },
-                    {
-                        "name": "limit",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "default": 100,
-                            "title": "Limit"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/PlanRead"
-                                    },
-                                    "title": "Response List Plans Api V1 Saas Plans Get"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/saas/plans/{plan_id}": {
-            "get": {
-                "tags": [
-                    "SaaS Management"
-                ],
-                "summary": "Get Plan",
-                "operationId": "get_plan_api_v1_saas_plans__plan_id__get",
-                "security": [
-                    {
-                        "HTTPBearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "plan_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid",
-                            "title": "Plan Id"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PlanRead"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "put": {
-                "tags": [
-                    "SaaS Management"
-                ],
-                "summary": "Update Plan",
-                "operationId": "update_plan_api_v1_saas_plans__plan_id__put",
-                "security": [
-                    {
-                        "HTTPBearer": []
-                    }
-                ],
-                "parameters": [
-                    {
-                        "name": "plan_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid",
-                            "title": "Plan Id"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PlanUpdate"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PlanRead"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/saas/tenants": {
             "get": {
                 "tags": [
                     "SaaS Management"
                 ],
                 "summary": "List Tenants",
-                "description": "(Super Admin) Lista todos los tenants activos en la plataforma.",
+                "description": "(Admin) Lista tenants.\n- Super Admin (con tenant:read_all): ve todos los tenants.\n- Platform Admin: ve solo los tenants asignados a él.",
                 "operationId": "list_tenants_api_v1_saas_tenants_get",
                 "security": [
                     {
@@ -857,50 +742,6 @@
                         }
                     }
                 }
-            },
-            "post": {
-                "tags": [
-                    "SaaS Management"
-                ],
-                "summary": "Create Tenant",
-                "operationId": "create_tenant_api_v1_saas_tenants_post",
-                "security": [
-                    {
-                        "HTTPBearer": []
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/TenantCreate"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/TenantRead"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
             }
         },
         "/api/v1/saas/tenants/{tenant_id}": {
@@ -909,6 +750,7 @@
                     "SaaS Management"
                 ],
                 "summary": "Get Tenant",
+                "description": "(Admin) Obtiene los detalles de un tenant específico.",
                 "operationId": "get_tenant_api_v1_saas_tenants__tenant_id__get",
                 "security": [
                     {
@@ -950,13 +792,13 @@
                     }
                 }
             },
-            "put": {
+            "patch": {
                 "tags": [
                     "SaaS Management"
                 ],
                 "summary": "Update Tenant",
-                "description": "(Super Admin) Actualiza los datos de cualquier tenant.",
-                "operationId": "update_tenant_api_v1_saas_tenants__tenant_id__put",
+                "description": "(Admin) Actualiza los detalles de un tenant específico.",
+                "operationId": "update_tenant_api_v1_saas_tenants__tenant_id__patch",
                 "security": [
                     {
                         "HTTPBearer": []
@@ -1006,14 +848,16 @@
                         }
                     }
                 }
-            },
-            "delete": {
+            }
+        },
+        "/api/v1/saas/tenants/{tenant_id}/delete": {
+            "post": {
                 "tags": [
                     "SaaS Management"
                 ],
-                "summary": "Delete Tenant",
-                "description": "(Super Admin) Realiza un borrado lógico de un tenant.",
-                "operationId": "delete_tenant_api_v1_saas_tenants__tenant_id__delete",
+                "summary": "Request Tenant Deletion",
+                "description": "(Admin) Inicia el proceso de eliminación de un tenant.\n- Si es Super Admin, el borrado es inmediato (y la respuesta será 204).\n- Si es Platform Admin, se crea una solicitud de aprobación.",
+                "operationId": "request_tenant_deletion_api_v1_saas_tenants__tenant_id__delete_post",
                 "security": [
                     {
                         "HTTPBearer": []
@@ -1036,18 +880,18 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/TenantDeletionConfirmation"
+                                "$ref": "#/components/schemas/TenantDeletionRequest"
                             }
                         }
                     }
                 },
                 "responses": {
-                    "200": {
+                    "202": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/TenantRead"
+                                    "$ref": "#/components/schemas/ApprovalRequestRead"
                                 }
                             }
                         }
@@ -1065,13 +909,14 @@
                 }
             }
         },
-        "/api/v1/saas/tenants/{tenant_id}/subscription": {
-            "put": {
+        "/api/v1/saas/tenants/{tenant_id}/assign-manager": {
+            "post": {
                 "tags": [
                     "SaaS Management"
                 ],
-                "summary": "Update Subscription",
-                "operationId": "update_subscription_api_v1_saas_tenants__tenant_id__subscription_put",
+                "summary": "Assign Manager",
+                "description": "(Super Admin) Asigna un gestor de cuenta (Platform Admin) a un tenant.",
+                "operationId": "assign_manager_api_v1_saas_tenants__tenant_id__assign_manager_post",
                 "security": [
                     {
                         "HTTPBearer": []
@@ -1094,7 +939,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SubscriptionUpdate"
+                                "$ref": "#/components/schemas/TenantManagerAssignment"
                             }
                         }
                     }
@@ -1105,7 +950,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/SubscriptionRead"
+                                    "$ref": "#/components/schemas/TenantRead"
                                 }
                             }
                         }
@@ -4018,8 +3863,117 @@
                     "Super Admin - Identity"
                 ],
                 "summary": "List All Users",
-                "description": "(Super Admin) Lista todos los usuarios de todos los tenants.",
+                "description": "(Super Admin) Lista todos los usuarios de todos los tenants.\n- GLOBAL_SUPER_ADMIN: Ve a todos.\n- PLATFORM_ADMIN: Ve a todos excepto a los GLOBAL_SUPER_ADMIN.",
                 "operationId": "list_all_users_api_v1_sys_mgt_identity_users_all_get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "default": 0,
+                            "title": "Skip"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 1000,
+                            "minimum": 1,
+                            "default": 100,
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserRead"
+                                    },
+                                    "title": "Response List All Users Api V1 Sys Mgt Identity Users All Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-mgt/notifications/config/templates/": {
+            "post": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Create Template",
+                "operationId": "create_template_api_v1_sys_mgt_notifications_config_templates__post",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotificationTemplateCreate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationTemplateRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "List Templates",
+                "operationId": "list_templates_api_v1_sys_mgt_notifications_config_templates__get",
                 "security": [
                     {
                         "HTTPBearer": []
@@ -4055,12 +4009,653 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/components/schemas/UserRead"
+                                        "$ref": "#/components/schemas/NotificationTemplateRead"
                                     },
-                                    "title": "Response List All Users Api V1 Sys Mgt Identity Users All Get"
+                                    "title": "Response List Templates Api V1 Sys Mgt Notifications Config Templates  Get"
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-mgt/notifications/config/templates/{template_id}": {
+            "get": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Get Template",
+                "operationId": "get_template_api_v1_sys_mgt_notifications_config_templates__template_id__get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "template_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Template Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationTemplateRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Update Template",
+                "operationId": "update_template_api_v1_sys_mgt_notifications_config_templates__template_id__patch",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "template_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Template Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotificationTemplateUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationTemplateRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Delete Template",
+                "operationId": "delete_template_api_v1_sys_mgt_notifications_config_templates__template_id__delete",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "template_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Template Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-mgt/notifications/config/channels/": {
+            "post": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Create Channel",
+                "operationId": "create_channel_api_v1_sys_mgt_notifications_config_channels__post",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotificationChannelCreate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationChannelRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "List Channels",
+                "operationId": "list_channels_api_v1_sys_mgt_notifications_config_channels__get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Skip"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 100,
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/NotificationChannelRead"
+                                    },
+                                    "title": "Response List Channels Api V1 Sys Mgt Notifications Config Channels  Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-mgt/notifications/config/channels/{channel_id}": {
+            "get": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Get Channel",
+                "operationId": "get_channel_api_v1_sys_mgt_notifications_config_channels__channel_id__get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "channel_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Channel Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationChannelRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Update Channel",
+                "operationId": "update_channel_api_v1_sys_mgt_notifications_config_channels__channel_id__patch",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "channel_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Channel Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotificationChannelUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationChannelRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Delete Channel",
+                "operationId": "delete_channel_api_v1_sys_mgt_notifications_config_channels__channel_id__delete",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "channel_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Channel Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-mgt/notifications/config/rules/": {
+            "post": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Create Rule",
+                "operationId": "create_rule_api_v1_sys_mgt_notifications_config_rules__post",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotificationRuleCreate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationRuleRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "List Rules",
+                "operationId": "list_rules_api_v1_sys_mgt_notifications_config_rules__get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "skip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0,
+                            "title": "Skip"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 100,
+                            "title": "Limit"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/NotificationRuleRead"
+                                    },
+                                    "title": "Response List Rules Api V1 Sys Mgt Notifications Config Rules  Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/sys-mgt/notifications/config/rules/{rule_id}": {
+            "get": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Get Rule",
+                "operationId": "get_rule_api_v1_sys_mgt_notifications_config_rules__rule_id__get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "rule_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Rule Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationRuleRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Update Rule",
+                "operationId": "update_rule_api_v1_sys_mgt_notifications_config_rules__rule_id__patch",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "rule_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Rule Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/NotificationRuleUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotificationRuleRead"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Notifications - Configuration"
+                ],
+                "summary": "Delete Rule",
+                "operationId": "delete_rule_api_v1_sys_mgt_notifications_config_rules__rule_id__delete",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "rule_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "title": "Rule Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
                     },
                     "422": {
                         "description": "Validation Error",
@@ -4081,29 +4676,61 @@
                     "Notifications"
                 ],
                 "summary": "Get My Notifications",
-                "description": "Obtiene todas las notificaciones no leídas para el usuario autenticado.",
+                "description": "Obtiene las notificaciones para el usuario autenticado.",
                 "operationId": "get_my_notifications_api_v1_notifications__get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "unread_only",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": true,
+                            "title": "Unread Only"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "title": "Limit"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "array",
                                     "items": {
                                         "$ref": "#/components/schemas/NotificationRead"
                                     },
-                                    "type": "array",
                                     "title": "Response Get My Notifications Api V1 Notifications  Get"
                                 }
                             }
                         }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
                     }
-                },
-                "security": [
-                    {
-                        "HTTPBearer": []
-                    }
-                ]
+                }
             }
         },
         "/api/v1/notifications/{notification_id}/read": {
@@ -4153,6 +4780,33 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/notifications/read-all": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Mark All Notifications As Read",
+                "description": "Marca todas las notificaciones del usuario como leídas.",
+                "operationId": "mark_all_notifications_as_read_api_v1_notifications_read_all_post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MarkAsReadResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ]
             }
         }
     },
@@ -5284,6 +5938,21 @@
                 "type": "object",
                 "title": "DataSourceUpdate"
             },
+            "ForgotPasswordRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "title": "Email",
+                        "description": "El correo electrónico del usuario que olvidó su contraseña."
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email"
+                ],
+                "title": "ForgotPasswordRequest",
+                "description": "Esquema para solicitar un restablecimiento de contraseña."
+            },
             "HTTPValidationError": {
                 "properties": {
                     "detail": {
@@ -5296,6 +5965,19 @@
                 },
                 "type": "object",
                 "title": "HTTPValidationError"
+            },
+            "MarkAsReadResponse": {
+                "properties": {
+                    "updated": {
+                        "type": "integer",
+                        "title": "Updated"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "updated"
+                ],
+                "title": "MarkAsReadResponse"
             },
             "MediaItemRead": {
                 "properties": {
@@ -5381,33 +6063,227 @@
                 ],
                 "title": "MediaItemStatus"
             },
-            "NotificationRead": {
+            "NotificationChannelCreate": {
                 "properties": {
-                    "user_id": {
+                    "name": {
                         "type": "string",
-                        "format": "uuid",
-                        "title": "User Id"
+                        "maxLength": 100,
+                        "title": "Name"
                     },
                     "type": {
-                        "type": "string",
-                        "title": "Type"
+                        "$ref": "#/components/schemas/NotificationChannelType"
                     },
-                    "content": {
-                        "type": "string",
-                        "title": "Content"
+                    "config": {
+                        "anyOf": [
+                            {
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Config"
                     },
-                    "reference_id": {
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Is Active",
+                        "default": true
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "type"
+                ],
+                "title": "NotificationChannelCreate"
+            },
+            "NotificationChannelRead": {
+                "properties": {
+                    "name": {
                         "type": "string",
-                        "title": "Reference Id"
+                        "maxLength": 100,
+                        "title": "Name"
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/NotificationChannelType"
+                    },
+                    "config": {
+                        "anyOf": [
+                            {
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Config"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Is Active",
+                        "default": true
                     },
                     "id": {
                         "type": "string",
                         "format": "uuid",
                         "title": "Id"
                     },
-                    "is_read": {
-                        "type": "boolean",
-                        "title": "Is Read"
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Created At"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Updated At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "type",
+                    "id",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "NotificationChannelRead"
+            },
+            "NotificationChannelType": {
+                "type": "string",
+                "enum": [
+                    "IN_APP",
+                    "EMAIL",
+                    "SMS",
+                    "PUSH"
+                ],
+                "title": "NotificationChannelType"
+            },
+            "NotificationChannelUpdate": {
+                "properties": {
+                    "name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Name"
+                    },
+                    "type": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/NotificationChannelType"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "config": {
+                        "anyOf": [
+                            {
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Config"
+                    },
+                    "is_active": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Is Active"
+                    }
+                },
+                "type": "object",
+                "title": "NotificationChannelUpdate"
+            },
+            "NotificationLevel": {
+                "type": "string",
+                "enum": [
+                    "TENANT",
+                    "PLATFORM"
+                ],
+                "title": "NotificationLevel"
+            },
+            "NotificationRead": {
+                "properties": {
+                    "level": {
+                        "$ref": "#/components/schemas/NotificationLevel"
+                    },
+                    "icon": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Icon"
+                    },
+                    "title": {
+                        "type": "string",
+                        "title": "Title"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "action_url": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Action Url"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Id"
+                    },
+                    "recipient_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Recipient Id"
+                    },
+                    "tenant_id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Tenant Id"
+                    },
+                    "read_at": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Read At"
                     },
                     "created_at": {
                         "type": "string",
@@ -5417,15 +6293,471 @@
                 },
                 "type": "object",
                 "required": [
-                    "user_id",
-                    "type",
-                    "content",
-                    "reference_id",
+                    "level",
+                    "title",
+                    "message",
                     "id",
-                    "is_read",
+                    "recipient_id",
+                    "tenant_id",
+                    "read_at",
                     "created_at"
                 ],
                 "title": "NotificationRead"
+            },
+            "NotificationRecipientType": {
+                "type": "string",
+                "enum": [
+                    "ROLE",
+                    "USER",
+                    "TENANT_ADMIN_OF_ENTITY",
+                    "REQUESTER"
+                ],
+                "title": "NotificationRecipientType"
+            },
+            "NotificationRuleCreate": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "title": "Name"
+                    },
+                    "event_type": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "title": "Event Type"
+                    },
+                    "template_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Template Id"
+                    },
+                    "channel_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Channel Id"
+                    },
+                    "recipient_type": {
+                        "$ref": "#/components/schemas/NotificationRecipientType"
+                    },
+                    "recipient_id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Recipient Id"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Is Active",
+                        "default": true
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "event_type",
+                    "template_id",
+                    "channel_id",
+                    "recipient_type"
+                ],
+                "title": "NotificationRuleCreate"
+            },
+            "NotificationRuleRead": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "title": "Name"
+                    },
+                    "event_type": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "title": "Event Type"
+                    },
+                    "template_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Template Id"
+                    },
+                    "channel_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Channel Id"
+                    },
+                    "recipient_type": {
+                        "$ref": "#/components/schemas/NotificationRecipientType"
+                    },
+                    "recipient_id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Recipient Id"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Is Active",
+                        "default": true
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Id"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Created At"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Updated At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "event_type",
+                    "template_id",
+                    "channel_id",
+                    "recipient_type",
+                    "id",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "NotificationRuleRead"
+            },
+            "NotificationRuleUpdate": {
+                "properties": {
+                    "name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Name"
+                    },
+                    "event_type": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Event Type"
+                    },
+                    "template_id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Template Id"
+                    },
+                    "channel_id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Channel Id"
+                    },
+                    "recipient_type": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/NotificationRecipientType"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "recipient_id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Recipient Id"
+                    },
+                    "is_active": {
+                        "anyOf": [
+                            {
+                                "type": "boolean"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Is Active"
+                    }
+                },
+                "type": "object",
+                "title": "NotificationRuleUpdate"
+            },
+            "NotificationTemplateCreate": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "title": "Name"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description"
+                    },
+                    "level": {
+                        "$ref": "#/components/schemas/NotificationLevel"
+                    },
+                    "subject": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 255
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Subject"
+                    },
+                    "body": {
+                        "type": "string",
+                        "title": "Body"
+                    },
+                    "placeholders": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Placeholders",
+                        "description": "Ej: {'user_name': 'Nombre del usuario'}"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "level",
+                    "body"
+                ],
+                "title": "NotificationTemplateCreate"
+            },
+            "NotificationTemplateRead": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "title": "Name"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description"
+                    },
+                    "level": {
+                        "$ref": "#/components/schemas/NotificationLevel"
+                    },
+                    "subject": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 255
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Subject"
+                    },
+                    "body": {
+                        "type": "string",
+                        "title": "Body"
+                    },
+                    "placeholders": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Placeholders",
+                        "description": "Ej: {'user_name': 'Nombre del usuario'}"
+                    },
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Id"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Created At"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Updated At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name",
+                    "level",
+                    "body",
+                    "id",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "NotificationTemplateRead"
+            },
+            "NotificationTemplateUpdate": {
+                "properties": {
+                    "name": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Name"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description"
+                    },
+                    "level": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/NotificationLevel"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "subject": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Subject"
+                    },
+                    "body": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Body"
+                    },
+                    "placeholders": {
+                        "anyOf": [
+                            {
+                                "additionalProperties": {
+                                    "type": "string"
+                                },
+                                "type": "object"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Placeholders"
+                    }
+                },
+                "type": "object",
+                "title": "NotificationTemplateUpdate"
+            },
+            "PasswordChange": {
+                "properties": {
+                    "current_password": {
+                        "type": "string",
+                        "title": "Current Password",
+                        "description": "La contraseña actual del usuario."
+                    },
+                    "new_password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "title": "New Password",
+                        "description": "La nueva contraseña, debe cumplir con los requisitos de seguridad."
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "current_password",
+                    "new_password"
+                ],
+                "title": "PasswordChange",
+                "description": "Esquema para que un usuario autenticado cambie su contraseña."
             },
             "PermissionRead": {
                 "properties": {
@@ -5457,229 +6789,6 @@
                     "id"
                 ],
                 "title": "PermissionRead"
-            },
-            "PlanCreate": {
-                "properties": {
-                    "code": {
-                        "type": "string",
-                        "maxLength": 50,
-                        "title": "Code"
-                    },
-                    "name": {
-                        "type": "string",
-                        "maxLength": 100,
-                        "title": "Name"
-                    },
-                    "price_monthly": {
-                        "type": "number",
-                        "minimum": 0,
-                        "title": "Price Monthly"
-                    },
-                    "price_yearly": {
-                        "type": "number",
-                        "minimum": 0,
-                        "title": "Price Yearly"
-                    },
-                    "currency": {
-                        "type": "string",
-                        "maxLength": 3,
-                        "title": "Currency",
-                        "default": "USD"
-                    },
-                    "limits": {
-                        "anyOf": [
-                            {
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Limits",
-                        "default": {}
-                    },
-                    "features": {
-                        "anyOf": [
-                            {
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Features",
-                        "default": {}
-                    },
-                    "is_active": {
-                        "type": "boolean",
-                        "title": "Is Active",
-                        "default": true
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "code",
-                    "name",
-                    "price_monthly",
-                    "price_yearly"
-                ],
-                "title": "PlanCreate"
-            },
-            "PlanRead": {
-                "properties": {
-                    "code": {
-                        "type": "string",
-                        "maxLength": 50,
-                        "title": "Code"
-                    },
-                    "name": {
-                        "type": "string",
-                        "maxLength": 100,
-                        "title": "Name"
-                    },
-                    "price_monthly": {
-                        "type": "number",
-                        "minimum": 0,
-                        "title": "Price Monthly"
-                    },
-                    "price_yearly": {
-                        "type": "number",
-                        "minimum": 0,
-                        "title": "Price Yearly"
-                    },
-                    "currency": {
-                        "type": "string",
-                        "maxLength": 3,
-                        "title": "Currency",
-                        "default": "USD"
-                    },
-                    "limits": {
-                        "anyOf": [
-                            {
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Limits",
-                        "default": {}
-                    },
-                    "features": {
-                        "anyOf": [
-                            {
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Features",
-                        "default": {}
-                    },
-                    "is_active": {
-                        "type": "boolean",
-                        "title": "Is Active",
-                        "default": true
-                    },
-                    "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "title": "Id"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "code",
-                    "name",
-                    "price_monthly",
-                    "price_yearly",
-                    "id"
-                ],
-                "title": "PlanRead"
-            },
-            "PlanUpdate": {
-                "properties": {
-                    "name": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Name"
-                    },
-                    "price_monthly": {
-                        "anyOf": [
-                            {
-                                "type": "number"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Price Monthly"
-                    },
-                    "price_yearly": {
-                        "anyOf": [
-                            {
-                                "type": "number"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Price Yearly"
-                    },
-                    "currency": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Currency"
-                    },
-                    "limits": {
-                        "anyOf": [
-                            {
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Limits"
-                    },
-                    "features": {
-                        "anyOf": [
-                            {
-                                "type": "object"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Features"
-                    },
-                    "is_active": {
-                        "anyOf": [
-                            {
-                                "type": "boolean"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Is Active"
-                    }
-                },
-                "type": "object",
-                "title": "PlanUpdate"
             },
             "ProviderCreate": {
                 "properties": {
@@ -5868,43 +6977,27 @@
                 "type": "object",
                 "title": "ProviderUpdate"
             },
-            "PublicRegistrationRequest": {
+            "ResetPasswordRequest": {
                 "properties": {
-                    "company_name": {
+                    "token": {
                         "type": "string",
-                        "minLength": 2,
-                        "title": "Company Name"
+                        "title": "Token",
+                        "description": "El token de restablecimiento recibido por correo electrónico."
                     },
-                    "admin_name": {
-                        "type": "string",
-                        "minLength": 2,
-                        "title": "Admin Name"
-                    },
-                    "admin_email": {
-                        "type": "string",
-                        "format": "email",
-                        "title": "Admin Email"
-                    },
-                    "admin_password": {
+                    "new_password": {
                         "type": "string",
                         "minLength": 8,
-                        "title": "Admin Password"
-                    },
-                    "plan_id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "title": "Plan Id"
+                        "title": "New Password",
+                        "description": "La nueva contraseña."
                     }
                 },
                 "type": "object",
                 "required": [
-                    "company_name",
-                    "admin_name",
-                    "admin_email",
-                    "admin_password",
-                    "plan_id"
+                    "token",
+                    "new_password"
                 ],
-                "title": "PublicRegistrationRequest"
+                "title": "ResetPasswordRequest",
+                "description": "Esquema para realizar el restablecimiento de la contraseña con un token."
             },
             "RoleCreate": {
                 "properties": {
@@ -6272,77 +7365,6 @@
                 "type": "object",
                 "title": "SparePartUpdate"
             },
-            "SubscriptionRead": {
-                "properties": {
-                    "plan_id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "title": "Plan Id"
-                    },
-                    "id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "title": "Id"
-                    },
-                    "tenant_id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "title": "Tenant Id"
-                    },
-                    "status": {
-                        "type": "string",
-                        "title": "Status"
-                    },
-                    "current_period_start": {
-                        "anyOf": [
-                            {
-                                "type": "string",
-                                "format": "date-time"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Current Period Start"
-                    },
-                    "current_period_end": {
-                        "anyOf": [
-                            {
-                                "type": "string",
-                                "format": "date-time"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Current Period End"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "plan_id",
-                    "id",
-                    "tenant_id",
-                    "status",
-                    "current_period_start",
-                    "current_period_end"
-                ],
-                "title": "SubscriptionRead"
-            },
-            "SubscriptionUpdate": {
-                "properties": {
-                    "plan_id": {
-                        "type": "string",
-                        "format": "uuid",
-                        "title": "Plan Id"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "plan_id"
-                ],
-                "title": "SubscriptionUpdate"
-            },
             "TenantCreate": {
                 "properties": {
                     "name": {
@@ -6483,19 +7505,35 @@
                 ],
                 "title": "TenantCreate"
             },
-            "TenantDeletionConfirmation": {
+            "TenantDeletionRequest": {
                 "properties": {
-                    "confirmation_key": {
+                    "justification": {
                         "type": "string",
-                        "title": "Confirmation Key",
-                        "description": "Clave de confirmación requerida para el borrado."
+                        "minLength": 10,
+                        "title": "Justification",
+                        "description": "Justificación detallada para la solicitud de borrado."
                     }
                 },
                 "type": "object",
                 "required": [
-                    "confirmation_key"
+                    "justification"
                 ],
-                "title": "TenantDeletionConfirmation"
+                "title": "TenantDeletionRequest"
+            },
+            "TenantManagerAssignment": {
+                "properties": {
+                    "account_manager_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "title": "Account Manager Id",
+                        "description": "ID del usuario (PLATFORM_ADMIN) a asignar como gestor de cuenta."
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "account_manager_id"
+                ],
+                "title": "TenantManagerAssignment"
             },
             "TenantRead": {
                 "properties": {
@@ -6633,6 +7671,18 @@
                             }
                         ],
                         "title": "Deleted At"
+                    },
+                    "account_manager_id": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Account Manager Id"
                     }
                 },
                 "type": "object",
@@ -6882,40 +7932,6 @@
                     "upload_info"
                 ],
                 "title": "UploadRequestResponse"
-            },
-            "UsageDetail": {
-                "properties": {
-                    "used": {
-                        "type": "integer",
-                        "title": "Used"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "title": "Limit"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "used",
-                    "limit"
-                ],
-                "title": "UsageDetail"
-            },
-            "UsageReport": {
-                "properties": {
-                    "users": {
-                        "$ref": "#/components/schemas/UsageDetail"
-                    },
-                    "assets": {
-                        "$ref": "#/components/schemas/UsageDetail"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "users",
-                    "assets"
-                ],
-                "title": "UsageReport"
             },
             "UserCreate": {
                 "properties": {

@@ -23,6 +23,7 @@ from app.identity.role_service import RoleService
 from app.identity.service_partner import PartnerService
 from app.identity.service_saas import SaasService
 from app.identity.service_usage import UsageService
+from app.identity.service_marketing import MarketingService # <-- Nuevo import
 from app.identity.tfa_service import TfaService
 from app.maintenance.service import MaintenanceService
 from app.media.service import MediaService
@@ -80,6 +81,8 @@ def get_usage_service(db: Session = Depends(get_db)) -> UsageService:
 def get_partner_service(db: Session = Depends(get_db)) -> PartnerService:
     return PartnerService(db=db)
 
+def get_marketing_service(db: Session = Depends(get_db)) -> MarketingService: # <-- Nueva función
+    return MarketingService(db=db)
 
 def get_media_service(db: Session = Depends(get_db)) -> MediaService:
     return MediaService(db)

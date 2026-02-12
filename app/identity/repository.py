@@ -6,12 +6,12 @@ Capa de Repositorio para el módulo de Identidad (User, Role, Permission).
 import uuid
 from typing import List, Optional
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, not_ # Importar not_
+from sqlalchemy import and_, not_
 
 from app.core.config import settings
 from app.core.security import hash_password
 from app.identity.models import User, Role, Permission
-from app.identity.schemas import UserCreate, RoleCreate, UserUpdate, RoleUpdate
+from app.identity.schemas import UserCreate, RoleCreate, UserUpdate, RoleUpdate, UserCreateSys, UserUpdateSys
 from app.sectors.repository import SectorRepository
 
 
@@ -37,7 +37,6 @@ class RoleRepository:
         return self.db.query(Role).options(joinedload(Role.permissions)).filter(Role.id == role_id).first()
 
     def get_by_name(self, name: str, tenant_id: uuid.UUID) -> Optional[Role]:
-        # Los roles también deberían ser por tenant
         return self.db.query(Role).filter(Role.name == name, Role.tenant_id == tenant_id).first()
 
     def list_all(self, tenant_id: uuid.UUID) -> List[Role]:
@@ -49,11 +48,8 @@ class RoleRepository:
     def create(self, role_in: RoleCreate, tenant_id: uuid.UUID) -> Role:
         role_data = role_in.model_dump(exclude={"permission_ids"})
         db_role = Role(**role_data, tenant_id=tenant_id)
-
         if role_in.permission_ids:
-            permissions = self.permission_repo.get_by_ids(role_in.permission_ids)
-            db_role.permissions = permissions
-
+            db_role.permissions = self.permission_repo.get_by_ids(role_in.permission_ids)
         self.db.add(db_role)
         self.db.commit()
         self.db.refresh(db_role)
@@ -61,15 +57,11 @@ class RoleRepository:
 
     def update(self, db_role: Role, role_in: RoleUpdate) -> Role:
         update_data = role_in.model_dump(exclude_unset=True)
-        
         for field, value in update_data.items():
             if field != "permission_ids":
                 setattr(db_role, field, value)
-
         if role_in.permission_ids is not None:
-            permissions = self.permission_repo.get_by_ids(role_in.permission_ids)
-            db_role.permissions = permissions
-
+            db_role.permissions = self.permission_repo.get_by_ids(role_in.permission_ids)
         self.db.add(db_role)
         self.db.commit()
         self.db.refresh(db_role)
@@ -94,44 +86,39 @@ class UserRepository:
         return self.db.query(User).filter(User.id == user_id, User.tenant_id == tenant_id).first()
 
     def get_by_email(self, email: str) -> User | None:
-        # El email es único en toda la plataforma, no necesita filtro de tenant
         return self.db.query(User).filter(User.email == email).first()
 
     def list_users(self, tenant_id: uuid.UUID, skip: int, limit: int) -> List[User]:
-        """Devuelve una lista de usuarios para un tenant específico."""
         return self.db.query(User).filter(User.tenant_id == tenant_id).offset(skip).limit(limit).all()
 
     def list_all_users(self, exclude_super_admins: bool = False, skip: int = 0, limit: int = 100) -> List[User]:
-        """
-        Devuelve una lista de todos los usuarios de la plataforma.
-        Opcionalmente puede excluir a los super administradores.
-        """
         query = self.db.query(User)
         if exclude_super_admins:
-            # Subconsulta para encontrar los IDs de los super admins
-            # Usamos .subquery() para que pueda ser referenciada en el .in_()
-            super_admin_role_ids = self.db.query(Role.id).filter(Role.name == settings.SUPER_ADMIN_ROLE_NAME).subquery()
-            
-            # Filtra los usuarios que NO tienen el rol de super admin
-            query = query.filter(
-                not_(User.roles.any(Role.id.in_(super_admin_role_ids)))
-            )
-            
+            # Subconsulta para encontrar el ID del rol de super admin
+            super_admin_role_id = self.db.query(Role.id).filter(Role.name == settings.SUPER_ADMIN_ROLE_NAME).scalar_subquery()
+            # Filtra los usuarios que NO tienen ese rol
+            query = query.filter(not_(User.roles.any(Role.id == super_admin_role_id)))
         return query.offset(skip).limit(limit).all()
 
     def create(self, user_in: UserCreate, tenant_id: Optional[uuid.UUID] = None) -> User:
         user_data = user_in.model_dump(exclude={"password", "role_ids", "sector_ids"})
         user_data["hashed_password"] = hash_password(user_in.password)
         db_user = User(**user_data, tenant_id=tenant_id)
-
         if user_in.role_ids:
-            roles = self.role_repo.get_by_ids(user_in.role_ids)
-            db_user.roles = roles
-
+            db_user.roles = self.role_repo.get_by_ids(user_in.role_ids)
         if user_in.sector_ids:
-            sectors = self.sector_repo.get_by_ids(user_in.sector_ids)
-            db_user.assigned_sectors = sectors
+            db_user.assigned_sectors = self.sector_repo.get_by_ids(user_in.sector_ids)
+        self.db.add(db_user)
+        self.db.commit()
+        self.db.refresh(db_user)
+        return db_user
 
+    def create_global(self, user_in: UserCreateSys, roles: List[Role]) -> User:
+        """Crea un usuario desde la API de sistema."""
+        user_data = user_in.model_dump(exclude={"password", "role_ids"})
+        user_data["hashed_password"] = hash_password(user_in.password)
+        db_user = User(**user_data)
+        db_user.roles = roles
         self.db.add(db_user)
         self.db.commit()
         self.db.refresh(db_user)
@@ -139,19 +126,25 @@ class UserRepository:
 
     def update(self, db_user: User, user_in: UserUpdate) -> User:
         update_data = user_in.model_dump(exclude_unset=True)
-
         for field, value in update_data.items():
             if field not in ["role_ids", "sector_ids"]:
                 setattr(db_user, field, value)
-
         if user_in.role_ids is not None:
-            roles = self.role_repo.get_by_ids(user_in.role_ids)
-            db_user.roles = roles
-
+            db_user.roles = self.role_repo.get_by_ids(user_in.role_ids)
         if user_in.sector_ids is not None:
-            sectors = self.sector_repo.get_by_ids(user_in.sector_ids)
-            db_user.assigned_sectors = sectors
+            db_user.assigned_sectors = self.sector_repo.get_by_ids(user_in.sector_ids)
+        self.db.add(db_user)
+        self.db.commit()
+        self.db.refresh(db_user)
+        return db_user
 
+    def update_global(self, db_user: User, data_in: UserUpdateSys, roles: Optional[List[Role]]) -> User:
+        """Actualiza un usuario desde la API de sistema."""
+        update_data = data_in.model_dump(exclude_unset=True, exclude={"role_ids"})
+        for field, value in update_data.items():
+            setattr(db_user, field, value)
+        if roles is not None:
+            db_user.roles = roles
         self.db.add(db_user)
         self.db.commit()
         self.db.refresh(db_user)
