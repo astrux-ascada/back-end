@@ -12,6 +12,7 @@ Estos módulos están construidos, integrados y listos para ser probados.
 | Módulo            | Archivo                                | Descripción                                                                                  |
 |:------------------|:---------------------------------------|:---------------------------------------------------------------------------------------------|
 | **Identity**      | [`identity.md`](identity.md)           | Gestiona la autenticación, autorización (RBAC), usuarios, roles y permisos.                  |
+| **Marketing**     | [`marketing.md`](marketing.md)         | Motor de crecimiento: gestiona campañas, cupones de descuento y referidos.                   |
 | **Sectors**       | [`sectors.md`](sectors.md)             | Define las áreas físicas/lógicas de la planta.                                               |
 | **Assets**        | [`assets.md`](assets.md)               | Gestiona el catálogo de activos, sus jerarquías y las instancias físicas.                    |
 | **Core Engine**   | [`core-engine.md`](core-engine.md)     | El corazón del sistema. Se conecta a hardware (OPC UA) y gestiona el flujo de datos.         |

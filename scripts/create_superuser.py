@@ -1,105 +1,106 @@
 import os
 import sys
 import logging
+from dotenv import load_dotenv
+from sqlalchemy import text
 
-# Agregar el directorio padre al path
+# Configuración de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# --- Entorno y Configuración ---
+load_dotenv(os.path.join(os.getcwd(), ".env"))
+
+if os.environ.get("POSTGRES_HOST") == "backend_db":
+    logger.info("🔄 Configurando entorno local (localhost:5433)...")
+    os.environ["POSTGRES_HOST"] = "localhost"
+    os.environ["POSTGRES_PORT"] = "5433"
+if os.environ.get("REDIS_HOST") == "redis":
+    os.environ["REDIS_HOST"] = "localhost"
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.identity.models import User, Role, Permission
 from app.notifications.models import NotificationChannel, NotificationTemplate, NotificationRule, NotificationChannelType, NotificationRecipientType, NotificationLevel
 from app.core.security import hash_password
+from app.core import permissions as p
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# --- Lista completa de permisos ---
+ALL_PERMISSIONS = [
+    # SaaS
+    p.PLAN_READ, p.PLAN_CREATE, p.PLAN_UPDATE,
+    p.TENANT_READ, p.TENANT_READ_ALL, p.TENANT_CREATE, p.TENANT_UPDATE, p.TENANT_ASSIGN_MANAGER,
+    p.TENANT_DELETE_REQUEST, p.TENANT_DELETE_APPROVE, p.TENANT_DELETE_FORCE,
+    p.SUBSCRIPTION_READ, p.SUBSCRIPTION_UPDATE,
+    # Marketing
+    p.CAMPAIGN_READ, p.CAMPAIGN_CREATE, p.CAMPAIGN_UPDATE, p.CAMPAIGN_DELETE,
+    p.COUPON_READ, p.COUPON_CREATE, p.COUPON_UPDATE, p.COUPON_DELETE, p.COUPON_APPLY,
+    p.REFERRAL_READ,
+    # Identity
+    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE,
+    p.USER_READ_ALL, p.USER_CREATE_ANY, p.USER_UPDATE_ANY, p.USER_DELETE_ANY,
+    p.USER_CREATE_ADMIN,
+    p.ROLE_READ, p.ROLE_CREATE, p.ROLE_UPDATE, p.ROLE_DELETE,
+    p.PERMISSION_READ, p.SESSION_DELETE,
+    # ... (se pueden añadir el resto de permisos operativos si se desea)
+]
+
+PLATFORM_ADMIN_PERMISSIONS = p.DEFAULT_PLATFORM_ADMIN_PERMISSIONS
 
 def create_initial_data():
-    db = SessionLocal()
     try:
-        logger.info("🌱 Iniciando carga de datos iniciales (Seed)...")
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        logger.info("✅ Conexión a BD establecida.")
+    except Exception as e:
+        logger.error(f"❌ Error conectando a la BD: {e}")
+        return
 
-        # 1. Crear Roles Base
-        roles = ["GLOBAL_SUPER_ADMIN", "PLATFORM_ADMIN", "TENANT_ADMIN", "OPERATOR"]
-        db_roles = {}
-        for role_name in roles:
-            role = db.query(Role).filter(Role.name == role_name).first()
-            if not role:
-                role = Role(name=role_name, description=f"Rol predeterminado {role_name}")
-                db.add(role)
-                db.flush()
-                logger.info(f"✅ Rol creado: {role_name}")
-            db_roles[role_name] = role
+    try:
+        logger.info("🌱 Iniciando carga de datos...")
 
-        # 2. Crear Usuarios
-        # 2.1 Super Admin
-        super_email = "admin@astruxa.com"
-        if not db.query(User).filter(User.email == super_email).first():
-            super_user = User(
-                email=super_email,
-                name="Super Admin",
-                hashed_password=hash_password("admin123"), # CORREGIDO
-                is_active=True
-            )
-            super_user.roles.append(db_roles["GLOBAL_SUPER_ADMIN"])
+        # 1. Permisos
+        logger.info("--- [1/4] Gestionando Permisos ---")
+        permissions_map = {perm.name: perm for perm in db.query(Permission).all()}
+        for perm_name in ALL_PERMISSIONS:
+            if perm_name not in permissions_map:
+                db_perm = Permission(name=perm_name, description=f"Permite: {perm_name}")
+                db.add(db_perm)
+                permissions_map[perm_name] = db_perm
+        db.flush()
+
+        # 2. Roles
+        logger.info("--- [2/4] Gestionando Roles ---")
+        super_role = db.query(Role).filter(Role.name == "GLOBAL_SUPER_ADMIN").first()
+        if not super_role:
+            super_role = Role(name="GLOBAL_SUPER_ADMIN", description="Acceso total.", tenant_id=None)
+            db.add(super_role)
+        super_role.permissions = list(permissions_map.values())
+        logger.info("   > Permisos actualizados para GLOBAL_SUPER_ADMIN")
+
+        platform_role = db.query(Role).filter(Role.name == "PLATFORM_ADMIN").first()
+        if not platform_role:
+            platform_role = Role(name="PLATFORM_ADMIN", description="Gestión operativa.", tenant_id=None)
+            db.add(platform_role)
+        platform_role.permissions = [permissions_map[p_name] for p_name in PLATFORM_ADMIN_PERMISSIONS if p_name in permissions_map]
+        logger.info("   > Permisos actualizados para PLATFORM_ADMIN")
+
+        db.flush()
+
+        # 3. Usuarios
+        logger.info("--- [3/4] Gestionando Usuarios ---")
+        super_user = db.query(User).filter(User.email == "admin@astruxa.com").first()
+        if not super_user:
+            super_user = User(email="admin@astruxa.com", name="Super Admin", hashed_password=hash_password("admin123"), is_active=True)
+            super_user.roles.append(super_role)
             db.add(super_user)
-            logger.info(f"✅ Superusuario creado: {super_email}")
-
-        # 2.2 Platform Admin
-        platform_email = "platform@astruxa.com"
-        if not db.query(User).filter(User.email == platform_email).first():
-            platform_user = User(
-                email=platform_email,
-                name="Platform Manager",
-                hashed_password=hash_password("platform123"), # CORREGIDO
-                is_active=True
-            )
-            platform_user.roles.append(db_roles["PLATFORM_ADMIN"])
-            db.add(platform_user)
-            logger.info(f"✅ Platform Admin creado: {platform_email}")
-
-        # 3. Configuración de Notificaciones
-        # 3.1 Canal IN_APP
-        channel = db.query(NotificationChannel).filter(NotificationChannel.type == NotificationChannelType.IN_APP).first()
-        if not channel:
-            channel = NotificationChannel(
-                name="In-App Notifications",
-                type=NotificationChannelType.IN_APP,
-                is_active=True
-            )
-            db.add(channel)
-            db.flush()
-            logger.info("✅ Canal de notificación creado: IN_APP")
-
-        # 3.2 Plantilla de Borrado de Tenant
-        template_name = "TENANT_DELETION_REQUEST"
-        template = db.query(NotificationTemplate).filter(NotificationTemplate.name == template_name).first()
-        if not template:
-            template = NotificationTemplate(
-                name=template_name,
-                description="Notificación para solicitar aprobación de borrado de tenant",
-                level=NotificationLevel.PLATFORM,
-                subject="Solicitud de Borrado: {{ tenant_name }}",
-                body="El usuario {{ requester_name }} ha solicitado eliminar el tenant '{{ tenant_name }}'. Justificación: {{ justification }}. Se requiere su aprobación.",
-                placeholders={"tenant_name": "Nombre del tenant", "requester_name": "Usuario solicitante", "justification": "Motivo"}
-            )
-            db.add(template)
-            db.flush()
-            logger.info(f"✅ Plantilla creada: {template_name}")
-
-        # 3.3 Regla de Notificación
-        rule_name = "NotifyPlatformAdminsOnTenantDeletion"
-        if not db.query(NotificationRule).filter(NotificationRule.name == rule_name).first():
-            rule = NotificationRule(
-                name=rule_name,
-                event_type="saas:tenant_deletion_requested",
-                template_id=template.id,
-                channel_id=channel.id,
-                recipient_type=NotificationRecipientType.ROLE,
-                recipient_id=db_roles["PLATFORM_ADMIN"].id,
-                is_active=True
-            )
-            db.add(rule)
-            logger.info(f"✅ Regla creada: {rule_name}")
+        
+        # 4. Notificaciones (simplificado)
+        logger.info("--- [4/4] Configurando Notificaciones ---")
+        if not db.query(NotificationChannel).filter(NotificationChannel.type == NotificationChannelType.IN_APP).first():
+            db.add(NotificationChannel(name="In-App Notifications", type=NotificationChannelType.IN_APP, is_active=True))
 
         db.commit()
         logger.info("✨ Carga de datos iniciales completada con éxito.")
@@ -108,7 +109,8 @@ def create_initial_data():
         logger.error(f"❌ Error durante el seed: {e}")
         db.rollback()
     finally:
-        db.close()
+        if 'db' in locals():
+            db.close()
 
 if __name__ == "__main__":
     create_initial_data()

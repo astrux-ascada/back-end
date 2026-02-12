@@ -4,7 +4,7 @@ Modelo para las Suscripciones (Contratos) de los Clientes.
 """
 import uuid
 import enum
-from sqlalchemy import Column, String, TIMESTAMP, func, ForeignKey, Enum
+from sqlalchemy import Column, String, TIMESTAMP, func, ForeignKey, Enum, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -28,6 +28,12 @@ class Subscription(Base):
     plan = relationship("Plan", back_populates="subscriptions")
     
     status = Column(Enum(SubscriptionStatus), nullable=False)
+    
+    # --- Nuevas Columnas para Descuentos ---
+    applied_coupon_id = Column(UUID(as_uuid=True), ForeignKey("coupons.id"), nullable=True)
+    # El precio final que el cliente paga después de aplicar el descuento.
+    # Si es null, se usa el precio del plan.
+    final_price = Column(Float, nullable=True)
     
     current_period_start = Column(TIMESTAMP(timezone=True), nullable=True)
     current_period_end = Column(TIMESTAMP(timezone=True), nullable=True)
