@@ -20,10 +20,16 @@ logger = logging.getLogger(__name__)
 # --- DATOS MAESTROS ---
 
 ALL_PERMISSIONS = [
+    # SaaS
     p.PLAN_READ, p.PLAN_CREATE, p.PLAN_UPDATE,
     p.TENANT_READ, p.TENANT_READ_ALL, p.TENANT_CREATE, p.TENANT_UPDATE, p.TENANT_ASSIGN_MANAGER,
     p.TENANT_DELETE_REQUEST, p.TENANT_DELETE_APPROVE, p.TENANT_DELETE_FORCE,
     p.SUBSCRIPTION_READ, p.SUBSCRIPTION_UPDATE,
+    # Marketing
+    p.CAMPAIGN_READ, p.CAMPAIGN_CREATE, p.CAMPAIGN_UPDATE, p.CAMPAIGN_DELETE,
+    p.COUPON_READ, p.COUPON_CREATE, p.COUPON_UPDATE, p.COUPON_DELETE, p.COUPON_APPLY,
+    p.REFERRAL_READ,
+    # Operativos
     p.ASSET_READ, p.ASSET_CREATE, p.ASSET_UPDATE, p.ASSET_UPDATE_STATUS, p.ASSET_DELETE,
     p.WORK_ORDER_READ, p.WORK_ORDER_CREATE, p.WORK_ORDER_UPDATE, p.WORK_ORDER_CANCEL, p.WORK_ORDER_ASSIGN_PROVIDER, p.WORK_ORDER_EVALUATE,
     p.PROVIDER_READ, p.PROVIDER_CREATE, p.PROVIDER_UPDATE, p.PROVIDER_DELETE,
@@ -35,7 +41,10 @@ ALL_PERMISSIONS = [
     p.CONFIG_PARAM_READ, p.CONFIG_PARAM_CREATE, p.CONFIG_PARAM_UPDATE, p.CONFIG_PARAM_DELETE,
     p.DATA_SOURCE_READ, p.DATA_SOURCE_CREATE, p.DATA_SOURCE_UPDATE, p.DATA_SOURCE_DELETE,
     p.AUDIT_LOG_READ, p.APPROVAL_READ, p.APPROVAL_DECIDE,
-    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE, p.USER_READ_ALL, p.USER_CREATE_ADMIN,
+    # Identity
+    p.USER_READ, p.USER_CREATE, p.USER_UPDATE, p.USER_DELETE,
+    p.USER_READ_ALL, p.USER_CREATE_ANY, p.USER_UPDATE_ANY, p.USER_DELETE_ANY,
+    p.USER_CREATE_ADMIN,
     p.ROLE_READ, p.ROLE_CREATE, p.ROLE_UPDATE, p.ROLE_DELETE,
     p.PERMISSION_READ, p.SESSION_DELETE
 ]
@@ -63,14 +72,19 @@ async def seed_initial_data(db: Session):
     super_admin_role = db.query(Role).filter(Role.name == "GLOBAL_SUPER_ADMIN").first()
     if not super_admin_role:
         super_admin_role = Role(name="GLOBAL_SUPER_ADMIN", description="Acceso total a la plataforma.", tenant_id=None)
-        super_admin_role.permissions = list(permissions_map.values())
         db.add(super_admin_role)
+    
+    # Actualizar permisos del Super Admin
+    super_admin_role.permissions = list(permissions_map.values())
 
     platform_admin_role = db.query(Role).filter(Role.name == "PLATFORM_ADMIN").first()
     if not platform_admin_role:
         platform_admin_role = Role(name="PLATFORM_ADMIN", description="Gestión operativa de la plataforma.", tenant_id=None)
-        platform_admin_role.permissions = [permissions_map[p_name] for p_name in PLATFORM_ADMIN_PERMISSIONS]
         db.add(platform_admin_role)
+    
+    # Actualizar permisos del Platform Admin
+    platform_admin_role.permissions = [permissions_map[p_name] for p_name in PLATFORM_ADMIN_PERMISSIONS if p_name in permissions_map]
+    
     db.commit()
 
     # 3. Usuarios Globales
@@ -118,7 +132,7 @@ async def seed_initial_data(db: Session):
         db.commit()
         
         tenant_admin_role = Role(name="TENANT_ADMIN", description="Administrador del Tenant", tenant_id=demo_tenant.id)
-        tenant_admin_role.permissions = [permissions_map[p_name] for p_name in TENANT_ADMIN_PERMISSIONS]
+        tenant_admin_role.permissions = [permissions_map[p_name] for p_name in TENANT_ADMIN_PERMISSIONS if p_name in permissions_map]
         db.add(tenant_admin_role)
         
         demo_admin_user = User(
