@@ -23,7 +23,7 @@ from app.identity.role_service import RoleService
 from app.identity.service_partner import PartnerService
 from app.identity.service_saas import SaasService
 from app.identity.service_usage import UsageService
-from app.identity.service_marketing import MarketingService # <-- Nuevo import
+from app.identity.service_marketing import MarketingService
 from app.identity.tfa_service import TfaService
 from app.maintenance.service import MaintenanceService
 from app.media.service import MediaService
@@ -36,6 +36,8 @@ from app.procurement.service import ProcurementService
 from app.procurement.service_evaluation import EvaluationService
 from app.sectors.service import SectorService
 from app.telemetry.service import TelemetryService
+from app.reporting.service import ReportingService # <-- Nuevo import
+from app.reporting.stoppage_service import StoppageService # <-- Nuevo import
 
 
 # --- Service Injectors for Astruxa Modules ---
@@ -81,7 +83,7 @@ def get_usage_service(db: Session = Depends(get_db)) -> UsageService:
 def get_partner_service(db: Session = Depends(get_db)) -> PartnerService:
     return PartnerService(db=db)
 
-def get_marketing_service(db: Session = Depends(get_db)) -> MarketingService: # <-- Nueva función
+def get_marketing_service(db: Session = Depends(get_db)) -> MarketingService:
     return MarketingService(db=db)
 
 def get_media_service(db: Session = Depends(get_db)) -> MediaService:
@@ -122,6 +124,13 @@ def get_procurement_service(db: Session = Depends(get_db)) -> ProcurementService
 
 def get_evaluation_service(db: Session = Depends(get_db)) -> EvaluationService:
     return EvaluationService(db)
+
+# --- Reporting Services ---
+def get_reporting_service(db: Session = Depends(get_db)) -> ReportingService: # <-- Nueva función
+    return ReportingService(db=db)
+
+def get_stoppage_service(db: Session = Depends(get_db)) -> StoppageService: # <-- Nueva función
+    return StoppageService(db=db)
 
 
 # --- Inyectores con Dependencias Circulares ---

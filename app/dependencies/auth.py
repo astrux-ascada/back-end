@@ -29,14 +29,17 @@ def get_current_token_payload(
 ) -> Dict[str, Any]:
     payload = verify_jwt_token(token.credentials)
     if not payload:
+        logger.warning("Token JWT inválido o expirado.")
         raise AuthenticationException("Token inválido o expirado.")
 
     jti = payload.get("jti")
     if not jti:
+        logger.warning("Token JWT sin JTI.")
         raise AuthenticationException("Token inválido: falta el identificador de sesión (jti).")
 
     session_key = f"session:{jti}"
     if not redis_client.exists(session_key):
+        logger.warning(f"Sesión no encontrada en Redis para JTI: {jti}. Posible sesión expirada o revocada.")
         raise AuthenticationException("La sesión ha sido cerrada o es inválida.")
 
     return payload
@@ -56,8 +59,13 @@ def get_current_active_user(
 
     user = db.query(User).options(joinedload(User.roles)).filter(User.id == user_id).first()
 
-    if not user or not user.is_active:
-        raise AuthenticationException("Credenciales de autenticación no válidas o usuario inactivo.")
+    if not user:
+        logger.warning(f"Usuario con ID {user_id} no encontrado en la base de datos.")
+        raise AuthenticationException("Credenciales de autenticación no válidas.")
+        
+    if not user.is_active:
+        logger.warning(f"Usuario {user.email} está inactivo.")
+        raise AuthenticationException("Usuario inactivo.")
 
     return user
 
