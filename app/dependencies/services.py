@@ -36,8 +36,8 @@ from app.procurement.service import ProcurementService
 from app.procurement.service_evaluation import EvaluationService
 from app.sectors.service import SectorService
 from app.telemetry.service import TelemetryService
-from app.reporting.service import ReportingService
-from app.reporting.stoppage_service import StoppageService
+from app.reporting.service import ReportingService # <-- Nuevo import
+from app.reporting.stoppage_service import StoppageService # <-- Nuevo import
 
 
 # --- Service Injectors for Astruxa Modules ---
@@ -145,11 +145,13 @@ def get_evaluation_service(db: Session = Depends(get_db)) -> EvaluationService:
     return EvaluationService(db)
 
 # --- Reporting Services ---
-def get_reporting_service(db: Session = Depends(get_db)) -> ReportingService:
+def get_reporting_service(db: Session = Depends(get_db)) -> ReportingService: # <-- Nueva función
     return ReportingService(db=db)
 
-def get_stoppage_service(db: Session = Depends(get_db)) -> StoppageService:
+def get_stoppage_service(db: Session = Depends(get_db)) -> StoppageService: # <-- Nueva función
     return StoppageService(db=db)
+
+
 
 
 # ---------------------------------------------
