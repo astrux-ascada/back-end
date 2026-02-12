@@ -4,7 +4,7 @@ API Routers para la gestión de Campañas, Cupones y Referidos.
 """
 import logging
 from typing import List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status # <-- Importaciones añadidas
 
 from app.dependencies.auth import get_current_active_user
 from app.dependencies.permissions import require_permission
@@ -16,7 +16,7 @@ from app.identity.schemas_saas import (
     CouponCreate, CouponUpdate, CouponRead,
     ApplyCouponRequest
 )
-from app.identity.schemas import UserRead # Asumiendo que se devuelve info del usuario
+from app.identity.schemas import UserRead
 
 logger = logging.getLogger("app.identity.api_marketing")
 
@@ -57,7 +57,7 @@ def apply_coupon(
 ):
     """Aplica un cupón a la suscripción del tenant del usuario actual."""
     if not current_user.tenant_id:
-        raise HTTPException(status_code=400, detail="Esta acción solo es válida para usuarios de un tenant.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Esta acción solo es válida para usuarios de un tenant.")
     
     service.apply_coupon_to_subscription(current_user.tenant_id, request.coupon_code)
     return {"message": "Cupón aplicado exitosamente."}
@@ -69,7 +69,7 @@ def get_my_referral_code(
 ):
     """Obtiene el código de referido para el tenant del usuario actual."""
     if not current_user.tenant:
-        raise HTTPException(status_code=400, detail="Esta acción solo es válida para usuarios de un tenant.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Esta acción solo es válida para usuarios de un tenant.")
         
     code = service.generate_referral_code(current_user.tenant)
     return {"referral_code": code}
