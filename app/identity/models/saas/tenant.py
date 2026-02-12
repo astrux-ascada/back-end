@@ -46,6 +46,10 @@ class Tenant(Base):
     # --- Configuración Flexible ---
     config = Column(JSONB, nullable=True, default={})
     
+    # --- Marketing y Referidos ---
+    # Código único que este tenant comparte para invitar a otros
+    referral_code = Column(String(20), unique=True, nullable=True, index=True)
+    
     subscription = relationship("Subscription", uselist=False, back_populates="tenant")
     
     # Relación con los usuarios que pertenecen a este tenant

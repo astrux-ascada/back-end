@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field, EmailStr
 
-# --- Esquemas para User ---
+# --- Esquemas para User (Nivel Tenant) ---
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -33,6 +33,26 @@ class UserRead(UserBase):
     
     class Config:
         from_attributes = True
+
+# --- Esquemas para User (Nivel Sistema/Global) ---
+
+class UserCreateSys(BaseModel):
+    """Schema para crear un usuario desde el panel de sistema."""
+    email: EmailStr
+    name: str
+    password: str = Field(..., min_length=8)
+    tenant_id: Optional[uuid.UUID] = None
+    role_ids: List[uuid.UUID] = []
+    is_active: bool = True
+
+class UserUpdateSys(BaseModel):
+    """Schema para actualizar un usuario desde el panel de sistema."""
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    tenant_id: Optional[uuid.UUID] = None
+    role_ids: Optional[List[uuid.UUID]] = None
+
+# --- Esquemas de Autenticación ---
 
 class UserLogin(BaseModel):
     email: EmailStr

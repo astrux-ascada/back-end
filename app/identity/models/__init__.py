@@ -22,6 +22,9 @@ from .saas.plan import Plan
 from .saas.tenant import Tenant
 from .saas.subscription import Subscription
 
+# Modelos de Marketing (Cupones, Campañas, Referidos)
+from .saas.marketing import MarketingCampaign, Coupon, Referral
+
 # Modelos de otros módulos con los que nos relacionamos
 from app.sectors.models.sector import Sector
 
@@ -32,3 +35,15 @@ from app.sectors.models.sector import Sector
 # Relación User <-> Sector
 User.assigned_sectors = relationship("Sector", secondary="user_sectors", back_populates="users")
 Sector.users = relationship("User", secondary="user_sectors", back_populates="assigned_sectors")
+
+# Relación Tenant <-> Referral
+# Un tenant puede referir a muchos (referrer) y ser referido por uno (referee)
+Tenant.referrals_made = relationship("Referral", foreign_keys=[Referral.referrer_tenant_id], back_populates="referrer")
+Tenant.referral_received = relationship("Referral", foreign_keys=[Referral.referred_tenant_id], uselist=False, back_populates="referee")
+
+Referral.referrer = relationship("Tenant", foreign_keys=[Referral.referrer_tenant_id], back_populates="referrals_made")
+Referral.referee = relationship("Tenant", foreign_keys=[Referral.referred_tenant_id], back_populates="referral_received")
+
+# Relación Subscription <-> Coupon
+# Añadimos la relación a la suscripción para saber qué cupón se aplicó
+Subscription.applied_coupon = relationship("Coupon")
