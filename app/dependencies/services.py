@@ -56,10 +56,33 @@ def get_notification_service(db: Session = Depends(get_db)) -> NotificationServi
 def get_notification_config_service(db: Session = Depends(get_db)) -> NotificationConfigService:
     return NotificationConfigService(db)
 
+# --- Inyectores con Dependencias Circulares ---
+# Definimos get_approval_service antes para poder usarlo en get_saas_service sin lambdas
+def get_asset_service(
+        db: Session = Depends(get_db),
+        audit_service: AuditService = Depends(get_audit_service)
+) -> AssetService:
+    return AssetService(db=db, audit_service=audit_service, approval_service=None)
+
+def get_manual_payment_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> ManualPaymentService:
+    return ManualPaymentService(db, approval_service=None, audit_service=audit_service)
+
+def get_approval_service(
+        db: Session = Depends(get_db),
+        asset_service: AssetService = Depends(get_asset_service),
+        manual_payment_service: ManualPaymentService = Depends(get_manual_payment_service)
+) -> ApprovalService:
+    approval_service = ApprovalService(db, asset_service=asset_service, manual_payment_service=manual_payment_service)
+    asset_service.approval_service = approval_service
+    manual_payment_service.approval_service = approval_service
+    return approval_service
+
+# ---------------------------------------------
+
 def get_saas_service(
     db: Session = Depends(get_db),
     auth_service: AuthService = Depends(get_auth_service),
-    approval_service: ApprovalService = Depends(lambda: get_approval_service(db)),
+    approval_service: ApprovalService = Depends(get_approval_service), # CORRECCIÓN: Sin lambda
     notification_service: NotificationService = Depends(get_notification_service),
     audit_service: AuditService = Depends(get_audit_service)
 ) -> SaasService:
@@ -109,10 +132,6 @@ def get_payment_service(db: Session = Depends(get_db)) -> PaymentService:
     return PaymentService(db)
 
 
-def get_manual_payment_service(db: Session = Depends(get_db), audit_service: AuditService = Depends(get_audit_service)) -> ManualPaymentService:
-    return ManualPaymentService(db, approval_service=None, audit_service=audit_service)
-
-
 def get_online_payment_service(db: Session = Depends(get_db)) -> OnlinePaymentService:
     return OnlinePaymentService(db)
 
@@ -133,23 +152,6 @@ def get_stoppage_service(db: Session = Depends(get_db)) -> StoppageService: # <-
     return StoppageService(db=db)
 
 
-# --- Inyectores con Dependencias Circulares ---
-def get_asset_service(
-        db: Session = Depends(get_db),
-        audit_service: AuditService = Depends(get_audit_service)
-) -> AssetService:
-    return AssetService(db=db, audit_service=audit_service, approval_service=None)
-
-
-def get_approval_service(
-        db: Session = Depends(get_db),
-        asset_service: AssetService = Depends(get_asset_service),
-        manual_payment_service: ManualPaymentService = Depends(get_manual_payment_service)
-) -> ApprovalService:
-    approval_service = ApprovalService(db, asset_service=asset_service, manual_payment_service=manual_payment_service)
-    asset_service.approval_service = approval_service
-    manual_payment_service.approval_service = approval_service
-    return approval_service
 
 
 # ---------------------------------------------
