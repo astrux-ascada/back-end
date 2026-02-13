@@ -44,18 +44,19 @@ def client(db: Session) -> Generator[TestClient, None, None]:
     # Limpiar overrides al final del test
     app.dependency_overrides.clear()
 
-@pytest.fixture(scope="module")
-def test_user(db: Session) -> User:
+@pytest.fixture(scope="function") # Cambiado a function para aislar tests
+def test_user(db: Session) -> Generator[User, None, None]:
     """
-    Crea un usuario de prueba para los tests.
+    Crea un usuario de prueba para los tests y lo elimina al finalizar.
     """
     email = "test_user_flow@example.com"
     password = "TestPassword123!"
     
-    # Verificar si ya existe
-    user = db.query(User).filter(User.email == email).first()
-    if user:
-        return user
+    # Limpieza previa por si acaso
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        db.delete(existing_user)
+        db.commit()
         
     # Crear usuario
     user = User(
@@ -65,8 +66,7 @@ def test_user(db: Session) -> User:
         is_active=True
     )
     
-    # Asignar rol (asumimos que los roles ya fueron creados por el seeder)
-    # Intentamos asignar GLOBAL_SUPER_ADMIN para tener permisos amplios
+    # Asignar rol
     role = db.query(Role).filter(Role.name == "GLOBAL_SUPER_ADMIN").first()
     if role:
         user.roles.append(role)
@@ -74,7 +74,12 @@ def test_user(db: Session) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    
+    yield user
+    
+    # Limpieza posterior
+    db.delete(user)
+    db.commit()
 
 @pytest.fixture(scope="module")
 def get_auth_headers(client: TestClient) -> Dict[str, str]:
