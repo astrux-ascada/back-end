@@ -35,8 +35,8 @@ async def seed_identity(db: Session, context: dict):
             email=super_email,
             name="Super Admin",
             hashed_password=hash_password("admin123"),
-            is_active=True,
-            is_superuser=True
+            is_active=True
+            # is_superuser=True  <-- ELIMINADO: Ya no existe en el modelo
         )
         super_user.roles.append(db_roles["GLOBAL_SUPER_ADMIN"])
         db.add(super_user)
