@@ -45,6 +45,21 @@ def list_all_users(
     )
     return users
 
+@router.get(
+    "/users/{user_id}",
+    response_model=UserRead,
+    dependencies=[Depends(require_permission("user:read_all"))]
+)
+def get_user(
+    user_id: uuid.UUID,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """
+    (Admin) Obtiene los detalles completos de un usuario específico por su ID.
+    Incluye roles, tenant y sectores asignados.
+    """
+    return auth_service.get_user_by_id(user_id)
+
 @router.post(
     "/users",
     response_model=UserRead,

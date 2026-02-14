@@ -4,7 +4,8 @@
 services:
   # --- Base de Datos de Pruebas (Efímera) ---
   db_test:
-    image: postgres:16-alpine
+    # CORRECCIÓN: Usar TimescaleDB en lugar de Postgres puro
+    image: timescale/timescaledb:latest-pg16
     container_name: astruxa_db_test
     env_file: .env.test
     ports:
@@ -15,6 +16,26 @@ services:
       timeout: 5s
       retries: 10
 
+  # --- Redis de Pruebas ---
+  redis_test: # Este nombre debe coincidir con REDIS_HOST en .env.test
+    image: redis:alpine
+    container_name: astruxa_redis_test
+    ports:
+      - "6380:6379" # Puerto distinto al de desarrollo
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+  # --- Servidor de Correo Mock (Mailpit) ---
+  mock: # Este nombre debe coincidir con SMTP_HOST en .env.test
+    image: axllent/mailpit
+    container_name: astruxa_mock_mail
+    ports:
+      - "8026:8025" # UI en puerto diferente
+      - "1026:1025" # SMTP en puerto diferente
+
   # --- Ejecutor de Pruebas (Pytest) ---
   test_runner:
     build: .
@@ -22,9 +43,16 @@ services:
     env_file: .env.test
     environment:
       - POSTGRES_HOST=db_test
+      - REDIS_HOST=redis_test # Asegurar que apunte al servicio correcto
+      - SMTP_HOST=mock 
     volumes:
       - .:/app # Montamos código para ver cambios sin reconstruir
-    command: pytest -v
+    # Ejecutar migraciones Y SEEDING antes de los tests
+    command: sh -c "alembic upgrade head && python -m app.db.seeding.seed_all && pytest -v"
     depends_on:
       db_test:
         condition: service_healthy
+      redis_test:
+        condition: service_healthy
+      mock:
+        condition: service_started
