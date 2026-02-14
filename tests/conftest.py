@@ -2,6 +2,7 @@ import pytest
 from typing import Generator, Dict
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.main import app
 from app.core.database import SessionLocal
@@ -55,6 +56,8 @@ def test_user(db: Session) -> Generator[User, None, None]:
     # Limpieza previa por si acaso
     existing_user = db.query(User).filter(User.email == email).first()
     if existing_user:
+        # Borrar logs de auditoría antes de borrar el usuario
+        db.execute(text("DELETE FROM audit_logs WHERE user_id = :uid"), {"uid": existing_user.id})
         db.delete(existing_user)
         db.commit()
         
@@ -78,6 +81,8 @@ def test_user(db: Session) -> Generator[User, None, None]:
     yield user
     
     # Limpieza posterior
+    # Borrar logs de auditoría generados durante el test
+    db.execute(text("DELETE FROM audit_logs WHERE user_id = :uid"), {"uid": user.id})
     db.delete(user)
     db.commit()
 
